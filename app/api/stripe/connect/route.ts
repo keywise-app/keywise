@@ -13,6 +13,8 @@ export async function POST(req: Request) {
   try {
     const { user_id } = await req.json();
 
+    console.log('[stripe/connect] user_id received:', user_id);
+
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
@@ -23,28 +25,33 @@ export async function POST(req: Request) {
       metadata: { user_id },
     });
 
-    // Save the account ID to the profiles table before redirecting.
-    // upsert handles both the case where the row exists and where it doesn't.
-    const { error: dbError } = await supabase
+    console.log('[stripe/connect] Stripe account created:', account.id);
+
+    // Save the account ID to the profiles table.
+    // upsert handles both missing and existing rows.
+    const { data: upsertData, error: dbError } = await supabase
       .from('profiles')
-      .upsert({ id: user_id, stripe_account_id: account.id }, { onConflict: 'id' });
+      .upsert({ id: user_id, stripe_account_id: account.id }, { onConflict: 'id' })
+      .select('id, stripe_account_id');
+
+    console.log('[stripe/connect] Supabase upsert result — data:', upsertData, 'error:', dbError);
 
     if (dbError) {
-      console.error('Failed to save stripe_account_id to profiles:', dbError.message);
-      return NextResponse.json({ error: 'Stripe account created but could not be saved: ' + dbError.message }, { status: 500 });
+      console.error('[stripe/connect] Failed to save stripe_account_id:', dbError.message, dbError.code, dbError.details);
+      // Don't block the flow — pass the account_id back so the client can save it as a fallback
     }
 
-    // Create the onboarding link
+    // Include account_id in the return_url so the client can save it as a backup
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
       refresh_url: 'https://keywise.app/?page=settings',
-      return_url: 'https://keywise.app/?page=settings&stripe=connected',
+      return_url: `https://keywise.app/?page=settings&stripe=connected&account_id=${account.id}`,
       type: 'account_onboarding',
     });
 
     return NextResponse.json({ url: accountLink.url, account_id: account.id });
   } catch (err: any) {
-    console.error('Stripe Connect error:', err);
+    console.error('[stripe/connect] Unexpected error:', err);
     return NextResponse.json({ error: err.message || 'Failed to create Stripe Connect link.' }, { status: 500 });
   }
 }
@@ -66,7 +73,7 @@ export async function GET(req: Request) {
       details_submitted: account.details_submitted,
     });
   } catch (err: any) {
-    console.error('Stripe account retrieve error:', err);
+    console.error('[stripe/connect] Account retrieve error:', err);
     return NextResponse.json({ error: err.message || 'Failed to retrieve account.' }, { status: 500 });
   }
 }

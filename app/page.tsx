@@ -67,6 +67,19 @@ export default function Home() {
     if (params.get('stripe') === 'connected') {
       setStripeSuccess(true);
       setTimeout(() => setStripeSuccess(false), 5000);
+      const accountId = params.get('account_id');
+      if (accountId) {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) {
+            supabase.from('profiles')
+              .upsert({ id: user.id, stripe_account_id: accountId }, { onConflict: 'id' })
+              .then(({ error }) => {
+                if (error) console.error('Client-side stripe_account_id save failed:', error.message);
+                else console.log('Client-side stripe_account_id saved:', accountId);
+              });
+          }
+        });
+      }
     }
     if (params.has('page') || params.has('stripe')) {
       window.history.replaceState({}, '', '/');
