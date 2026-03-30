@@ -23,11 +23,16 @@ export async function POST(req: Request) {
       metadata: { user_id },
     });
 
-    // Save the account ID to the profiles table before redirecting
-    await supabase
+    // Save the account ID to the profiles table before redirecting.
+    // upsert handles both the case where the row exists and where it doesn't.
+    const { error: dbError } = await supabase
       .from('profiles')
-      .update({ stripe_account_id: account.id })
-      .eq('id', user_id);
+      .upsert({ id: user_id, stripe_account_id: account.id }, { onConflict: 'id' });
+
+    if (dbError) {
+      console.error('Failed to save stripe_account_id to profiles:', dbError.message);
+      return NextResponse.json({ error: 'Stripe account created but could not be saved: ' + dbError.message }, { status: 500 });
+    }
 
     // Create the onboarding link
     const accountLink = await stripe.accountLinks.create({
