@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: Request) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    console.error('[invite-tenant] SUPABASE_SERVICE_ROLE_KEY is not set — admin methods will fail');
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
   try {
@@ -14,19 +19,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'lease_id and tenant_email are required' }, { status: 400 });
     }
 
-    // Generate a magic link that redirects to the tenant portal
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: tenant_email,
-      options: {
-        redirectTo: 'https://keywise.app/?tenant=true',
+    console.log('[invite-tenant] Sending invite to', tenant_email, 'for lease', lease_id);
+
+    // inviteUserByEmail sends the magic link email via Supabase's email system
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(tenant_email, {
+      redirectTo: 'https://keywise.app/?tenant=true',
+      data: {
+        role: 'tenant',
+        lease_id,
+        tenant_name,
       },
     });
 
-    if (linkError) {
-      console.error('[invite-tenant] generateLink error:', linkError.message);
-      return NextResponse.json({ error: linkError.message }, { status: 500 });
+    if (error) {
+      console.error('[invite-tenant] inviteUserByEmail error:', error.message, error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    console.log('[invite-tenant] Invite email sent successfully to', tenant_email, '— user id:', data.user?.id);
 
     // Mark the lease as invited
     const { error: updateError } = await supabase
@@ -39,12 +49,9 @@ export async function POST(req: Request) {
 
     if (updateError) {
       console.error('[invite-tenant] lease update error:', updateError.message);
-      // Don't block — the magic link was sent successfully
     }
 
-    console.log('[invite-tenant] Magic link generated for', tenant_email, '(', tenant_name, ')');
-
-    return NextResponse.json({ success: true, action_link: linkData.properties?.action_link });
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('[invite-tenant] Unexpected error:', err);
     return NextResponse.json({ error: err.message || 'Failed to send invite.' }, { status: 500 });
