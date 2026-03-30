@@ -9,6 +9,7 @@ import Tenants from './components/Tenants';
 import Operations from './components/Operations';
 import Profile from './components/Profile';
 import Onboarding from './components/Onboarding';
+import TenantDashboard from './components/TenantDashboard';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
@@ -45,6 +46,7 @@ export default function Home() {
   const [page, setPage] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stripeSuccess, setStripeSuccess] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
@@ -90,9 +92,31 @@ export default function Home() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        const { data: profile } = await supabase
-          .from('profiles').select('full_name').eq('id', session.user.id).single();
-        if (!profile?.full_name) setShowOnboarding(true);
+        const isTenantFlow = new URLSearchParams(window.location.search).get('tenant') === 'true';
+
+        if (isTenantFlow) {
+          // First-time tenant login via magic link — set up their profile and link their lease
+          await supabase.from('profiles').upsert(
+            { id: session.user.id, email: session.user.email, role: 'tenant' },
+            { onConflict: 'id' }
+          );
+          await supabase
+            .from('leases')
+            .update({ tenant_user_id: session.user.id })
+            .eq('email', session.user.email)
+            .is('tenant_user_id', null);
+          setUserRole('tenant');
+          window.history.replaceState({}, '', '/');
+        } else {
+          const { data: profile } = await supabase
+            .from('profiles').select('full_name, role').eq('id', session.user.id).single();
+          if (profile?.role === 'tenant') {
+            setUserRole('tenant');
+          } else {
+            setUserRole('landlord');
+            if (!profile?.full_name) setShowOnboarding(true);
+          }
+        }
       }
       setLoading(false);
     });
@@ -166,6 +190,7 @@ export default function Home() {
   );
 
   if (!session) return <Auth />;
+  if (session && userRole === 'tenant') return <TenantDashboard />;
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
 
   return (

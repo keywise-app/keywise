@@ -50,6 +50,9 @@ export default function Payments() {
   const [landlordUserId, setLandlordUserId] = useState('');
   const [landlordStripeConnected, setLandlordStripeConnected] = useState(false);
   const [payNowLoading, setPayNowLoading] = useState<Record<string, boolean>>({});
+  const [showRequest, setShowRequest] = useState(false);
+  const [requestForm, setRequestForm] = useState({ lease_id: '', tenant_name: '', property: '', amount: '', description: '', due_date: '' });
+  const [requestLoading, setRequestLoading] = useState(false);
 
   const emptyForm = {
     lease_id: '', tenant_name: '', property: '',
@@ -222,6 +225,34 @@ export default function Payments() {
     setLoadingReminder(false);
   };
 
+  const submitRequest = async () => {
+    if (!requestForm.lease_id || !requestForm.amount || !requestForm.due_date) {
+      alert('Please fill in tenant, amount, and due date.');
+      return;
+    }
+    setRequestLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setRequestLoading(false); return; }
+    const lease = leases.find(l => l.id === requestForm.lease_id);
+    const { error } = await supabase.from('payments').insert({
+      user_id: user.id,
+      lease_id: requestForm.lease_id,
+      tenant_name: lease?.tenant_name || requestForm.tenant_name,
+      property: lease?.property || requestForm.property,
+      amount: +requestForm.amount,
+      due_date: requestForm.due_date,
+      status: 'pending',
+    });
+    if (error) {
+      alert('Error: ' + error.message);
+    } else {
+      await fetchAll();
+      setShowRequest(false);
+      setRequestForm({ lease_id: '', tenant_name: '', property: '', amount: '', description: '', due_date: '' });
+    }
+    setRequestLoading(false);
+  };
+
   const openPayNow = async (p: Payment) => {
     setPayNowLoading(prev => ({ ...prev, [p.id]: true }));
     try {
@@ -352,9 +383,12 @@ export default function Payments() {
           {leases.length > 0 && (
             <button onClick={() => openScheduleWizard(leases[0])}
               style={{ ...btn.teal, fontSize: 12, padding: '7px 14px' }}>
-              ✦ Payment Schedules
+              ✦ Set Up Recurring
             </button>
           )}
+          <button onClick={() => setShowRequest(true)} style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>
+            📤 Request Payment
+          </button>
           <button onClick={() => setShowAdd(true)} style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>
             + Add Payment
           </button>
@@ -668,6 +702,56 @@ export default function Payments() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={confirmPayment} style={{ ...btn.primary, flex: 1, justifyContent: 'center' }}>✓ Confirm Payment</button>
               <button onClick={() => setShowRecord(false)} style={{ ...btn.ghost }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Payment Modal */}
+      {showRequest && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => setShowRequest(false)}>
+          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 480, boxShadow: T.shadowMd }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Request Payment</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 24 }}>
+              Request a one-time payment from a tenant. It will appear in their portal.
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>Tenant</label>
+              <select style={input} value={requestForm.lease_id} onChange={e => {
+                const lease = leases.find(l => l.id === e.target.value);
+                setRequestForm({ ...requestForm, lease_id: e.target.value, tenant_name: lease?.tenant_name || '', property: lease?.property || '', amount: '' });
+              }}>
+                <option value="">Select tenant…</option>
+                {leases.map(l => <option key={l.id} value={l.id}>{l.tenant_name} — {l.property?.split(',')[0]}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>Description</label>
+              <input style={input} type="text" placeholder="e.g. Water bill reimbursement, Parking fee…"
+                value={requestForm.description}
+                onChange={e => setRequestForm({ ...requestForm, description: e.target.value })} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+              <div>
+                <label style={label}>Amount ($)</label>
+                <input style={input} type="number" min="0" step="0.01" placeholder="0.00"
+                  value={requestForm.amount}
+                  onChange={e => setRequestForm({ ...requestForm, amount: e.target.value })} />
+              </div>
+              <div>
+                <label style={label}>Due Date</label>
+                <input style={input} type="date"
+                  value={requestForm.due_date}
+                  onChange={e => setRequestForm({ ...requestForm, due_date: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={submitRequest} disabled={requestLoading} style={{ ...btn.primary, flex: 1, justifyContent: 'center' }}>
+                {requestLoading ? 'Sending…' : '📤 Send Request'}
+              </button>
+              <button onClick={() => setShowRequest(false)} style={{ ...btn.ghost }}>Cancel</button>
             </div>
           </div>
         </div>
