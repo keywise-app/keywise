@@ -19,8 +19,8 @@ export default function Tenants() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [inviting, setInviting] = useState<string | null>(null);
-  const [inviteSentId, setInviteSentId] = useState<string | null>(null);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -100,35 +100,6 @@ export default function Tenants() {
     const remaining = leases.filter(l => l.id !== selected.id);
     setLeases(remaining);
     setSelected(remaining.length > 0 ? remaining[0] : null);
-  };
-
-  const inviteTenant = async (lease: any) => {
-    if (!lease.email) {
-      alert('No email on file for this tenant');
-      return;
-    }
-    setInviting(lease.id);
-    try {
-      const res = await fetch('/api/invite-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lease_id: lease.id, tenant_email: lease.email, tenant_name: lease.tenant_name }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        alert('Failed to send invite: ' + data.error);
-      } else {
-        const now = new Date().toISOString();
-        const updated = { ...lease, invite_sent: true, invite_sent_at: now };
-        setLeases(leases.map(l => l.id === lease.id ? updated : l));
-        if (selected?.id === lease.id) setSelected(updated);
-        setInviteSentId(lease.id);
-        setTimeout(() => setInviteSentId(null), 3000);
-      }
-    } catch (err: any) {
-      alert('Error: ' + (err.message || 'Could not send invite.'));
-    }
-    setInviting(null);
   };
 
   const getDaysLeft = (endDate: string) =>
@@ -325,21 +296,27 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     {selected.start_date} → {selected.end_date}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {inviteSentId === selected.id ? (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, background: T.greenLight, border: `1px solid ${T.green}33`, borderRadius: 20, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' as const }}>
-                      ✓ Invite sent!
-                    </span>
-                  ) : selected.invite_sent ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' as const }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {selected.invite_sent ? (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '6px 14px', display: 'inline-flex', alignItems: 'center' }}>
                       ✓ Invited
                     </span>
                   ) : (
-                    <button
-                      onClick={() => inviteTenant(selected)}
-                      disabled={inviting === selected.id}
-                      style={{ ...btn.teal, fontSize: 12, padding: '6px 14px', opacity: inviting === selected.id ? 0.7 : 1 }}>
-                      {inviting === selected.id ? 'Sending invite...' : '✉️ Invite to Keywise'}
+                    <button onClick={async () => {
+                      if (!selected.email) { alert('No email on file for this tenant. Add their email first.'); return; }
+                      setInviteSending(true);
+                      const res = await fetch('/api/invite-tenant', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name }),
+                      });
+                      const data = await res.json();
+                      setInviteSending(false);
+                      if (data.error) { alert('Error: ' + data.error); }
+                      else { setInviteSuccess(true); setTimeout(() => setInviteSuccess(false), 3000); }
+                    }}
+                      style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Sent!' : '✉️ Invite to Keywise'}
                     </button>
                   )}
                   <button onClick={openEdit}
