@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     // Create the onboarding link
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: 'http://localhost:3000/?page=settings',
-      return_url: 'http://localhost:3000/?page=settings&stripe=connected',
+      refresh_url: 'https://keywise.app/?page=settings',
+      return_url: 'https://keywise.app/?page=settings&stripe=connected',
       type: 'account_onboarding',
     });
 
