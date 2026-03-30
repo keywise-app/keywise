@@ -20,6 +20,7 @@ export default function Tenants() {
   const [editForm, setEditForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState<string | null>(null);
+  const [inviteSentId, setInviteSentId] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -103,7 +104,7 @@ export default function Tenants() {
 
   const inviteTenant = async (lease: any) => {
     if (!lease.email) {
-      alert('No email on file for ' + lease.tenant_name + '. Add their email in the Edit tab first.');
+      alert('No email on file for this tenant');
       return;
     }
     setInviting(lease.id);
@@ -121,6 +122,8 @@ export default function Tenants() {
         const updated = { ...lease, invite_sent: true, invite_sent_at: now };
         setLeases(leases.map(l => l.id === lease.id ? updated : l));
         if (selected?.id === lease.id) setSelected(updated);
+        setInviteSentId(lease.id);
+        setTimeout(() => setInviteSentId(null), 3000);
       }
     } catch (err: any) {
       alert('Error: ' + (err.message || 'Could not send invite.'));
@@ -323,17 +326,20 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {selected.invite_sent ? (
+                  {inviteSentId === selected.id ? (
                     <span style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, background: T.greenLight, border: `1px solid ${T.green}33`, borderRadius: 20, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' as const }}>
-                      ✓ Invited {selected.invite_sent_at ? new Date(selected.invite_sent_at).toLocaleDateString() : ''}
+                      ✓ Invite sent!
+                    </span>
+                  ) : selected.invite_sent ? (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' as const }}>
+                      ✓ Invited
                     </span>
                   ) : (
                     <button
                       onClick={() => inviteTenant(selected)}
                       disabled={inviting === selected.id}
-                      title={!selected.email ? 'No email on file' : 'Send portal invite'}
                       style={{ ...btn.teal, fontSize: 12, padding: '6px 14px', opacity: inviting === selected.id ? 0.7 : 1 }}>
-                      {inviting === selected.id ? 'Sending…' : '✉️ Invite to Keywise'}
+                      {inviting === selected.id ? 'Sending invite...' : '✉️ Invite to Keywise'}
                     </button>
                   )}
                   <button onClick={openEdit}
