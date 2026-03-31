@@ -52,6 +52,13 @@ export default function Communications() {
   const [smsStatus, setSmsStatus] = useState('');
   const [sendEmail, setSendEmail] = useState(false);
   const [sendSMSToggle, setSendSMSToggle] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -429,7 +436,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       )}
 
       {tab === 'draft' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
           <div>
             <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Message Type</div>

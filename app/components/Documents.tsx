@@ -81,6 +81,13 @@ export default function Documents() {
   const [signingSending, setSigningSending] = useState(false);
   const [signingSent, setSigningSent] = useState<string | null>(null);
   const [landlordProfile, setLandlordProfile] = useState<{ full_name: string; email: string } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const emptyForm = {
     name: '', type: 'lease', ownership_level: 'tenant',
@@ -414,7 +421,7 @@ export default function Documents() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
         {filtered.map(doc => {
           const dt = docType(doc.type);
           const expired = isExpired(doc.expiry_date);

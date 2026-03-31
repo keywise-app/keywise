@@ -95,6 +95,13 @@ export default function Leases() {
   });
   const [generatedLease, setGeneratedLease] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => { fetchLeases(); }, []);
 
@@ -541,7 +548,7 @@ export default function Leases() {
       )}
 
       {tab === 'generator' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 20 }}>Lease Details</div>
             {[
