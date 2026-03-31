@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
+import AddTenantWizard from './AddTenantWizard';
 
-export default function Tenants() {
+export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWizard?: boolean; onWizardOpen?: () => void } = {}) {
+  const [showWizard, setShowWizard] = useState(false);
   const [leases, setLeases] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,10 @@ export default function Tenants() {
   const [markPaidMethod, setMarkPaidMethod] = useState('Zelle');
   const [markPaidDate, setMarkPaidDate] = useState(new Date().toISOString().split('T')[0]);
   const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
+  }, [autoOpenWizard]);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -261,15 +267,24 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
   );
 
   if (leases.length === 0) return (
-    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 48, textAlign: 'center', boxShadow: T.shadow }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 6 }}>No tenants yet</div>
-      <div style={{ color: T.inkMuted, fontSize: 13 }}>Add leases to see your tenants here.</div>
-    </div>
+    <>
+      {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 60, textAlign: 'center', boxShadow: T.shadow }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+        <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 8 }}>No tenants yet</div>
+        <div style={{ color: T.inkMuted, fontSize: 14, marginBottom: 28 }}>Add your first tenant to start tracking leases, payments, and communications.</div>
+        <button onClick={() => setShowWizard(true)}
+          style={{ ...btn.primary, fontSize: 15, padding: '12px 28px', background: T.teal, color: T.navy, fontWeight: 700 }}>
+          + Add Your First Tenant
+        </button>
+      </div>
+    </>
   );
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 140px)' }}>
+      {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
+
       {/* Receipt sent toast */}
       {tenantReceiptSent && (
         <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
@@ -280,8 +295,14 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       {/* Tenant list — on mobile, hide when a tenant is selected */}
       {(!isMobile || !selected) && (
       <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: isMobile ? 'auto' : undefined }}>
-        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}`, fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {leases.length} Tenant{leases.length !== 1 ? 's' : ''}
+        <div style={{ padding: '10px 12px 10px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {leases.length} Tenant{leases.length !== 1 ? 's' : ''}
+          </span>
+          <button onClick={() => setShowWizard(true)}
+            style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            + Add
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {leases.map(lease => {

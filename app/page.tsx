@@ -63,6 +63,7 @@ export default function Home() {
 
   // ── Quick Actions FAB ──
   const [fabOpen, setFabOpen] = useState(false);
+  const [openWizardOnTenants, setOpenWizardOnTenants] = useState(false);
   const fabRef = useRef<HTMLDivElement>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -279,7 +280,7 @@ export default function Home() {
     switch (page) {
       case 'dashboard': return <Dashboard onNavigate={setPage} />;
       case 'portfolio': return <Portfolio />;
-      case 'tenants': return <Tenants />;
+      case 'tenants': return <Tenants autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
       case 'operations': return <Operations />;
       case 'settings': return <Profile onImport={() => setShowOnboarding(true)} />;
       default: return <Dashboard onNavigate={setPage} />;
@@ -477,12 +478,13 @@ export default function Home() {
           {fabOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
               {[
-                { icon: '🔧', label: 'Log Maintenance', page: 'operations' },
-                { icon: '💬', label: 'Send Message', page: 'tenants' },
-                { icon: '💳', label: 'Request Payment', page: 'tenants' },
-                { icon: '📁', label: 'Upload Document', page: 'operations' },
+                { icon: '👤', label: 'Add Tenant', page: 'tenants', wizard: true },
+                { icon: '🔧', label: 'Log Maintenance', page: 'operations', wizard: false },
+                { icon: '💬', label: 'Send Message', page: 'tenants', wizard: false },
+                { icon: '💳', label: 'Request Payment', page: 'tenants', wizard: false },
+                { icon: '📁', label: 'Upload Document', page: 'operations', wizard: false },
               ].map(action => (
-                <button key={action.label} onClick={() => { setPage(action.page); setFabOpen(false); }}
+                <button key={action.label} onClick={() => { setPage(action.page); if (action.wizard) setOpenWizardOnTenants(true); setFabOpen(false); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 16px', fontSize: 13, fontWeight: 600, color: T.navy, cursor: 'pointer', boxShadow: T.shadowMd, whiteSpace: 'nowrap' as const }}>
                   <span style={{ fontSize: 16 }}>{action.icon}</span> {action.label}
                 </button>
