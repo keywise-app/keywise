@@ -1,116 +1,8 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
-
-function AddressAutocomplete({
-  value,
-  onChange,
-  onSelect,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onSelect: (address: string) => void;
-  placeholder?: string;
-}) {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
-  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const updateDropdownPos = () => {
-    if (!inputRef.current) return;
-    const rect = inputRef.current.getBoundingClientRect();
-    setDropdownRect({ top: rect.bottom + window.scrollY + 4, left: rect.left, width: rect.width });
-  };
-
-  const fetchSuggestions = (query: string) => {
-    console.log('fetchAddressSuggestions called with:', query);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.length < 3) { setSuggestions([]); setOpen(false); return; }
-    debounceRef.current = setTimeout(async () => {
-      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      console.log('[Mapbox] Fetching suggestions for:', query, '| token present:', !!token);
-      if (!token) {
-        console.warn('[Mapbox] NEXT_PUBLIC_MAPBOX_TOKEN is not set');
-        return;
-      }
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address&country=US&limit=5`;
-      const res = await fetch(url);
-      const data = await res.json();
-      console.log('[Mapbox] Response status:', res.status, '| features:', data.features?.length ?? 0, data);
-      const places = (data.features || []).map((f: any) => f.place_name as string);
-      setSuggestions(places);
-      if (places.length > 0) {
-        updateDropdownPos();
-        setOpen(true);
-      } else {
-        setOpen(false);
-      }
-    }, 300);
-  };
-
-  return (
-    <>
-      <input
-        ref={inputRef}
-        style={input}
-        value={value}
-        placeholder={placeholder || 'Start typing an address…'}
-        onChange={e => {
-          console.log('MAPBOX TOKEN:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.slice(0, 10));
-          console.log('Query:', e.target.value);
-          onChange(e.target.value);
-          fetchSuggestions(e.target.value);
-        }}
-        onFocus={() => { if (suggestions.length > 0) { updateDropdownPos(); setOpen(true); } }}
-        autoComplete="off"
-      />
-      {open && dropdownRect && suggestions.length > 0 && (
-        <div style={{
-          position: 'fixed',
-          top: dropdownRect.top,
-          left: dropdownRect.left,
-          width: dropdownRect.width,
-          zIndex: 1000,
-          background: '#fff',
-          border: `1px solid ${T.border}`,
-          borderRadius: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          overflow: 'hidden',
-        }}>
-          {suggestions.map((s, i) => (
-            <div
-              key={i}
-              onMouseDown={e => { e.preventDefault(); onSelect(s); setSuggestions([]); setOpen(false); }}
-              style={{
-                padding: '10px 14px', fontSize: 13, cursor: 'pointer',
-                borderBottom: i < suggestions.length - 1 ? `1px solid ${T.border}` : 'none',
-                color: T.ink, background: '#fff',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = T.tealLight)}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-            >
-              {s}
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
+import AddressInput from './AddressInput';
 
 type Building = {
   id: string;
@@ -171,7 +63,6 @@ export default function Portfolio() {
   const [analyses, setAnalyses] = useState<{ [key: string]: string }>({});
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupResult, setLookupResult] = useState<string | null>(null);
-  const [buildingAddressSelected, setBuildingAddressSelected] = useState(false);
   const [unitLookingUp, setUnitLookingUp] = useState(false);
   const [unitLookupResult, setUnitLookupResult] = useState<string | null>(null);
   const [unitAddressSelected, setUnitAddressSelected] = useState(false);
@@ -380,7 +271,6 @@ export default function Portfolio() {
       notes: building.notes || '',
     });
     setLookupResult(null);
-    setBuildingAddressSelected(false);
     setShowAddBuilding(true);
   };
 
@@ -703,7 +593,7 @@ export default function Portfolio() {
       {/* Add / Edit Building Modal */}
       {showAddBuilding && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); setBuildingAddressSelected(false); }}>
+          onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); }}>
           <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: T.shadowMd }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>
@@ -715,13 +605,12 @@ export default function Portfolio() {
 
             <div style={{ marginBottom: 14 }}>
               <label style={label}>Building Address *</label>
-              <AddressAutocomplete
+              <AddressInput
                 value={buildingForm.address}
                 placeholder="42 Maple St, Dana Point, CA 92629"
-                onChange={v => { setBuildingForm({ ...buildingForm, address: v }); setBuildingAddressSelected(false); setLookupResult(null); }}
-                onSelect={v => { setBuildingForm({ ...buildingForm, address: v }); setBuildingAddressSelected(true); setLookupResult(null); }}
+                onChange={val => { setBuildingForm({ ...buildingForm, address: val }); setLookupResult(null); }}
               />
-              {buildingAddressSelected && (
+              {!!buildingForm.address && (
                 <div style={{ marginTop: 8 }}>
                   <button
                     onClick={lookupBuildingData}
@@ -799,7 +688,7 @@ export default function Portfolio() {
               <button onClick={saveBuilding} disabled={saving || !buildingForm.address} style={{ ...btn.primary }}>
                 {saving ? 'Saving…' : editingBuilding ? 'Save Changes' : 'Save Building'}
               </button>
-              <button onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); setBuildingAddressSelected(false); }}
+              <button onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); }}
                 style={{ ...btn.ghost }}>Cancel</button>
             </div>
           </div>
