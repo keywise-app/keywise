@@ -8,59 +8,50 @@ export default function AddressInput({ value, onChange, placeholder }: {
   placeholder?: string;
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [show, setShow] = useState(false);
-  const timeoutRef = useRef<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<any>(null);
 
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
-
-  const lookup = async (q: string) => {
-    if (q.length < 3) { setSuggestions([]); setShow(false); return; }
-    const res = await fetch(`/api/address-search?q=${encodeURIComponent(q)}`);
+  const search = async (q: string) => {
+    if (q.length < 3) { setSuggestions([]); return; }
+    const res = await fetch('/api/address-search?q=' + encodeURIComponent(q));
     const data = await res.json();
-    const list: string[] = data.suggestions || [];
-    console.log('suggestions:', list, 'show:', list.length > 0);
-    setSuggestions(list);
-    if (list.length > 0 && inputRef.current) {
-      const r = inputRef.current.getBoundingClientRect();
-      setDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      setShow(true);
-    } else {
-      setShow(false);
-    }
+    setSuggestions(data.suggestions || []);
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       <input
-        ref={inputRef}
         style={input}
         value={value}
         placeholder={placeholder || 'Start typing an address...'}
         onChange={e => {
           onChange(e.target.value);
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => lookup(e.target.value), 300);
+          clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => search(e.target.value), 300);
         }}
-        onBlur={() => setTimeout(() => setShow(false), 200)}
       />
-      {show && suggestions.length > 0 && dropdownPos && (
+      {suggestions.length > 0 && (
         <div style={{
-          position: 'fixed',
-          top: dropdownPos.top,
-          left: dropdownPos.left,
-          width: dropdownPos.width,
-          zIndex: 99999,
           background: 'white',
           border: `1px solid ${T.border}`,
           borderRadius: 8,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          marginTop: 4,
+          zIndex: 99999,
+          position: 'relative',
         }}>
           {suggestions.map((s, i) => (
-            <div key={i}
-              onMouseDown={() => { onChange(s); setShow(false); }}
+            <div
+              key={i}
+              onMouseDown={e => {
+                e.preventDefault();
+                onChange(s);
+                setSuggestions([]);
+              }}
               style={{
-                padding: '10px 14px', cursor: 'pointer', fontSize: 13, color: T.ink,
+                padding: '10px 14px',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: T.ink,
                 borderBottom: i < suggestions.length - 1 ? `1px solid ${T.border}` : 'none',
                 background: 'white',
               }}
