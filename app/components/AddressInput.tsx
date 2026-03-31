@@ -10,19 +10,24 @@ export default function AddressInput({ value, onChange, placeholder }: {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [show, setShow] = useState(false);
   const timeoutRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const lookup = async (q: string) => {
     if (q.length < 3) { setSuggestions([]); setShow(false); return; }
     const res = await fetch(`/api/address-search?q=${encodeURIComponent(q)}`);
     const data = await res.json();
     const list: string[] = data.suggestions || [];
+    console.log('suggestions:', list, 'show:', list.length > 0);
     setSuggestions(list);
     setShow(list.length > 0);
   };
 
+  const rect = inputRef.current?.getBoundingClientRect();
+
   return (
     <div style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         style={input}
         value={value}
         placeholder={placeholder || 'Start typing an address...'}
@@ -33,11 +38,17 @@ export default function AddressInput({ value, onChange, placeholder }: {
         }}
         onBlur={() => setTimeout(() => setShow(false), 200)}
       />
-      {show && (
+      {show && suggestions.length > 0 && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-          background: 'white', border: `1px solid ${T.border}`,
-          borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 4,
+          position: 'fixed',
+          top: (rect?.bottom ?? 0) + 4,
+          left: rect?.left ?? 0,
+          width: rect?.width ?? 300,
+          zIndex: 99999,
+          background: 'white',
+          border: `1px solid ${T.border}`,
+          borderRadius: 8,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
         }}>
           {suggestions.map((s, i) => (
             <div key={i}
