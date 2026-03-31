@@ -11,51 +11,39 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY!,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
-        tools: [{
-          type: 'web_search_20250305',
-          name: 'web_search',
-        }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search for public property information for this address: ${address}. Look on Zillow, Redfin, county assessor records, or any public source. Return ONLY a JSON object with these fields (use null if not found): { "year_built": number, "sqft": number, "beds": number, "baths": number, "property_type": "house/condo/duplex/apartment/townhouse", "num_units": number, "estimated_value": number }. Return only the JSON, no other text.`,
+          content: `Search Zillow, Redfin, or county assessor records for this property: "${address}". Find: year built, square footage, number of bedrooms, bathrooms, property type. Return ONLY valid JSON: {"year_built":null,"sqft":null,"beds":null,"baths":null,"property_type":null,"num_units":null}. No other text.`,
         }],
       }),
     });
 
-    const data = await response.json();
+    const result = await response.json();
+    console.log('[lookup-property] Full Claude response:', JSON.stringify(result, null, 2));
 
     if (!response.ok) {
-      console.error('[lookup-property] Anthropic error:', data);
-      return NextResponse.json({ error: 'API error', details: data }, { status: 500 });
+      console.error('[lookup-property] Anthropic error:', result);
+      return NextResponse.json({ error: 'API error', details: result }, { status: 500 });
     }
 
-    // Find the text block in the response (may be after tool_use blocks)
-    const textBlock = data.content?.find((b: any) => b.type === 'text');
-    if (!textBlock?.text) {
+    // Extract text from the last text content block
+    const textBlock = result.content?.filter((c: any) => c.type === 'text').pop();
+    const text = textBlock?.text || '{}';
+    const cleaned = text.replace(/```json|```/g, '').trim();
+
+    try {
+      const parsed = JSON.parse(cleaned);
+      const hasData = Object.values(parsed).some(v => v !== null && v !== undefined);
+      return NextResponse.json(hasData ? { found: true, data: parsed } : { found: false });
+    } catch {
+      console.error('[lookup-property] JSON parse failed, raw text:', text);
       return NextResponse.json({ found: false });
     }
-
-    // Extract JSON from the response text
-    const text = textBlock.text.trim();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json({ found: false });
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    // Check if we actually got any useful data
-    const hasData = Object.values(parsed).some(v => v !== null && v !== undefined);
-    if (!hasData) {
-      return NextResponse.json({ found: false });
-    }
-
-    return NextResponse.json({ found: true, data: parsed });
   } catch (err: any) {
     console.error('[lookup-property] Unexpected error:', err);
     return NextResponse.json({ error: err.message || 'Lookup failed' }, { status: 500 });
