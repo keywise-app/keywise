@@ -16,12 +16,13 @@ function AddressAutocomplete({
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -29,46 +30,69 @@ function AddressAutocomplete({
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const updateDropdownPos = () => {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropdownRect({ top: rect.bottom + window.scrollY + 4, left: rect.left, width: rect.width });
+  };
+
   const fetchSuggestions = (query: string) => {
-    if (debounce.current) clearTimeout(debounce.current);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.length < 3) { setSuggestions([]); setOpen(false); return; }
-    debounce.current = setTimeout(async () => {
+    debounceRef.current = setTimeout(async () => {
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      if (!token) return;
-      const res = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address&country=US&limit=5`
-      );
+      console.log('[Mapbox] Fetching suggestions for:', query, '| token present:', !!token);
+      if (!token) {
+        console.warn('[Mapbox] NEXT_PUBLIC_MAPBOX_TOKEN is not set');
+        return;
+      }
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address&country=US&limit=5`;
+      const res = await fetch(url);
       const data = await res.json();
+      console.log('[Mapbox] Response status:', res.status, '| features:', data.features?.length ?? 0, data);
       const places = (data.features || []).map((f: any) => f.place_name as string);
       setSuggestions(places);
-      setOpen(places.length > 0);
+      if (places.length > 0) {
+        updateDropdownPos();
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
     }, 300);
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <>
       <input
+        ref={inputRef}
         style={input}
         value={value}
         placeholder={placeholder || 'Start typing an address…'}
         onChange={e => { onChange(e.target.value); fetchSuggestions(e.target.value); }}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onFocus={() => { if (suggestions.length > 0) { updateDropdownPos(); setOpen(true); } }}
         autoComplete="off"
       />
-      {open && (
+      {open && dropdownRect && suggestions.length > 0 && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
-          background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radiusSm,
-          boxShadow: '0 4px 16px rgba(15,52,96,0.12)', marginTop: 2, overflow: 'hidden',
+          position: 'fixed',
+          top: dropdownRect.top,
+          left: dropdownRect.left,
+          width: dropdownRect.width,
+          zIndex: 1000,
+          background: '#fff',
+          border: `1px solid ${T.border}`,
+          borderRadius: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
         }}>
           {suggestions.map((s, i) => (
             <div
               key={i}
-              onMouseDown={() => { onSelect(s); setSuggestions([]); setOpen(false); }}
+              onMouseDown={e => { e.preventDefault(); onSelect(s); setSuggestions([]); setOpen(false); }}
               style={{
                 padding: '10px 14px', fontSize: 13, cursor: 'pointer',
                 borderBottom: i < suggestions.length - 1 ? `1px solid ${T.border}` : 'none',
-                color: T.ink,
+                color: T.ink, background: '#fff',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = T.tealLight)}
               onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
@@ -78,7 +102,7 @@ function AddressAutocomplete({
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
