@@ -1,7 +1,86 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
+
+function AddressAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (address: string) => void;
+  placeholder?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const fetchSuggestions = (query: string) => {
+    if (debounce.current) clearTimeout(debounce.current);
+    if (query.length < 3) { setSuggestions([]); setOpen(false); return; }
+    debounce.current = setTimeout(async () => {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      if (!token) return;
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address&country=US&limit=5`
+      );
+      const data = await res.json();
+      const places = (data.features || []).map((f: any) => f.place_name as string);
+      setSuggestions(places);
+      setOpen(places.length > 0);
+    }, 300);
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <input
+        style={input}
+        value={value}
+        placeholder={placeholder || 'Start typing an address…'}
+        onChange={e => { onChange(e.target.value); fetchSuggestions(e.target.value); }}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        autoComplete="off"
+      />
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
+          background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radiusSm,
+          boxShadow: '0 4px 16px rgba(15,52,96,0.12)', marginTop: 2, overflow: 'hidden',
+        }}>
+          {suggestions.map((s, i) => (
+            <div
+              key={i}
+              onMouseDown={() => { onSelect(s); setSuggestions([]); setOpen(false); }}
+              style={{
+                padding: '10px 14px', fontSize: 13, cursor: 'pointer',
+                borderBottom: i < suggestions.length - 1 ? `1px solid ${T.border}` : 'none',
+                color: T.ink,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = T.tealLight)}
+              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+            >
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Building = {
   id: string;
@@ -60,6 +139,12 @@ export default function Portfolio() {
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analyses, setAnalyses] = useState<{ [key: string]: string }>({});
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupResult, setLookupResult] = useState<string | null>(null);
+  const [buildingAddressSelected, setBuildingAddressSelected] = useState(false);
+  const [unitLookingUp, setUnitLookingUp] = useState(false);
+  const [unitLookupResult, setUnitLookupResult] = useState<string | null>(null);
+  const [unitAddressSelected, setUnitAddressSelected] = useState(false);
 
   const emptyBuilding = {
     address: '', name: '', type: 'Duplex', year_built: '',
@@ -183,6 +268,74 @@ export default function Portfolio() {
     await fetchAll();
   };
 
+  const formatLookupResult = (d: any): string => {
+    const parts: string[] = [];
+    if (d.beds) parts.push(`${d.beds} bed`);
+    if (d.baths) parts.push(`${d.baths} bath`);
+    if (d.sqft) parts.push(`${d.sqft.toLocaleString()} sqft`);
+    if (d.year_built) parts.push(`built ${d.year_built}`);
+    if (d.estimated_value) parts.push(`est. value $${d.estimated_value.toLocaleString()}`);
+    return parts.join(' · ') || 'Some data found';
+  };
+
+  const lookupBuildingData = async () => {
+    if (!buildingForm.address) return;
+    setLookingUp(true);
+    setLookupResult(null);
+    const res = await fetch('/api/lookup-property', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: buildingForm.address }),
+    });
+    const data = await res.json();
+    setLookingUp(false);
+    if (!data.found || !data.data) {
+      setLookupResult('none');
+      return;
+    }
+    const d = data.data;
+    const typeMap: Record<string, string> = {
+      house: 'Single Family', condo: 'Condo', duplex: 'Duplex',
+      apartment: 'Apartment Building', townhouse: 'Townhouse',
+    };
+    setBuildingForm((f: any) => ({
+      ...f,
+      year_built: d.year_built ?? f.year_built,
+      num_units: d.num_units ?? f.num_units,
+      type: d.property_type && typeMap[d.property_type.toLowerCase()] ? typeMap[d.property_type.toLowerCase()] : f.type,
+    }));
+    setLookupResult(formatLookupResult(d));
+  };
+
+  const lookupUnitData = async () => {
+    const building = buildings.find(b => b.id === unitForm.building_id);
+    const address = building
+      ? building.address + (unitForm.unit_number ? ', Unit ' + unitForm.unit_number : '')
+      : '';
+    if (!address) return;
+    setUnitLookingUp(true);
+    setUnitLookupResult(null);
+    const res = await fetch('/api/lookup-property', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+    });
+    const data = await res.json();
+    setUnitLookingUp(false);
+    if (!data.found || !data.data) {
+      setUnitLookupResult('none');
+      return;
+    }
+    const d = data.data;
+    setUnitForm((f: any) => ({
+      ...f,
+      beds: d.beds ?? f.beds,
+      baths: d.baths ? String(d.baths) : f.baths,
+      sqft: d.sqft ?? f.sqft,
+    }));
+    setUnitLookupResult(formatLookupResult(d));
+  };
+
   const openEditBuilding = (building: Building) => {
     setEditingBuilding(building);
     setBuildingForm({
@@ -196,6 +349,8 @@ export default function Portfolio() {
       hoa_fee: building.hoa_fee || '',
       notes: building.notes || '',
     });
+    setLookupResult(null);
+    setBuildingAddressSelected(false);
     setShowAddBuilding(true);
   };
 
@@ -212,6 +367,8 @@ export default function Portfolio() {
       laundry: unit.laundry || 'in-unit',
       parking: unit.parking || 'included',
     });
+    setUnitLookupResult(null);
+    setUnitAddressSelected(false);
     setShowAddUnit(true);
   };
 
@@ -516,7 +673,7 @@ export default function Portfolio() {
       {/* Add / Edit Building Modal */}
       {showAddBuilding && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); }}>
+          onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); setBuildingAddressSelected(false); }}>
           <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: T.shadowMd }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>
@@ -528,8 +685,33 @@ export default function Portfolio() {
 
             <div style={{ marginBottom: 14 }}>
               <label style={label}>Building Address *</label>
-              <input style={input} value={buildingForm.address} placeholder="42 Maple St, Dana Point, CA 92629"
-                onChange={e => setBuildingForm({ ...buildingForm, address: e.target.value })} />
+              <AddressAutocomplete
+                value={buildingForm.address}
+                placeholder="42 Maple St, Dana Point, CA 92629"
+                onChange={v => { setBuildingForm({ ...buildingForm, address: v }); setBuildingAddressSelected(false); setLookupResult(null); }}
+                onSelect={v => { setBuildingForm({ ...buildingForm, address: v }); setBuildingAddressSelected(true); setLookupResult(null); }}
+              />
+              {buildingAddressSelected && (
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    onClick={lookupBuildingData}
+                    disabled={lookingUp}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, color: T.tealDark, fontWeight: 600 }}>
+                    {lookingUp ? '✦ Searching public records…' : '✦ Look up property data'}
+                  </button>
+                </div>
+              )}
+              {lookupResult && lookupResult !== 'none' && (
+                <div style={{ marginTop: 8, background: T.tealLight, border: `1px solid ${T.teal}44`, borderRadius: T.radiusSm, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 13, color: T.tealDark, fontWeight: 600 }}>✦ Found: {lookupResult}</div>
+                  <div style={{ fontSize: 11, color: T.tealDark, marginTop: 3, opacity: 0.8 }}>Not right? Edit the fields below.</div>
+                </div>
+              )}
+              {lookupResult === 'none' && (
+                <div style={{ marginTop: 8, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: T.inkMuted }}>
+                  No public data found for this address. Please fill in manually.
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: 14 }}>
@@ -587,7 +769,7 @@ export default function Portfolio() {
               <button onClick={saveBuilding} disabled={saving || !buildingForm.address} style={{ ...btn.primary }}>
                 {saving ? 'Saving…' : editingBuilding ? 'Save Changes' : 'Save Building'}
               </button>
-              <button onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); }}
+              <button onClick={() => { setShowAddBuilding(false); setEditingBuilding(null); setBuildingForm(emptyBuilding); setLookupResult(null); setBuildingAddressSelected(false); }}
                 style={{ ...btn.ghost }}>Cancel</button>
             </div>
           </div>
@@ -597,7 +779,7 @@ export default function Portfolio() {
       {/* Add / Edit Unit Modal */}
       {showAddUnit && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAddUnit(false); setEditingUnit(null); setUnitForm(emptyUnit); }}>
+          onClick={() => { setShowAddUnit(false); setEditingUnit(null); setUnitForm(emptyUnit); setUnitLookupResult(null); setUnitAddressSelected(false); }}>
           <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 500, boxShadow: T.shadowMd }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>
@@ -620,6 +802,27 @@ export default function Portfolio() {
               <label style={label}>Unit Number / Identifier</label>
               <input style={input} value={unitForm.unit_number} placeholder="e.g. 1, 2, A, B, Upper, Lower"
                 onChange={e => setUnitForm({ ...unitForm, unit_number: e.target.value })} />
+              {unitForm.building_id && (
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    onClick={lookupUnitData}
+                    disabled={unitLookingUp}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, color: T.tealDark, fontWeight: 600 }}>
+                    {unitLookingUp ? '✦ Searching public records…' : '✦ Look up unit data'}
+                  </button>
+                </div>
+              )}
+              {unitLookupResult && unitLookupResult !== 'none' && (
+                <div style={{ marginTop: 8, background: T.tealLight, border: `1px solid ${T.teal}44`, borderRadius: T.radiusSm, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 13, color: T.tealDark, fontWeight: 600 }}>✦ Found: {unitLookupResult}</div>
+                  <div style={{ fontSize: 11, color: T.tealDark, marginTop: 3, opacity: 0.8 }}>Not right? Edit the fields below.</div>
+                </div>
+              )}
+              {unitLookupResult === 'none' && (
+                <div style={{ marginTop: 8, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: T.inkMuted }}>
+                  No public data found for this unit. Please fill in manually.
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
@@ -678,7 +881,7 @@ export default function Portfolio() {
               <button onClick={saveUnit} disabled={saving || !unitForm.building_id} style={{ ...btn.primary }}>
                 {saving ? 'Saving…' : editingUnit ? 'Save Changes' : 'Save Unit'}
               </button>
-              <button onClick={() => { setShowAddUnit(false); setEditingUnit(null); setUnitForm(emptyUnit); }}
+              <button onClick={() => { setShowAddUnit(false); setEditingUnit(null); setUnitForm(emptyUnit); setUnitLookupResult(null); setUnitAddressSelected(false); }}
                 style={{ ...btn.ghost }}>Cancel</button>
             </div>
           </div>
