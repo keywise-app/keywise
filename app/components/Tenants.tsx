@@ -115,28 +115,20 @@ export default function Tenants() {
     if (!selected) return;
     if (!confirm('Remove ' + selected.tenant_name + '? This will also delete their payments, documents, and signing records.')) return;
 
-    const steps: { table: string; error: any }[] = [];
+    const { error: tokenError } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
+    if (tokenError) { alert('Error deleting signing tokens: ' + tokenError.message); return; }
 
-    const { error: e1 } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
-    if (e1) steps.push({ table: 'signing_tokens', error: e1 });
+    const { error: docError } = await supabase.from('documents').delete().eq('lease_id', selected.id);
+    if (docError) { alert('Error deleting documents: ' + docError.message); return; }
 
-    const { error: e2 } = await supabase.from('documents').delete().eq('lease_id', selected.id);
-    if (e2) steps.push({ table: 'documents', error: e2 });
+    const { error: payError } = await supabase.from('payments').delete().eq('lease_id', selected.id);
+    if (payError) { alert('Error deleting payments: ' + payError.message); return; }
 
-    const { error: e3 } = await supabase.from('payments').delete().eq('lease_id', selected.id);
-    if (e3) steps.push({ table: 'payments', error: e3 });
+    const { error: leaseError } = await supabase.from('leases').delete().eq('id', selected.id);
+    if (leaseError) { alert('Error deleting lease: ' + leaseError.message); return; }
 
-    const { error: e4 } = await supabase.from('leases').delete().eq('id', selected.id);
-    if (e4) steps.push({ table: 'leases', error: e4 });
-
-    if (steps.length > 0) {
-      alert('Deletion failed:\n' + steps.map(s => s.table + ': ' + s.error.message).join('\n'));
-      return;
-    }
-
-    const remaining = leases.filter(l => l.id !== selected.id);
-    setLeases(remaining);
-    setSelected(remaining.length > 0 ? remaining[0] : null);
+    setSelected(null);
+    await fetchAll();
   };
 
   const getDaysLeft = (endDate: string) =>
