@@ -6,12 +6,15 @@ import { T, btn } from '../lib/theme';
 export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: string } = {}) {
   const [lease, setLease] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [landlord, setLandlord] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [msgText, setMsgText] = useState('');
   const [msgSending, setMsgSending] = useState(false);
   const [msgSent, setMsgSent] = useState(false);
   const [payNowLoading, setPayNowLoading] = useState<Record<string, boolean>>({});
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [docLoading, setDocLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => { fetchData(); }, []);
 
@@ -22,11 +25,9 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     let leaseData: any = null;
 
     if (previewLeaseId) {
-      // Preview mode — fetch lease directly by ID for the landlord
       const { data } = await supabase.from('leases').select('*').eq('id', previewLeaseId).single();
       leaseData = data;
     } else {
-      // Tenant flow — try by user ID first, fall back to email match
       const { data: byUserId } = await supabase
         .from('leases')
         .select('*')
@@ -43,7 +44,6 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           .single();
         if (byEmail) {
           leaseData = byEmail;
-          // Opportunistically link the user ID now that we found the lease
           await supabase
             .from('leases')
             .update({ tenant_user_id: user.id })
@@ -55,7 +55,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!leaseData) { setLoading(false); return; }
     setLease(leaseData);
 
-    const [payRes, landlordRes] = await Promise.all([
+    const [payRes, landlordRes, docRes] = await Promise.all([
       supabase
         .from('payments')
         .select('*')
@@ -66,10 +66,16 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         .select('full_name, email, phone, company')
         .eq('id', leaseData.user_id)
         .single(),
+      supabase
+        .from('documents')
+        .select('*')
+        .eq('lease_id', leaseData.id)
+        .order('created_at', { ascending: false }),
     ]);
 
     if (payRes.data) setPayments(payRes.data);
     if (landlordRes.data) setLandlord(landlordRes.data);
+    if (docRes.data) setDocuments(docRes.data);
     setLoading(false);
   };
 
@@ -102,26 +108,49 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   };
 
   const sendMessage = async () => {
-    if (!msgText.trim() || !landlord?.phone) return;
+    if (!msgText.trim()) return;
     setMsgSending(true);
-    try {
-      const res = await fetch('/api/send-sms', {
+    const senderName = lease?.tenant_name?.split(' ')[0] || 'Your tenant';
+    const promises: Promise<any>[] = [];
+    if (landlord?.phone) {
+      promises.push(fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: landlord.phone, message: msgText }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        alert('Failed to send: ' + data.error);
-      } else {
-        setMsgSent(true);
-        setMsgText('');
-        setTimeout(() => setMsgSent(false), 4000);
-      }
+        body: JSON.stringify({ to: landlord.phone, message: `${senderName}: ${msgText}` }),
+      }));
+    }
+    if (landlord?.email) {
+      promises.push(fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: landlord.email,
+          subject: `Message from ${senderName} — ${lease?.property?.split(',')[0] || lease?.property}`,
+          from_name: senderName,
+          html: `<p><strong>${senderName}</strong> sent you a message via Keywise:</p><blockquote style="border-left:3px solid #00D4AA;padding-left:12px;margin:12px 0;color:#333">${msgText}</blockquote><p style="color:#888;font-size:12px">Tenant: ${lease?.tenant_name} · ${lease?.property}</p>`,
+        }),
+      }));
+    }
+    try {
+      await Promise.all(promises);
+      setMsgSent(true);
+      setMsgText('');
+      setTimeout(() => setMsgSent(false), 4000);
     } catch (err: any) {
       alert('Error: ' + (err.message || 'Could not send message.'));
     }
     setMsgSending(false);
+  };
+
+  const openDocument = async (doc: any) => {
+    if (docUrls[doc.id]) { window.open(docUrls[doc.id], '_blank'); return; }
+    setDocLoading(prev => ({ ...prev, [doc.id]: true }));
+    const { data } = await supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600);
+    if (data?.signedUrl) {
+      setDocUrls(prev => ({ ...prev, [doc.id]: data.signedUrl }));
+      window.open(data.signedUrl, '_blank');
+    }
+    setDocLoading(prev => ({ ...prev, [doc.id]: false }));
   };
 
   const outstanding = payments.filter(p => p.status !== 'paid');
@@ -133,6 +162,24 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     return { background: T.amberLight, color: T.amberDark };
   };
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const leaseProgress = () => {
+    if (!lease?.start_date || !lease?.end_date) return null;
+    const start = new Date(lease.start_date).getTime();
+    const end = new Date(lease.end_date).getTime();
+    const now = Date.now();
+    if (now < start || end <= start) return null;
+    const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+    const daysLeft = Math.ceil((end - now) / 86400000);
+    return { pct, daysLeft };
+  };
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: T.inkMuted, fontSize: 14 }}>
       Loading your dashboard…
@@ -141,7 +188,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
 
   if (!lease) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ textAlign: 'center', maxWidth: 420 }}>
+      <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 20px' }}>
         <div style={{ fontSize: 36, marginBottom: 16 }}>🏠</div>
         <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 8 }}>Lease not found</div>
         <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
@@ -152,11 +199,10 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   );
 
   const propertyShort = lease.property?.split(',')[0] || lease.property;
+  const progress = leaseProgress();
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <style>{`* { box-sizing: border-box; } body { margin: 0; } button, input, select, textarea { font-family: inherit; }`}</style>
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 0 40px' }}>
 
       {/* Preview banner */}
       {previewLeaseId && (
@@ -166,9 +212,9 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 26, fontWeight: 700, color: T.navy, letterSpacing: '-0.5px' }}>
-          Welcome back, {lease.tenant_name?.split(' ')[0] || 'there'} 👋
+          {greeting()}, {lease.tenant_name?.split(' ')[0] || 'there'} 👋
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.tealLight, border: `1px solid ${T.teal}44`, borderRadius: 20, padding: '4px 12px', marginTop: 8 }}>
           <span style={{ fontSize: 13 }}>🏠</span>
@@ -176,8 +222,32 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       </div>
 
+      {/* Lease Progress */}
+      {progress && (
+        <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 20, marginBottom: 16, boxShadow: T.shadow }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Lease Progress</div>
+            <div style={{ fontSize: 12, color: progress.daysLeft <= 90 ? T.coral : T.inkMuted, fontWeight: 600 }}>
+              {progress.daysLeft > 0 ? `${progress.daysLeft} days remaining` : 'Lease ended'}
+            </div>
+          </div>
+          <div style={{ height: 8, background: T.bg, borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 4,
+              width: `${progress.pct}%`,
+              background: progress.daysLeft <= 30 ? T.coral : progress.daysLeft <= 90 ? T.amber : T.teal,
+              transition: 'width 0.6s ease',
+            }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: T.inkMuted }}>
+            <span>{lease.start_date}</span>
+            <span>{lease.end_date}</span>
+          </div>
+        </div>
+      )}
+
       {/* Outstanding Payments */}
-      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
+      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Outstanding Payments</div>
         <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Payments due or upcoming</div>
 
@@ -204,7 +274,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                   </div>
                   <div style={{ fontSize: 13, color: T.inkMuted }}>
                     Due {p.due_date}
-                    {(p as any).description ? ` · ${(p as any).description}` : ''}
+                    {p.description ? ` · ${p.description}` : ''}
                   </div>
                 </div>
                 <button
@@ -228,67 +298,116 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
 
       {/* Payment History */}
       {history.length > 0 && (
-        <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
+        <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Payment History</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['Amount', 'Due Date', 'Paid On', 'Status'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', fontSize: 11, color: T.inkMuted, fontWeight: 700, padding: '6px 12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `2px solid ${T.border}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {history.map(p => (
-                <tr key={p.id}>
-                  <td style={{ padding: '11px 12px', fontSize: 14, fontWeight: 700, color: T.navy, borderBottom: `1px solid ${T.border}` }}>${(p.amount || 0).toLocaleString()}</td>
-                  <td style={{ padding: '11px 12px', fontSize: 13, color: T.inkMid, borderBottom: `1px solid ${T.border}` }}>{p.due_date}</td>
-                  <td style={{ padding: '11px 12px', fontSize: 13, color: T.inkMuted, borderBottom: `1px solid ${T.border}` }}>{p.paid_date || '—'}</td>
-                  <td style={{ padding: '11px 12px', borderBottom: `1px solid ${T.border}` }}>
-                    <span style={{ ...statusStyle(p.status), padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const }}>
-                      {p.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {history.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: `1px solid ${T.border}` }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
+                    <span style={{ ...statusStyle(p.status), fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>paid</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>
+                    {p.paid_date ? `Paid ${p.paid_date}` : `Due ${p.due_date}`}
+                    {p.method ? ` · ${p.method}` : ''}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const w = window.open('', '_blank')!;
+                    w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title><style>body{font-family:Arial,sans-serif;max-width:500px;margin:40px auto;padding:0 20px}h2{color:#0F3460}table{width:100%;border-collapse:collapse}td{padding:8px 0;border-bottom:1px solid #eee}td:last-child{text-align:right;font-weight:600}@media print{button{display:none}}</style></head><body><h2>Keywise — Payment Receipt</h2><p>Receipt for ${lease.tenant_name} at ${propertyShort}</p><table><tr><td>Amount</td><td>$${(p.amount||0).toLocaleString()}</td></tr><tr><td>Paid On</td><td>${p.paid_date||'—'}</td></tr><tr><td>Method</td><td>${p.method||'—'}</td></tr><tr><td>Property</td><td>${propertyShort}</td></tr></table><br/><button onclick="window.print()">Print Receipt</button></body></html>`);
+                    w.document.close();
+                  }}
+                  style={{ ...btn.ghost, fontSize: 11, padding: '5px 10px', flexShrink: 0 }}>
+                  ↓ Receipt
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Lease Details */}
-      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
+      {/* Documents */}
+      {documents.length > 0 && (
+        <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Documents</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {documents.map(doc => (
+              <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.bg, borderRadius: T.radiusSm, border: `1px solid ${T.border}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                    {doc.name || doc.file_name || 'Document'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                    <span style={{ fontSize: 11, color: T.inkMuted }}>{doc.type || 'Document'}</span>
+                    {doc.signed_at ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: T.greenLight, color: T.greenDark, padding: '1px 7px', borderRadius: 10 }}>
+                        ✓ Signed {doc.signed_at.slice(0, 10)}
+                      </span>
+                    ) : doc.requires_signature ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: T.amberLight, color: T.amberDark, padding: '1px 7px', borderRadius: 10 }}>
+                        Awaiting signature
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  onClick={() => openDocument(doc)}
+                  disabled={docLoading[doc.id]}
+                  style={{ ...btn.ghost, fontSize: 11, padding: '5px 12px', flexShrink: 0, marginLeft: 10 }}>
+                  {docLoading[doc.id] ? '…' : '↓ View'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lease Details + Landlord */}
+      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Lease Details</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {[
             { label: 'Monthly Rent', value: '$' + (lease.rent || 0).toLocaleString() + '/mo' },
             { label: 'Lease Start', value: lease.start_date || '—' },
             { label: 'Lease End', value: lease.end_date || 'Month-to-month' },
-            { label: 'Payment Due', value: lease.payment_day ? `${lease.payment_day}${ordinal(lease.payment_day)} of the month` : '—' },
+            { label: 'Payment Due', value: lease.payment_day ? `${lease.payment_day}${ordinal(lease.payment_day)} of month` : '—' },
           ].map(item => (
-            <div key={item.label} style={{ background: T.bg, borderRadius: T.radiusSm, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.navy }}>{item.value}</div>
+            <div key={item.label} style={{ background: T.bg, borderRadius: T.radiusSm, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 4 }}>{item.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy }}>{item.value}</div>
             </div>
           ))}
         </div>
 
         {landlord && (
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 12, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Your Landlord</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 4 }}>{landlord.full_name || landlord.company || '—'}</div>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {landlord.email && <span style={{ fontSize: 13, color: T.inkMid }}>📧 {landlord.email}</span>}
-              {landlord.phone && <span style={{ fontSize: 13, color: T.inkMid }}>📞 {landlord.phone}</span>}
+            <div style={{ fontSize: 12, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 10 }}>Your Landlord</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: T.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+                  {(landlord.full_name || landlord.company || '?')[0].toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.navy }}>{landlord.full_name || landlord.company || '—'}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '2px 14px', marginTop: 3 }}>
+                  {landlord.email && <span style={{ fontSize: 12, color: T.inkMuted }}>✉ {landlord.email}</span>}
+                  {landlord.phone && <span style={{ fontSize: 12, color: T.inkMuted }}>📞 {landlord.phone}</span>}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Message Landlord */}
-      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
+      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Message Your Landlord</div>
-        <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Send a quick message via SMS</div>
+        <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+          {landlord?.email && landlord?.phone ? 'Sends via SMS and email' : landlord?.email ? 'Sends via email' : landlord?.phone ? 'Sends via SMS' : 'No contact info on file'}
+        </div>
 
         {msgSent ? (
           <div style={{ background: T.greenLight, border: `1px solid ${T.green}33`, borderRadius: T.radiusSm, padding: '14px 18px', fontSize: 14, fontWeight: 600, color: T.greenDark }}>
@@ -309,13 +428,13 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
             />
             <button
               onClick={sendMessage}
-              disabled={!msgText.trim() || msgSending || !landlord?.phone}
-              style={{ ...btn.primary, opacity: (!msgText.trim() || msgSending || !landlord?.phone) ? 0.6 : 1 }}>
+              disabled={!msgText.trim() || msgSending || (!landlord?.phone && !landlord?.email)}
+              style={{ ...btn.primary, opacity: (!msgText.trim() || msgSending || (!landlord?.phone && !landlord?.email)) ? 0.6 : 1 }}>
               {msgSending ? 'Sending…' : '📤 Send Message'}
             </button>
-            {!landlord?.phone && (
+            {!landlord?.phone && !landlord?.email && (
               <div style={{ marginTop: 8, fontSize: 12, color: T.inkMuted }}>
-                Your landlord hasn't set up a phone number yet. Try emailing them directly.
+                Your landlord hasn't set up contact info yet.
               </div>
             )}
           </>
@@ -323,7 +442,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       </div>
 
       {/* Sign out */}
-      <div style={{ textAlign: 'center', paddingBottom: 40 }}>
+      <div style={{ textAlign: 'center', paddingTop: 8 }}>
         <button onClick={() => supabase.auth.signOut()}
           style={{ background: 'none', border: 'none', color: T.inkMuted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Sign out

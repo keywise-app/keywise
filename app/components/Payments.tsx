@@ -53,6 +53,7 @@ export default function Payments() {
   const [showRequest, setShowRequest] = useState(false);
   const [requestForm, setRequestForm] = useState({ lease_id: '', tenant_name: '', property: '', amount: '', description: '', due_date: '' });
   const [requestLoading, setRequestLoading] = useState(false);
+  const [receiptSent, setReceiptSent] = useState<string | null>(null);
 
   const emptyForm = {
     lease_id: '', tenant_name: '', property: '',
@@ -199,6 +200,28 @@ export default function Payments() {
     if (!error) {
       setPayments(payments.map(p => p.id === selectedPayment.id
         ? { ...p, status: 'paid', paid_date: paidDate, method } : p));
+
+      // Send receipt email if tenant has email on file
+      const lease = leases.find(l => l.id === selectedPayment.lease_id) as any;
+      if (lease?.email) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
+        fetch('/api/send-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payment_id: selectedPayment.id,
+            tenant_name: selectedPayment.tenant_name,
+            tenant_email: lease.email,
+            property: selectedPayment.property,
+            amount: selectedPayment.amount,
+            paid_date: paidDate,
+            method,
+            landlord_name: profile?.full_name || '',
+            landlord_email: profile?.email || '',
+          }),
+        }).then(r => r.ok && (setReceiptSent(lease.email), setTimeout(() => setReceiptSent(null), 5000)));
+      }
     }
     setShowRecord(false);
     setSelectedPayment(null);
@@ -301,6 +324,12 @@ export default function Payments() {
 
   return (
     <div>
+      {/* Receipt sent toast */}
+      {receiptSent && (
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+          <span style={{ color: T.teal }}>✓</span> Receipt sent to {receiptSent}
+        </div>
+      )}
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {[

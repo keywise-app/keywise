@@ -17,6 +17,10 @@ type Document = {
   notes: string;
   size: string;
   created_at: string;
+  signed_at?: string;
+  signer_name?: string;
+  signature_type?: string;
+  requires_signature?: boolean;
 };
 
 const inputStyle = {
@@ -72,6 +76,11 @@ export default function Documents() {
   const [editForm, setEditForm] = useState<any>(null);
   const [editSaving, setEditSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [signingDoc, setSigningDoc] = useState<Document | null>(null);
+  const [signingForm, setSigningForm] = useState({ lease_id: '', tenant_email: '', tenant_name: '' });
+  const [signingSending, setSigningSending] = useState(false);
+  const [signingSent, setSigningSent] = useState<string | null>(null);
+  const [landlordProfile, setLandlordProfile] = useState<{ full_name: string; email: string } | null>(null);
 
   const emptyForm = {
     name: '', type: 'lease', ownership_level: 'tenant',
@@ -84,15 +93,46 @@ export default function Documents() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [docsRes, leasesRes, propsRes] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser();
+    const [docsRes, leasesRes, propsRes, profRes] = await Promise.all([
       supabase.from('documents').select('*').order('created_at', { ascending: false }),
-      supabase.from('leases').select('id, tenant_name, property').order('tenant_name'),
+      supabase.from('leases').select('id, tenant_name, property, email').order('tenant_name'),
       supabase.from('properties').select('address'),
+      user ? supabase.from('profiles').select('full_name, email').eq('id', user.id).single() : Promise.resolve({ data: null }),
     ]);
     if (docsRes.data) setDocuments(docsRes.data);
     if (leasesRes.data) setLeases(leasesRes.data);
     if (propsRes.data) setProperties(propsRes.data.map(p => p.address));
+    if (profRes.data) setLandlordProfile(profRes.data);
     setLoading(false);
+  };
+
+  const sendSigningLink = async () => {
+    if (!signingDoc) return;
+    const lease = leases.find(l => l.id === signingForm.lease_id);
+    const tenantEmail = signingForm.tenant_email || lease?.email || '';
+    const tenantName = signingForm.tenant_name || lease?.tenant_name || signingDoc.tenant_name || '';
+    if (!tenantEmail) { alert('Please enter a tenant email address.'); return; }
+    setSigningSending(true);
+    const res = await fetch('/api/signing-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_id: signingDoc.id,
+        lease_id: signingForm.lease_id || signingDoc.lease_id || null,
+        tenant_email: tenantEmail,
+        tenant_name: tenantName,
+        document_name: signingDoc.name,
+        landlord_name: landlordProfile?.full_name || '',
+        landlord_email: landlordProfile?.email || '',
+      }),
+    });
+    const data = await res.json();
+    setSigningSending(false);
+    if (data.error) { alert('Error: ' + data.error); return; }
+    setSigningSent(tenantEmail);
+    await fetchAll();
+    setTimeout(() => { setSigningDoc(null); setSigningSent(null); }, 3000);
   };
 
   const uploadFile = async (file: File): Promise<{ path: string } | null> => {
@@ -400,6 +440,15 @@ export default function Documents() {
                       {expired ? '🔴 Expired' : expiring ? '🟡 Expires' : '✓ Valid until'} {doc.expiry_date}
                     </div>
                   )}
+                  {doc.signed_at ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#D8EDDF', color: '#1A472A', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                      ✓ Signed {doc.signed_at.slice(0, 10)}{doc.signer_name ? ` · ${doc.signer_name}` : ''}
+                    </div>
+                  ) : doc.requires_signature ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#FEF0E4', color: '#D4701A', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                      ✍️ Awaiting signature
+                    </div>
+                  ) : null}
                   {doc.size && <div style={{ fontSize: 11, color: '#8C8070', marginBottom: 6 }}>{doc.size}</div>}
                   {doc.notes && <div style={{ fontSize: 12, color: '#8C8070', fontStyle: 'italic', marginBottom: 6 }}>{doc.notes}</div>}
                   {doc.summary && (
@@ -435,6 +484,16 @@ export default function Documents() {
                     <button onClick={() => checkInsurance(doc)} disabled={checking === doc.id}
                       style={{ background: '#D6EAF8', color: '#1A5276', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {checking === doc.id ? '…' : '✦ Check'}
+                    </button>
+                  )}
+                  {!doc.signed_at && (
+                    <button onClick={() => {
+                      setSigningDoc(doc);
+                      const lease = leases.find(l => l.id === doc.lease_id);
+                      setSigningForm({ lease_id: doc.lease_id || '', tenant_email: (lease as any)?.email || '', tenant_name: doc.tenant_name || lease?.tenant_name || '' });
+                    }}
+                      style={{ background: '#EAE4FF', color: '#5B21B6', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      ✍️ Sign
                     </button>
                   )}
                   <button onClick={() => {
@@ -671,6 +730,60 @@ export default function Documents() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send for Signature Modal */}
+      {signingDoc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={e => { if (e.target === e.currentTarget) setSigningDoc(null); }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 32, width: 480, maxWidth: '95vw', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>Send for Signature</div>
+              <button onClick={() => setSigningDoc(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#8C8070', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ fontSize: 13, color: '#8C8070', marginBottom: 24 }}>📄 {signingDoc.name}</div>
+
+            {signingSent ? (
+              <div style={{ background: '#D8EDDF', border: '1px solid #1A472A33', borderRadius: 10, padding: '16px 20px', fontSize: 14, fontWeight: 600, color: '#1A472A', textAlign: 'center' }}>
+                ✓ Signing link sent to {signingSent}
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Tenant</label>
+                  <select style={inputStyle} value={signingForm.lease_id} onChange={e => {
+                    const lease = leases.find(l => l.id === e.target.value);
+                    setSigningForm({ lease_id: e.target.value, tenant_email: (lease as any)?.email || '', tenant_name: lease?.tenant_name || '' });
+                  }}>
+                    <option value="">Select tenant…</option>
+                    {leases.map(l => <option key={l.id} value={l.id}>{l.tenant_name}</option>)}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Tenant Email</label>
+                  <input style={inputStyle} type="email" placeholder="tenant@email.com" value={signingForm.tenant_email}
+                    onChange={e => setSigningForm({ ...signingForm, tenant_email: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={labelStyle}>Tenant Name</label>
+                  <input style={inputStyle} placeholder="Full name" value={signingForm.tenant_name}
+                    onChange={e => setSigningForm({ ...signingForm, tenant_name: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={sendSigningLink} disabled={signingSending || !signingForm.tenant_email}
+                    style={{ background: '#5B21B6', color: 'white', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: signingSending || !signingForm.tenant_email ? 0.6 : 1 }}>
+                    {signingSending ? 'Sending…' : '✍️ Send Signing Link'}
+                  </button>
+                  <button onClick={() => setSigningDoc(null)}
+                    style={{ background: '#F7F5F0', border: '1px solid #E8E3D8', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

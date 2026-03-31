@@ -36,6 +36,10 @@ export default function Tenants() {
     return () => window.removeEventListener('resize', check);
   }, []);
   const [prLinkCopied, setPrLinkCopied] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [markPaidMethod, setMarkPaidMethod] = useState('Zelle');
+  const [markPaidDate, setMarkPaidDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -249,6 +253,12 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 140px)' }}>
+      {/* Receipt sent toast */}
+      {tenantReceiptSent && (
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+          <span style={{ color: T.teal }}>✓</span> Receipt sent to {tenantReceiptSent}
+        </div>
+      )}
 
       {/* Tenant list — on mobile, hide when a tenant is selected */}
       {(!isMobile || !selected) && (
@@ -645,8 +655,63 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                             ↺ Resend
                           </button>
                         )}
+                        {(p.status === 'pending' || p.status === 'overdue') && (
+                          <button
+                            onClick={() => { setMarkingPaid(p.id); setMarkPaidMethod('Zelle'); setMarkPaidDate(new Date().toISOString().split('T')[0]); }}
+                            style={{ ...btn.primary, fontSize: 11, padding: '4px 10px' }}>
+                            ✓ Mark Paid
+                          </button>
+                        )}
                       </div>
                     </div>
+                    {/* Mark Paid inline form */}
+                    {markingPaid === p.id && (
+                      <div style={{ marginTop: 10, background: T.bg, borderRadius: T.radiusSm, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
+                        <div>
+                          <label style={{ ...label, fontSize: 11 }}>Date Paid</label>
+                          <input type="date" style={{ ...input, fontSize: 12, padding: '5px 8px' }} value={markPaidDate} onChange={e => setMarkPaidDate(e.target.value)} />
+                        </div>
+                        <div>
+                          <label style={{ ...label, fontSize: 11 }}>Method</label>
+                          <select style={{ ...input, fontSize: 12, padding: '5px 8px' }} value={markPaidMethod} onChange={e => setMarkPaidMethod(e.target.value)}>
+                            {['Zelle', 'Venmo', 'Cash', 'Check', 'Bank Transfer', 'Credit Card', 'Other'].map(m => <option key={m}>{m}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={async () => {
+                              const { error } = await supabase.from('payments').update({ status: 'paid', paid_date: markPaidDate, method: markPaidMethod }).eq('id', p.id);
+                              if (!error) {
+                                setPayments(payments.map(x => x.id === p.id ? { ...x, status: 'paid', paid_date: markPaidDate, method: markPaidMethod } : x));
+                                setMarkingPaid(null);
+                                if (selected.email) {
+                                  const { data: { user } } = await supabase.auth.getUser();
+                                  const { data: prof } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
+                                  fetch('/api/send-receipt', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      payment_id: p.id,
+                                      tenant_name: selected.tenant_name,
+                                      tenant_email: selected.email,
+                                      property: selected.property,
+                                      amount: p.amount,
+                                      paid_date: markPaidDate,
+                                      method: markPaidMethod,
+                                      landlord_name: prof?.full_name || '',
+                                      landlord_email: prof?.email || '',
+                                    }),
+                                  }).then(r => r.ok && (setTenantReceiptSent(selected.email), setTimeout(() => setTenantReceiptSent(null), 5000)));
+                                }
+                              }
+                            }}
+                            style={{ ...btn.primary, fontSize: 12, padding: '6px 14px' }}>
+                            Confirm
+                          </button>
+                          <button onClick={() => setMarkingPaid(null)} style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
