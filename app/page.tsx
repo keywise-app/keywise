@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from './lib/supabase';
 import { T } from './lib/theme';
 import Auth from './components/Auth';
@@ -54,6 +54,17 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // ── Notifications bell ──
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<{ id: string; icon: string; type: string; msg: string; page: string }[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // ── Quick Actions FAB ──
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabRef = useRef<HTMLDivElement>(null);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,6 +74,77 @@ export default function Home() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Load read IDs from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('kw_notif_read');
+    if (stored) { try { setReadIds(new Set(JSON.parse(stored))); } catch { /* ignore */ } }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const in3Days = new Date(now.getTime() + 3 * 86400000).toISOString().slice(0, 10);
+    const in60Days = new Date(now.getTime() + 60 * 86400000).toISOString().slice(0, 10);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+
+    const [payRes, leaseRes, maintRes] = await Promise.all([
+      supabase.from('payments').select('id,tenant_name,amount,due_date,status')
+        .or(`status.eq.overdue,and(status.eq.pending,due_date.lte.${in3Days},due_date.gte.${today})`).limit(15),
+      supabase.from('leases').select('id,tenant_name,end_date')
+        .lte('end_date', in60Days).gte('end_date', today).limit(10),
+      supabase.from('maintenance').select('id,issue,created_at')
+        .neq('status', 'resolved').lte('created_at', sevenDaysAgo + 'T23:59:59').limit(10),
+    ]);
+
+    const notifs: { id: string; icon: string; type: string; msg: string; page: string }[] = [];
+    payRes.data?.forEach(p => {
+      const daysUntil = Math.ceil((new Date(p.due_date).getTime() - now.getTime()) / 86400000);
+      notifs.push({ id: `pay_${p.id}`, icon: p.status === 'overdue' ? '⚠' : '💳', type: p.status === 'overdue' ? 'danger' : 'warning', msg: p.status === 'overdue' ? `${p.tenant_name} — $${(p.amount||0).toLocaleString()} overdue` : `${p.tenant_name} — $${(p.amount||0).toLocaleString()} due in ${daysUntil}d`, page: 'tenants' });
+    });
+    leaseRes.data?.forEach(l => {
+      const days = Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000);
+      notifs.push({ id: `lease_${l.id}`, icon: '📅', type: 'warning', msg: `${l.tenant_name}'s lease expires in ${days} days`, page: 'tenants' });
+    });
+    maintRes.data?.forEach(m => {
+      const daysOpen = Math.floor((now.getTime() - new Date(m.created_at).getTime()) / 86400000);
+      notifs.push({ id: `maint_${m.id}`, icon: '🔧', type: 'info', msg: `${m.issue || 'Maintenance issue'} — open ${daysOpen}d`, page: 'operations' });
+    });
+
+    const order: Record<string, number> = { danger: 0, warning: 1, info: 2 };
+    notifs.sort((a, b) => (order[a.type] ?? 3) - (order[b.type] ?? 3));
+    setNotifications(notifs);
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const iv = setInterval(fetchNotifications, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [fetchNotifications]);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false); };
+    if (notifOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
+
+  // Close FAB on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (fabRef.current && !fabRef.current.contains(e.target as Node)) setFabOpen(false); };
+    if (fabOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [fabOpen]);
+
+  const unreadCount = useMemo(() => notifications.filter(n => !readIds.has(n.id)).length, [notifications, readIds]);
+
+  const markAllRead = () => {
+    const all = new Set(notifications.map(n => n.id));
+    setReadIds(all);
+    localStorage.setItem('kw_notif_read', JSON.stringify([...all]));
+  };
+
+  const notifTypeColor = (type: string) => type === 'danger' ? { color: '#C2410C', bg: '#FFF4EE' } : type === 'warning' ? { color: '#9A6500', bg: '#FFF8E0' } : { color: '#4A5068', bg: '#F0F4FF' };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -275,10 +357,17 @@ export default function Home() {
                 <KeywiseLogo size={24} />
               </div>
               <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, letterSpacing: '-0.3px' }}>{PAGE_TITLES[page]}</div>
-              <button onClick={() => supabase.auth.signOut()}
-                style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer' }}>
-                Sign out
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Bell — mobile */}
+                <button onClick={() => setNotifOpen(o => !o)} style={{ position: 'relative', background: 'transparent', border: 'none', padding: '6px 8px', cursor: 'pointer' }}>
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
+                  {unreadCount > 0 && <span style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: '50%', background: '#EF4444', color: '#fff', fontSize: 8, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+                </button>
+                <button onClick={() => supabase.auth.signOut()}
+                  style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer' }}>
+                  Sign out
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -291,6 +380,42 @@ export default function Home() {
               </button>
               <div style={{ fontSize: 12, color: T.inkMuted, flexShrink: 0 }}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </div>
+              {/* Bell — desktop */}
+              <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <button onClick={() => setNotifOpen(o => !o)}
+                  style={{ position: 'relative', background: notifOpen ? T.bg : 'transparent', border: `1px solid ${notifOpen ? T.border : 'transparent'}`, borderRadius: 10, padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 17, lineHeight: 1 }}>🔔</span>
+                  {unreadCount > 0 && (
+                    <span style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: '50%', background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: '0 8px 32px rgba(15,52,96,0.14)', zIndex: 300, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: T.navy }}>Notifications {unreadCount > 0 && <span style={{ fontSize: 11, background: '#EF4444', color: '#fff', borderRadius: 100, padding: '1px 6px', marginLeft: 4 }}>{unreadCount}</span>}</div>
+                      {unreadCount > 0 && <button onClick={markAllRead} style={{ background: 'none', border: 'none', fontSize: 11, color: T.tealDark, fontWeight: 600, cursor: 'pointer' }}>Mark all read</button>}
+                    </div>
+                    <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '28px 16px', textAlign: 'center', color: T.inkMuted, fontSize: 13 }}>All clear — no alerts.</div>
+                      ) : notifications.map(n => {
+                        const isRead = readIds.has(n.id);
+                        const tc = notifTypeColor(n.type);
+                        return (
+                          <div key={n.id} onClick={() => { setPage(n.page); setNotifOpen(false); const next = new Set(readIds); next.add(n.id); setReadIds(next); localStorage.setItem('kw_notif_read', JSON.stringify([...next])); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', background: isRead ? 'transparent' : tc.bg, opacity: isRead ? 0.65 : 1 }}
+                            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = T.bg}
+                            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = isRead ? 'transparent' : tc.bg}>
+                            <span style={{ fontSize: 16, flexShrink: 0 }}>{n.icon}</span>
+                            <span style={{ fontSize: 12, color: isRead ? T.inkMuted : tc.color, flex: 1, fontWeight: isRead ? 400 : 600, lineHeight: 1.4 }}>{n.msg}</span>
+                            {!isRead && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -315,6 +440,59 @@ export default function Home() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* ── MOBILE NOTIFICATIONS PANEL ── */}
+      {isMobile && notifOpen && (
+        <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.4)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: T.surface, borderRadius: `${T.radius}px ${T.radius}px 0 0`, maxHeight: '70vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Notifications {unreadCount > 0 && <span style={{ fontSize: 11, background: '#EF4444', color: '#fff', borderRadius: 100, padding: '1px 6px', marginLeft: 4 }}>{unreadCount}</span>}</div>
+              {unreadCount > 0 && <button onClick={markAllRead} style={{ background: 'none', border: 'none', fontSize: 12, color: T.tealDark, fontWeight: 600, cursor: 'pointer' }}>Mark all read</button>}
+            </div>
+            <div style={{ overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <div style={{ padding: '32px 20px', textAlign: 'center', color: T.inkMuted, fontSize: 13 }}>All clear — no alerts.</div>
+              ) : notifications.map(n => {
+                const isRead = readIds.has(n.id);
+                const tc = notifTypeColor(n.type);
+                return (
+                  <div key={n.id} onClick={() => { setPage(n.page); setNotifOpen(false); const next = new Set(readIds); next.add(n.id); setReadIds(next); localStorage.setItem('kw_notif_read', JSON.stringify([...next])); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', background: isRead ? 'transparent' : tc.bg }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{n.icon}</span>
+                    <span style={{ fontSize: 13, color: isRead ? T.inkMuted : tc.color, flex: 1, fontWeight: isRead ? 400 : 600, lineHeight: 1.4 }}>{n.msg}</span>
+                    {!isRead && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── QUICK ACTIONS FAB ── */}
+      {userRole === 'landlord' && (
+        <div ref={fabRef} style={{ position: 'fixed', bottom: isMobile ? 96 : 32, right: 24, zIndex: 180, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+          {fabOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+              {[
+                { icon: '🔧', label: 'Log Maintenance', page: 'operations' },
+                { icon: '💬', label: 'Send Message', page: 'tenants' },
+                { icon: '💳', label: 'Request Payment', page: 'tenants' },
+                { icon: '📁', label: 'Upload Document', page: 'operations' },
+              ].map(action => (
+                <button key={action.label} onClick={() => { setPage(action.page); setFabOpen(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 16px', fontSize: 13, fontWeight: 600, color: T.navy, cursor: 'pointer', boxShadow: T.shadowMd, whiteSpace: 'nowrap' as const }}>
+                  <span style={{ fontSize: 16 }}>{action.icon}</span> {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setFabOpen(o => !o)}
+            style={{ width: 52, height: 52, borderRadius: '50%', background: T.navy, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(15,52,96,0.3)', fontSize: 26, color: T.teal, transition: 'transform 0.2s', transform: fabOpen ? 'rotate(45deg)' : 'none', fontFamily: 'inherit' }}>
+            +
+          </button>
         </div>
       )}
 
