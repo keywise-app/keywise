@@ -296,29 +296,33 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     {selected.start_date} → {selected.end_date}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {selected.invite_sent ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '6px 14px', display: 'inline-flex', alignItems: 'center' }}>
-                      ✓ Invited
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {selected.invite_sent && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' as const }}>
+                      ✓ Invited {selected.invite_sent_at ? new Date(selected.invite_sent_at).toLocaleDateString() : ''}
                     </span>
-                  ) : (
-                    <button onClick={async () => {
-                      if (!selected.email) { alert('No email on file for this tenant. Add their email first.'); return; }
-                      setInviteSending(true);
-                      const res = await fetch('/api/invite-tenant', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name }),
-                      });
-                      const data = await res.json();
-                      setInviteSending(false);
-                      if (data.error) { alert('Error: ' + data.error); }
-                      else { setInviteSuccess(true); setTimeout(() => setInviteSuccess(false), 3000); }
-                    }}
-                      style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Sent!' : '✉️ Invite to Keywise'}
-                    </button>
                   )}
+                  <button onClick={async () => {
+                    if (!selected.email) { alert('No email on file for this tenant. Add their email first.'); return; }
+                    setInviteSending(true);
+                    const res = await fetch('/api/invite-tenant', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name }),
+                    });
+                    const data = await res.json();
+                    setInviteSending(false);
+                    if (data.error) { alert('Error: ' + data.error); }
+                    else {
+                      setInviteSuccess(true);
+                      setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
+                      setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
+                      setTimeout(() => setInviteSuccess(false), 3000);
+                    }
+                  }}
+                    style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: inviteSending ? 'default' : 'pointer', opacity: inviteSending ? 0.7 : 1 }}>
+                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Sent!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite to Keywise'}
+                  </button>
                   <button
                     onClick={() => window.open(`/?tenant_preview=true&lease_id=${selected.id}`, '_blank')}
                     style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
