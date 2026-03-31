@@ -204,7 +204,7 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
           {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
           <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
             style={{ color: N, fontWeight: 600, cursor: 'pointer' }}>
-            {mode === 'login' ? 'Sign up free' : 'Log in'}
+            {mode === 'login' ? 'Sign up free' : 'Log In'}
           </span>
         </div>
       </div>
@@ -376,7 +376,7 @@ export default function Landing() {
             {/* Early access capture */}
             {!waitlistSuccess ? (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 8, fontWeight: 500 }}>Or get early access — no account needed:</div>
+                <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 8, fontWeight: 500 }}>Or get early access — no account needed</div>
                 <div className="landing-waitlist-form" style={{ display: 'flex', gap: 8, maxWidth: 380 }}>
                   <input
                     type="email"
@@ -455,7 +455,7 @@ export default function Landing() {
           </div>
           <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {[
-              { icon: '✦', title: 'AI Lease Extraction', desc: 'Drop a PDF. We extract every term — including late fees, payment dates, and clauses — automatically.', accent: true },
+              { icon: '✦', title: 'AI Lease Extraction', desc: 'Drop a PDF. Keywise extracts every term — including late fees, payment dates, and clauses — automatically.', accent: true },
               { icon: '💳', title: 'Online Rent Collection', desc: 'Tenants pay online. You get paid faster. Automatic reminders handle the follow-ups.', accent: false },
               { icon: '✦', title: 'Smart Communications', desc: 'Late notices, renewals, entry notices — drafted in seconds with AI, ready to send in one click.', accent: true },
               { icon: '🔧', title: 'Maintenance Tracking', desc: 'Log issues, assign contractors, and track every repair from open to resolved.', accent: false },
@@ -487,7 +487,7 @@ export default function Landing() {
           <div className="landing-steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
             <div className="landing-steps-connector" style={{ position: 'absolute', top: 36, left: '16.67%', right: '16.67%', height: 2, background: `linear-gradient(90deg, ${TEAL}44, ${TEAL}, ${TEAL}44)`, zIndex: 0 }} />
             {[
-              { num: '1', title: 'Import your documents', desc: 'Drop your existing leases and documents. AI reads them and sets everything up — tenant names, rent amounts, lease dates, late fees.' },
+              { num: '1', title: 'Import your documents', desc: 'Drop your existing leases and documents. Keywise reads them and sets everything up — tenant names, rent amounts, lease dates, late fees.' },
               { num: '2', title: 'Invite your tenants', desc: 'Send a magic link in one click. Tenants get access to their portal where they can view their lease and pay rent online.' },
               { num: '3', title: 'Manage everything in one place', desc: 'Dashboard, communications, maintenance, payments — all connected, all organized, no more scattered apps.' },
             ].map(step => (
@@ -518,7 +518,7 @@ export default function Landing() {
               <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                 <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
-                <span style={{ fontSize: 14, color: INK_MUTED }}>forever</span>
+                <span style={{ fontSize: 14, color: INK_MUTED }}>/forever</span>
               </div>
               <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>Up to 2 units</div>
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 28 }}>
