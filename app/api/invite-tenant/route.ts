@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     console.error('[invite-tenant] SUPABASE_SERVICE_ROLE_KEY is not set — admin methods will fail');
   }
 
-  const adminClient = createClient(
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     console.log('[invite-tenant] Generating magic link for', tenant_email);
 
     // generateLink works for both new and existing users
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: tenant_email,
       options: {
@@ -31,47 +31,46 @@ export async function POST(req: Request) {
       },
     });
 
-    if (linkError) {
-      console.error('[invite-tenant] generateLink error:', linkError.message, linkError);
-      return NextResponse.json({ error: linkError.message }, { status: 500 });
+    if (error) {
+      console.error('[invite-tenant] generateLink error:', error.message, error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const magicLink = linkData.properties?.action_link;
-    console.log('[invite-tenant] Magic link generated:', magicLink ? 'yes' : 'no');
+    const magicLink = data.properties?.action_link;
+    console.log('[invite-tenant] Magic link generated for', tenant_email);
 
-    // Fetch the lease to get the tenant's phone number
-    const { data: lease } = await adminClient
+    // Fetch the tenant's phone from the lease record
+    const { data: lease } = await supabase
       .from('leases')
       .select('phone')
       .eq('id', lease_id)
       .single();
 
-    const tenantPhone = lease?.phone;
-    let smsSent = false;
+    let sentSms = false;
+    let sentToPhone: string | null = null;
 
-    if (tenantPhone && magicLink) {
-      // Send the magic link via SMS
+    if (lease?.phone && magicLink) {
       try {
         const twilioClient = twilio(
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         );
-        const formatted = tenantPhone.startsWith('+') ? tenantPhone : '+1' + tenantPhone.replace(/\D/g, '');
+        const formatted = lease.phone.startsWith('+') ? lease.phone : '+1' + lease.phone.replace(/\D/g, '');
         await twilioClient.messages.create({
-          body: `Hi ${tenant_name || 'there'}! Your landlord has invited you to Keywise to manage your lease and pay rent online. Click here to get started: ${magicLink}`,
+          body: `Hi ${tenant_name || 'there'}! Your landlord has invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`,
           from: process.env.TWILIO_PHONE_NUMBER,
           to: formatted,
         });
-        smsSent = true;
+        sentSms = true;
+        sentToPhone = formatted;
         console.log('[invite-tenant] SMS sent to', formatted);
       } catch (smsErr: any) {
-        console.error('[invite-tenant] SMS send failed:', smsErr.message);
-        // Don't block — return the link so the landlord can send it manually
+        console.error('[invite-tenant] SMS failed:', smsErr.message);
       }
     }
 
     // Mark the lease as invited
-    const { error: updateError } = await adminClient
+    const { error: updateError } = await supabase
       .from('leases')
       .update({
         invite_sent: true,
@@ -85,9 +84,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      sms_sent: smsSent,
-      // Return the link when no phone so landlord can copy and share manually
-      magic_link: smsSent ? null : magicLink,
+      magic_link: magicLink,
+      sent_sms: sentSms,
+      phone: sentToPhone,
     });
   } catch (err: any) {
     console.error('[invite-tenant] Unexpected error:', err);

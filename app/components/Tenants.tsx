@@ -23,6 +23,7 @@ export default function Tenants() {
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteMagicLink, setInviteMagicLink] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+  const [inviteSmsSent, setInviteSmsSent] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -308,6 +309,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     if (!selected.email) { alert('No email on file for this tenant. Add their email first.'); return; }
                     setInviteSending(true);
                     setInviteMagicLink(null);
+                    setInviteSmsSent(null);
                     const res = await fetch('/api/invite-tenant', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -321,6 +323,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
                       setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
                       if (data.magic_link) setInviteMagicLink(data.magic_link);
+                      if (data.sent_sms && data.phone) setInviteSmsSent(data.phone);
                       setTimeout(() => setInviteSuccess(false), 3000);
                     }
                   }}
@@ -344,11 +347,16 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
               </div>
             </div>
 
-            {/* Magic link copy box — shown when tenant has no phone */}
+            {/* Magic link copy box — always shown after invite */}
             {inviteMagicLink && (
-              <div style={{ background: T.amberLight, border: `1px solid ${T.amber}44`, borderRadius: T.radiusSm, padding: '12px 16px', marginTop: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: T.amberDark, marginBottom: 6 }}>
-                  No phone number on file — copy this link and send it to your tenant:
+              <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '14px 16px', marginTop: 12 }}>
+                {inviteSmsSent && (
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.greenDark, marginBottom: 8 }}>
+                    ✓ Sent via SMS to {inviteSmsSent}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.tealDark, marginBottom: 6 }}>
+                  Share this link with your tenant:
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
