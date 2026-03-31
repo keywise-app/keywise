@@ -94,23 +94,30 @@ export default function Home() {
       if (session) {
         const isTenantFlow = new URLSearchParams(window.location.search).get('tenant') === 'true';
 
-        if (isTenantFlow) {
-          // First-time tenant login via magic link — set up their profile and link their lease
-          await supabase.from('profiles').upsert(
-            { id: session.user.id, email: session.user.email, role: 'tenant' },
-            { onConflict: 'id' }
-          );
+        const linkLeaseByEmail = async () => {
+          // Link the tenant's user ID to their lease record by email match
           await supabase
             .from('leases')
             .update({ tenant_user_id: session.user.id })
             .eq('email', session.user.email)
             .is('tenant_user_id', null);
+        };
+
+        if (isTenantFlow) {
+          // First-time tenant login via magic link
+          await supabase.from('profiles').upsert(
+            { id: session.user.id, email: session.user.email, role: 'tenant' },
+            { onConflict: 'id' }
+          );
+          await linkLeaseByEmail();
           setUserRole('tenant');
           window.history.replaceState({}, '', '/');
         } else {
           const { data: profile } = await supabase
             .from('profiles').select('full_name, role').eq('id', session.user.id).single();
           if (profile?.role === 'tenant') {
+            // Also attempt to link lease on every login in case it wasn't linked yet
+            await linkLeaseByEmail();
             setUserRole('tenant');
           } else {
             setUserRole('landlord');

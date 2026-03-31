@@ -19,11 +19,31 @@ export default function TenantDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: leaseData } = await supabase
+    // Try by tenant_user_id first, fall back to email match
+    let leaseData: any = null;
+    const { data: byUserId } = await supabase
       .from('leases')
       .select('*')
       .eq('tenant_user_id', user.id)
       .single();
+
+    if (byUserId) {
+      leaseData = byUserId;
+    } else {
+      const { data: byEmail } = await supabase
+        .from('leases')
+        .select('*')
+        .eq('email', user.email)
+        .single();
+      if (byEmail) {
+        leaseData = byEmail;
+        // Opportunistically link the user ID now that we found the lease
+        await supabase
+          .from('leases')
+          .update({ tenant_user_id: user.id })
+          .eq('id', byEmail.id);
+      }
+    }
 
     if (!leaseData) { setLoading(false); return; }
     setLease(leaseData);
@@ -114,11 +134,11 @@ export default function TenantDashboard() {
 
   if (!lease) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ textAlign: 'center', maxWidth: 380 }}>
+      <div style={{ textAlign: 'center', maxWidth: 420 }}>
         <div style={{ fontSize: 36, marginBottom: 16 }}>🏠</div>
-        <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 8 }}>No active lease found</div>
+        <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 8 }}>Lease not found</div>
         <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
-          Your landlord hasn't linked your account yet. Contact them directly to get set up.
+          We couldn't find your lease. Please contact your landlord to confirm your email address matches your lease record.
         </div>
       </div>
     </div>
