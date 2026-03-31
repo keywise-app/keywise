@@ -99,16 +99,22 @@ export default function Home() {
         const isTenantFlow = new URLSearchParams(window.location.search).get('tenant') === 'true';
 
         const linkLeaseByEmail = async () => {
-          // Link the tenant's user ID to their lease record by email match
+          // Link this user's ID to their lease by email — but never link leases
+          // that this user owns as a landlord (user_id = this user)
           await supabase
             .from('leases')
             .update({ tenant_user_id: session.user.id })
             .eq('email', session.user.email)
+            .neq('user_id', session.user.id)
             .is('tenant_user_id', null);
         };
 
-        if (isTenantFlow) {
-          // First-time tenant login via magic link
+        // Always fetch profile first — role is the source of truth
+        const { data: profile } = await supabase
+          .from('profiles').select('full_name, role').eq('id', session.user.id).single();
+
+        if (isTenantFlow && profile?.role !== 'landlord') {
+          // First-time tenant login via magic link — only if not already a landlord
           await supabase.from('profiles').upsert(
             { id: session.user.id, email: session.user.email, role: 'tenant' },
             { onConflict: 'id' }
@@ -116,17 +122,15 @@ export default function Home() {
           await linkLeaseByEmail();
           setUserRole('tenant');
           window.history.replaceState({}, '', '/');
+        } else if (profile?.role === 'tenant') {
+          // Returning tenant — attempt to link in case it wasn't set yet
+          await linkLeaseByEmail();
+          setUserRole('tenant');
         } else {
-          const { data: profile } = await supabase
-            .from('profiles').select('full_name, role').eq('id', session.user.id).single();
-          if (profile?.role === 'tenant') {
-            // Also attempt to link lease on every login in case it wasn't linked yet
-            await linkLeaseByEmail();
-            setUserRole('tenant');
-          } else {
-            setUserRole('landlord');
-            if (!profile?.full_name) setShowOnboarding(true);
-          }
+          // landlord, null, or isTenantFlow but user is already a landlord
+          setUserRole('landlord');
+          if (!profile?.full_name) setShowOnboarding(true);
+          if (isTenantFlow) window.history.replaceState({}, '', '/');
         }
       }
       setLoading(false);
