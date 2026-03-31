@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { T, input } from '../lib/theme';
 
 export default function AddressInput({ value, onChange, placeholder }: {
@@ -11,17 +11,11 @@ export default function AddressInput({ value, onChange, placeholder }: {
   const [show, setShow] = useState(false);
   const timeoutRef = useRef<any>(null);
 
-  useEffect(() => {
-    console.log('Mapbox token:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.slice(0, 10));
-  }, []);
-
   const lookup = async (q: string) => {
     if (q.length < 3) { setSuggestions([]); setShow(false); return; }
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${token}&types=address&country=US&limit=5`;
-    const res = await fetch(url);
+    const res = await fetch(`/api/address-search?q=${encodeURIComponent(q)}`);
     const data = await res.json();
-    const list = data.features?.map((f: any) => f.place_name) || [];
+    const list: string[] = data.suggestions || [];
     setSuggestions(list);
     setShow(list.length > 0);
   };

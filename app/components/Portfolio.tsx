@@ -209,6 +209,7 @@ export default function Portfolio() {
       body: JSON.stringify({ address: buildingForm.address }),
     });
     const data = await res.json();
+    console.log('Property lookup result:', data);
     setLookingUp(false);
     if (!data.found || !data.data) {
       setLookupResult('none');
@@ -219,12 +220,9 @@ export default function Portfolio() {
       house: 'Single Family', condo: 'Condo', duplex: 'Duplex',
       apartment: 'Apartment Building', townhouse: 'Townhouse',
     };
-    setBuildingForm((f: any) => ({
-      ...f,
-      year_built: d.year_built ?? f.year_built,
-      num_units: d.num_units ?? f.num_units,
-      type: d.property_type && typeMap[d.property_type.toLowerCase()] ? typeMap[d.property_type.toLowerCase()] : f.type,
-    }));
+    if (d.year_built) setBuildingForm((f: any) => ({ ...f, year_built: d.year_built }));
+    if (d.num_units) setBuildingForm((f: any) => ({ ...f, num_units: d.num_units }));
+    if (d.property_type) setBuildingForm((f: any) => ({ ...f, type: typeMap[d.property_type.toLowerCase()] ?? f.type }));
     setLookupResult(formatLookupResult(d));
   };
 
