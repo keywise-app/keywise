@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, btn } from '../lib/theme';
 
-export default function TenantDashboard() {
+export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: string } = {}) {
   const [lease, setLease] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [landlord, setLandlord] = useState<any>(null);
@@ -19,29 +19,36 @@ export default function TenantDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    // Try by tenant_user_id first, fall back to email match
     let leaseData: any = null;
-    const { data: byUserId } = await supabase
-      .from('leases')
-      .select('*')
-      .eq('tenant_user_id', user.id)
-      .single();
 
-    if (byUserId) {
-      leaseData = byUserId;
+    if (previewLeaseId) {
+      // Preview mode — fetch lease directly by ID for the landlord
+      const { data } = await supabase.from('leases').select('*').eq('id', previewLeaseId).single();
+      leaseData = data;
     } else {
-      const { data: byEmail } = await supabase
+      // Tenant flow — try by user ID first, fall back to email match
+      const { data: byUserId } = await supabase
         .from('leases')
         .select('*')
-        .eq('email', user.email)
+        .eq('tenant_user_id', user.id)
         .single();
-      if (byEmail) {
-        leaseData = byEmail;
-        // Opportunistically link the user ID now that we found the lease
-        await supabase
+
+      if (byUserId) {
+        leaseData = byUserId;
+      } else {
+        const { data: byEmail } = await supabase
           .from('leases')
-          .update({ tenant_user_id: user.id })
-          .eq('id', byEmail.id);
+          .select('*')
+          .eq('email', user.email)
+          .single();
+        if (byEmail) {
+          leaseData = byEmail;
+          // Opportunistically link the user ID now that we found the lease
+          await supabase
+            .from('leases')
+            .update({ tenant_user_id: user.id })
+            .eq('id', byEmail.id);
+        }
       }
     }
 
@@ -150,6 +157,13 @@ export default function TenantDashboard() {
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       <style>{`* { box-sizing: border-box; } body { margin: 0; } button, input, select, textarea { font-family: inherit; }`}</style>
+
+      {/* Preview banner */}
+      {previewLeaseId && (
+        <div style={{ background: T.amberLight, border: `1px solid ${T.amber}44`, borderRadius: T.radiusSm, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: T.amberDark, fontWeight: 600 }}>
+          👁 Preview mode — this is what {lease.tenant_name} will see
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>

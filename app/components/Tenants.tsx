@@ -319,6 +319,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Sent!' : '✉️ Invite to Keywise'}
                     </button>
                   )}
+                  <button
+                    onClick={() => window.open(`/?tenant_preview=true&lease_id=${selected.id}`, '_blank')}
+                    style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                    👁 Preview
+                  </button>
                   <button onClick={openEdit}
                     style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
                     ✏️ Edit
@@ -412,7 +417,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   {[
                     { label: 'Tenant Name', key: 'tenant_name', type: 'text' },
                     { label: 'Property', key: 'property', type: 'text' },
-                    { label: 'Email', key: 'email', type: 'email' },
+                    { label: 'Tenant Email Address', key: 'email', type: 'email' },
                     { label: 'Phone', key: 'phone', type: 'tel' },
                     { label: 'Monthly Rent ($)', key: 'rent', type: 'number' },
                     { label: 'Security Deposit ($)', key: 'deposit', type: 'number' },

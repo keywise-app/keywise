@@ -47,6 +47,7 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stripeSuccess, setStripeSuccess] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [previewLeaseId, setPreviewLeaseId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
@@ -83,7 +84,10 @@ export default function Home() {
         });
       }
     }
-    if (params.has('page') || params.has('stripe')) {
+    if (params.get('tenant_preview') === 'true' && params.get('lease_id')) {
+      setPreviewLeaseId(params.get('lease_id'));
+    }
+    if (params.has('page') || params.has('stripe') || params.has('tenant_preview')) {
       window.history.replaceState({}, '', '/');
     }
   }, []);
@@ -197,6 +201,7 @@ export default function Home() {
   );
 
   if (!session) return <Auth />;
+  if (session && previewLeaseId) return <TenantDashboard previewLeaseId={previewLeaseId} />;
   if (session && userRole === 'tenant') return <TenantDashboard />;
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
 
