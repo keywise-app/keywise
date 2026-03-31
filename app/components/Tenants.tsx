@@ -698,25 +698,28 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                           onClick={async () => {
                             if (!prForm.amount || !prForm.due_date) return;
                             setPrSending(true);
+                            const payload = {
+                              lease_id: selected.id,
+                              type: prForm.type,
+                              amount: parseFloat(prForm.amount),
+                              description: prForm.description,
+                              due_date: prForm.due_date,
+                              recurring: prForm.recurring,
+                              tenant_email: selected.email,
+                              tenant_phone: selected.phone,
+                              tenant_name: selected.tenant_name,
+                              property: selected.property,
+                              notify_email: prForm.notify_email,
+                              notify_sms: prForm.notify_sms,
+                            };
+                            console.log('[payment-request] Sending payload:', JSON.stringify(payload));
                             const res = await fetch('/api/payment-request', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                lease_id: selected.id,
-                                type: prForm.type,
-                                amount: parseFloat(prForm.amount),
-                                description: prForm.description,
-                                due_date: prForm.due_date,
-                                recurring: prForm.recurring,
-                                tenant_email: selected.email,
-                                tenant_phone: selected.phone,
-                                tenant_name: selected.tenant_name,
-                                property: selected.property,
-                                notify_email: prForm.notify_email,
-                                notify_sms: prForm.notify_sms,
-                              }),
+                              body: JSON.stringify(payload),
                             });
                             const data = await res.json();
+                            console.log('[payment-request] Response status:', res.status, '| body:', JSON.stringify(data));
                             setPrSending(false);
                             if (data.error) {
                               alert('Error: ' + data.error);
