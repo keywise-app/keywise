@@ -113,9 +113,27 @@ export default function Tenants() {
 
   const removeTenant = async () => {
     if (!selected) return;
-    if (!confirm('Remove ' + selected.tenant_name + '? This will also delete their payment records.')) return;
-    await supabase.from('payments').delete().eq('lease_id', selected.id);
-    await supabase.from('leases').delete().eq('id', selected.id);
+    if (!confirm('Remove ' + selected.tenant_name + '? This will also delete their payments, documents, and signing records.')) return;
+
+    const steps: { table: string; error: any }[] = [];
+
+    const { error: e1 } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
+    if (e1) steps.push({ table: 'signing_tokens', error: e1 });
+
+    const { error: e2 } = await supabase.from('documents').delete().eq('lease_id', selected.id);
+    if (e2) steps.push({ table: 'documents', error: e2 });
+
+    const { error: e3 } = await supabase.from('payments').delete().eq('lease_id', selected.id);
+    if (e3) steps.push({ table: 'payments', error: e3 });
+
+    const { error: e4 } = await supabase.from('leases').delete().eq('id', selected.id);
+    if (e4) steps.push({ table: 'leases', error: e4 });
+
+    if (steps.length > 0) {
+      alert('Deletion failed:\n' + steps.map(s => s.table + ': ' + s.error.message).join('\n'));
+      return;
+    }
+
     const remaining = leases.filter(l => l.id !== selected.id);
     setLeases(remaining);
     setSelected(remaining.length > 0 ? remaining[0] : null);
