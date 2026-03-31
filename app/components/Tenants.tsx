@@ -24,6 +24,11 @@ export default function Tenants() {
   const [inviteMagicLink, setInviteMagicLink] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [inviteSmsSent, setInviteSmsSent] = useState<string | null>(null);
+  const [showPaymentRequest, setShowPaymentRequest] = useState(false);
+  const [prForm, setPrForm] = useState({ type: 'Monthly Rent', amount: '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
+  const [prSending, setPrSending] = useState(false);
+  const [prSuccess, setPrSuccess] = useState('');
+  const [prLinkCopied, setPrLinkCopied] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -533,29 +538,205 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             {/* PAYMENTS */}
             {tab === 'payments' && (
               <div>
-                {tenantPayments.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: 40, color: T.inkMuted, fontSize: 13 }}>
-                    No payment records yet for this tenant.
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Payment History</div>
+                  <button
+                    onClick={() => {
+                      setShowPaymentRequest(true);
+                      setPrSuccess('');
+                      setPrForm({ type: 'Monthly Rent', amount: selected.rent ? String(selected.rent) : '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
+                    }}
+                    style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>
+                    + Payment Request
+                  </button>
+                </div>
+
+                {prSuccess && (
+                  <div style={{ background: T.greenLight, border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: T.greenDark, fontWeight: 600 }}>
+                    {prSuccess}
                   </div>
                 )}
+
+                {tenantPayments.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 40, color: T.inkMuted, fontSize: 13 }}>
+                    No payment records yet. Use "+ Payment Request" to create one.
+                  </div>
+                )}
+
                 {tenantPayments.map(p => (
-                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${T.border}` }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>Due {p.due_date}</div>
-                      {p.paid_date && <div style={{ fontSize: 12, color: T.inkMuted }}>Paid {p.paid_date}{p.method ? ' · ' + p.method : ''}</div>}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-                        background: p.status === 'paid' ? T.greenLight : p.status === 'overdue' ? T.coralLight : T.amberLight,
-                        color: p.status === 'paid' ? T.greenDark : p.status === 'overdue' ? T.coral : T.amberDark,
-                      }}>
-                        {p.status}
-                      </span>
+                  <div key={p.id} style={{ padding: '14px 0', borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const,
+                            background: p.status === 'paid' ? T.greenLight : p.status === 'overdue' ? T.coralLight : T.amberLight,
+                            color: p.status === 'paid' ? T.greenDark : p.status === 'overdue' ? T.coral : T.amberDark,
+                          }}>
+                            {p.status}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 3 }}>
+                          Due {p.due_date}
+                          {p.description && <span style={{ color: T.inkMid }}> · {p.description}</span>}
+                        </div>
+                        {p.status === 'paid' && p.paid_date && (
+                          <div style={{ fontSize: 12, color: T.greenDark, marginTop: 2 }}>
+                            ✓ Paid {p.paid_date}{p.method ? ' · ' + p.method : ''}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {p.status !== 'paid' && p.payment_link_url && (
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(p.payment_link_url); setPrLinkCopied(p.id); setTimeout(() => setPrLinkCopied(null), 2000); }}
+                            style={{ ...btn.ghost, fontSize: 11, padding: '4px 10px' }}>
+                            {prLinkCopied === p.id ? '✓ Copied' : '🔗 Copy Link'}
+                          </button>
+                        )}
+                        {(p.status === 'pending' || p.status === 'overdue') && (
+                          <button
+                            onClick={async () => {
+                              const landlordName = profile?.full_name || profile?.company || 'Your landlord';
+                              const amountNum = p.amount || 0;
+                              const promises: Promise<any>[] = [];
+                              if (selected.email && p.payment_link_url) {
+                                promises.push(fetch('/api/send-email', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    to: selected.email,
+                                    subject: `Payment Reminder: $${amountNum.toLocaleString()} due ${p.due_date}`,
+                                    from_name: landlordName,
+                                    html: `<p>Hi ${selected.tenant_name},</p><p>This is a reminder that a payment of $${amountNum.toLocaleString()} is due on ${p.due_date}${p.description ? ' for ' + p.description : ''}.</p><p><a href="${p.payment_link_url}" style="background:#00D4AA;color:#0F3460;padding:12px 28px;text-decoration:none;border-radius:8px;font-weight:700;display:inline-block;">Pay Now →</a></p><p>— ${landlordName}</p>`,
+                                  }),
+                                }));
+                              }
+                              if (selected.phone && p.payment_link_url) {
+                                promises.push(fetch('/api/send-sms', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    to: selected.phone,
+                                    message: `Hi ${(selected.tenant_name || '').split(' ')[0]}! Reminder: $${amountNum.toLocaleString()} is due ${p.due_date}${p.description ? ' for ' + p.description : ''}. Pay here: ${p.payment_link_url}`,
+                                  }),
+                                }));
+                              }
+                              await Promise.all(promises);
+                              setPrSuccess(`✓ Reminder sent to ${selected.tenant_name}`);
+                              setTimeout(() => setPrSuccess(''), 4000);
+                            }}
+                            style={{ ...btn.ghost, fontSize: 11, padding: '4px 10px' }}>
+                            ↺ Resend
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
+
+                {/* Payment Request Modal */}
+                {showPaymentRequest && (
+                  <div
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={e => { if (e.target === e.currentTarget) setShowPaymentRequest(false); }}>
+                    <div style={{ background: T.surface, borderRadius: T.radius, padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: T.navy }}>New Payment Request</div>
+                        <button onClick={() => setShowPaymentRequest(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: T.inkMuted, lineHeight: 1 }}>×</button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div>
+                          <label style={label}>Payment Type</label>
+                          <select style={input} value={prForm.type} onChange={e => setPrForm({ ...prForm, type: e.target.value })}>
+                            {['Monthly Rent', 'Security Deposit', 'Late Fee', 'Maintenance', 'Utilities', 'Other'].map(t => <option key={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={label}>Amount ($)</label>
+                          <input type="number" style={input} value={prForm.amount} onChange={e => setPrForm({ ...prForm, amount: e.target.value })} placeholder="0.00" />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={label}>Description (optional)</label>
+                        <input type="text" style={input} value={prForm.description} onChange={e => setPrForm({ ...prForm, description: e.target.value })} placeholder="e.g. March rent, Broken window repair…" />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                        <div>
+                          <label style={label}>Due Date</label>
+                          <input type="date" style={input} value={prForm.due_date} onChange={e => setPrForm({ ...prForm, due_date: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: T.ink }}>
+                            <input type="checkbox" checked={prForm.recurring} onChange={e => setPrForm({ ...prForm, recurring: e.target.checked })} />
+                            Recurring monthly
+                          </label>
+                        </div>
+                      </div>
+
+                      <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 20 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 8 }}>Notify Tenant</div>
+                        <div style={{ display: 'flex', gap: 20 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: T.ink, opacity: selected.email ? 1 : 0.45 }}>
+                            <input type="checkbox" checked={prForm.notify_email} disabled={!selected.email} onChange={e => setPrForm({ ...prForm, notify_email: e.target.checked })} />
+                            Email{!selected.email ? ' (no email on file)' : ''}
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: T.ink, opacity: selected.phone ? 1 : 0.45 }}>
+                            <input type="checkbox" checked={prForm.notify_sms} disabled={!selected.phone} onChange={e => setPrForm({ ...prForm, notify_sms: e.target.checked })} />
+                            SMS{!selected.phone ? ' (no phone on file)' : ''}
+                          </label>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                          disabled={prSending || !prForm.amount || !prForm.due_date}
+                          onClick={async () => {
+                            if (!prForm.amount || !prForm.due_date) return;
+                            setPrSending(true);
+                            const res = await fetch('/api/payment-request', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                lease_id: selected.id,
+                                type: prForm.type,
+                                amount: parseFloat(prForm.amount),
+                                description: prForm.description,
+                                due_date: prForm.due_date,
+                                recurring: prForm.recurring,
+                                tenant_email: selected.email,
+                                tenant_phone: selected.phone,
+                                tenant_name: selected.tenant_name,
+                                property: selected.property,
+                                notify_email: prForm.notify_email,
+                                notify_sms: prForm.notify_sms,
+                              }),
+                            });
+                            const data = await res.json();
+                            setPrSending(false);
+                            if (data.error) {
+                              alert('Error: ' + data.error);
+                            } else {
+                              setShowPaymentRequest(false);
+                              const count = data.payments_created || 1;
+                              setPrSuccess(`✓ Payment request sent to ${selected.tenant_name}${count > 1 ? ` (${count} payments created)` : ''}`);
+                              setTimeout(() => setPrSuccess(''), 5000);
+                              const { data: updatedPayments } = await supabase.from('payments').select('*').order('due_date', { ascending: false });
+                              if (updatedPayments) setPayments(updatedPayments);
+                            }
+                          }}
+                          style={{ ...btn.primary, flex: 1, opacity: (!prForm.amount || !prForm.due_date || prSending) ? 0.6 : 1 }}>
+                          {prSending ? 'Sending…' : 'Send Payment Request'}
+                        </button>
+                        <button onClick={() => setShowPaymentRequest(false)} style={{ ...btn.ghost }}>Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
