@@ -29,6 +29,7 @@ type Unit = {
   pets: string;
   laundry: string;
   parking: string;
+  garage?: string;
 };
 
 type Lease = {
@@ -73,7 +74,7 @@ export default function Portfolio() {
   };
   const emptyUnit = {
     building_id: '', unit_number: '', beds: '2', baths: '1',
-    sqft: '', current_rent: '', pets: 'no pets', laundry: 'in-unit', parking: 'included',
+    sqft: '', current_rent: '', pets: 'No pets', laundry: 'in-unit', parking: 'included', garage: 'No parking',
   };
 
   const [buildingForm, setBuildingForm] = useState<any>(emptyBuilding);
@@ -157,6 +158,7 @@ export default function Portfolio() {
       pets: unitForm.pets,
       laundry: unitForm.laundry,
       parking: unitForm.parking,
+      garage: unitForm.garage || null,
     };
 
     let error;
@@ -281,9 +283,10 @@ export default function Portfolio() {
       baths: unit.baths || '1',
       sqft: unit.sqft || '',
       current_rent: unit.current_rent || '',
-      pets: unit.pets || 'no pets',
+      pets: unit.pets || 'No pets',
       laundry: unit.laundry || 'in-unit',
       parking: unit.parking || 'included',
+      garage: unit.garage || 'No parking',
     });
     setUnitLookupResult(null);
     setUnitAddressSelected(false);
@@ -500,7 +503,7 @@ export default function Portfolio() {
                               {unit.sqft ? ' · ' + unit.sqft.toLocaleString() + ' sqft' : ''}
                             </div>
                             <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>
-                              {unit.laundry && unit.laundry} · {unit.pets && unit.pets}
+                              {unit.laundry && unit.laundry} · {unit.pets && unit.pets}{unit.garage && unit.garage !== 'No parking' ? ' · ' + unit.garage : ''}
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
@@ -789,7 +792,14 @@ export default function Portfolio() {
                 <label style={label}>Pets</label>
                 <select style={input} value={unitForm.pets}
                   onChange={e => setUnitForm({ ...unitForm, pets: e.target.value })}>
-                  {['no pets', 'cats only', 'small dogs', 'all pets allowed'].map(p => <option key={p}>{p}</option>)}
+                  {['No pets', 'Cats only', 'Small dogs (under 25 lbs)', 'Large dogs allowed', 'All pets welcome', 'Case by case basis'].map(p => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={label}>Garage / Parking</label>
+                <select style={input} value={unitForm.garage || 'No parking'}
+                  onChange={e => setUnitForm({ ...unitForm, garage: e.target.value })}>
+                  {['No parking', 'Street parking only', '1 car garage', '2 car garage', 'Shared garage', 'Carport', 'Assigned spot', 'Driveway'].map(g => <option key={g}>{g}</option>)}
                 </select>
               </div>
             </div>
