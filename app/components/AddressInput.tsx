@@ -12,6 +12,8 @@ export default function AddressInput({ value, onChange, placeholder }: {
   const timeoutRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
   const lookup = async (q: string) => {
     if (q.length < 3) { setSuggestions([]); setShow(false); return; }
     const res = await fetch(`/api/address-search?q=${encodeURIComponent(q)}`);
@@ -19,10 +21,14 @@ export default function AddressInput({ value, onChange, placeholder }: {
     const list: string[] = data.suggestions || [];
     console.log('suggestions:', list, 'show:', list.length > 0);
     setSuggestions(list);
-    setShow(list.length > 0);
+    if (list.length > 0 && inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      setShow(true);
+    } else {
+      setShow(false);
+    }
   };
-
-  const rect = inputRef.current?.getBoundingClientRect();
 
   return (
     <div style={{ position: 'relative' }}>
@@ -38,12 +44,12 @@ export default function AddressInput({ value, onChange, placeholder }: {
         }}
         onBlur={() => setTimeout(() => setShow(false), 200)}
       />
-      {show && suggestions.length > 0 && (
+      {show && suggestions.length > 0 && dropdownPos && (
         <div style={{
           position: 'fixed',
-          top: (rect?.bottom ?? 0) + 4,
-          left: rect?.left ?? 0,
-          width: rect?.width ?? 300,
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          width: dropdownPos.width,
           zIndex: 99999,
           background: 'white',
           border: `1px solid ${T.border}`,
