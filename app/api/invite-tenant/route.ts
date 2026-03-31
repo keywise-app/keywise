@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import twilio from 'twilio';
 
 export async function POST(req: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,45 +20,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'lease_id and tenant_email are required' }, { status: 400 });
     }
 
-    console.log('[invite-tenant] Sending invite to', tenant_email, 'for lease', lease_id);
+    console.log('[invite-tenant] Generating magic link for', tenant_email);
 
-    // Try inviteUserByEmail first (works for new users, sends invite email)
-    const { data, error } = await adminClient.auth.admin.inviteUserByEmail(tenant_email, {
-      redirectTo: 'https://keywise.app/?tenant=true',
-      data: { role: 'tenant', lease_id, tenant_name },
+    // generateLink works for both new and existing users
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: 'magiclink',
+      email: tenant_email,
+      options: {
+        redirectTo: 'https://keywise.app/?tenant=true',
+      },
     });
 
-    if (error) {
-      const alreadyExists =
-        error.message.toLowerCase().includes('already registered') ||
-        error.message.toLowerCase().includes('already been registered') ||
-        error.message.toLowerCase().includes('user already exists');
+    if (linkError) {
+      console.error('[invite-tenant] generateLink error:', linkError.message, linkError);
+      return NextResponse.json({ error: linkError.message }, { status: 500 });
+    }
 
-      if (alreadyExists) {
-        // Existing user — send a magic link OTP email instead
-        console.log('[invite-tenant] User already exists, sending magic link OTP to', tenant_email);
-        const anonClient = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const magicLink = linkData.properties?.action_link;
+    console.log('[invite-tenant] Magic link generated:', magicLink ? 'yes' : 'no');
+
+    // Fetch the lease to get the tenant's phone number
+    const { data: lease } = await adminClient
+      .from('leases')
+      .select('phone')
+      .eq('id', lease_id)
+      .single();
+
+    const tenantPhone = lease?.phone;
+    let smsSent = false;
+
+    if (tenantPhone && magicLink) {
+      // Send the magic link via SMS
+      try {
+        const twilioClient = twilio(
+          process.env.TWILIO_ACCOUNT_SID,
+          process.env.TWILIO_AUTH_TOKEN
         );
-        const { error: otpError } = await anonClient.auth.signInWithOtp({
-          email: tenant_email,
-          options: {
-            emailRedirectTo: 'https://keywise.app/?tenant=true',
-            shouldCreateUser: false,
-          },
+        const formatted = tenantPhone.startsWith('+') ? tenantPhone : '+1' + tenantPhone.replace(/\D/g, '');
+        await twilioClient.messages.create({
+          body: `Hi ${tenant_name || 'there'}! Your landlord has invited you to Keywise to manage your lease and pay rent online. Click here to get started: ${magicLink}`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: formatted,
         });
-        if (otpError) {
-          console.error('[invite-tenant] signInWithOtp error:', otpError.message, otpError);
-          return NextResponse.json({ error: otpError.message }, { status: 500 });
-        }
-        console.log('[invite-tenant] Magic link OTP sent to existing user', tenant_email);
-      } else {
-        console.error('[invite-tenant] inviteUserByEmail error:', error.message, error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        smsSent = true;
+        console.log('[invite-tenant] SMS sent to', formatted);
+      } catch (smsErr: any) {
+        console.error('[invite-tenant] SMS send failed:', smsErr.message);
+        // Don't block — return the link so the landlord can send it manually
       }
-    } else {
-      console.log('[invite-tenant] Invite email sent to new user', tenant_email, '— id:', data.user?.id);
     }
 
     // Mark the lease as invited
@@ -73,9 +83,14 @@ export async function POST(req: Request) {
       console.error('[invite-tenant] lease update error:', updateError.message);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      sms_sent: smsSent,
+      // Return the link when no phone so landlord can copy and share manually
+      magic_link: smsSent ? null : magicLink,
+    });
   } catch (err: any) {
     console.error('[invite-tenant] Unexpected error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to send invite.' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to generate invite link.' }, { status: 500 });
   }
 }

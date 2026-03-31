@@ -21,6 +21,8 @@ export default function Tenants() {
   const [saving, setSaving] = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteMagicLink, setInviteMagicLink] = useState<string | null>(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -305,6 +307,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   <button onClick={async () => {
                     if (!selected.email) { alert('No email on file for this tenant. Add their email first.'); return; }
                     setInviteSending(true);
+                    setInviteMagicLink(null);
                     const res = await fetch('/api/invite-tenant', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -317,11 +320,12 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       setInviteSuccess(true);
                       setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
                       setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
+                      if (data.magic_link) setInviteMagicLink(data.magic_link);
                       setTimeout(() => setInviteSuccess(false), 3000);
                     }
                   }}
                     style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: inviteSending ? 'default' : 'pointer', opacity: inviteSending ? 0.7 : 1 }}>
-                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Sent!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite to Keywise'}
+                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Link generated!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite to Keywise'}
                   </button>
                   <button
                     onClick={() => window.open(`/?tenant_preview=true&lease_id=${selected.id}`, '_blank')}
@@ -339,6 +343,28 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 </div>
               </div>
             </div>
+
+            {/* Magic link copy box — shown when tenant has no phone */}
+            {inviteMagicLink && (
+              <div style={{ background: T.amberLight, border: `1px solid ${T.amber}44`, borderRadius: T.radiusSm, padding: '12px 16px', marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: T.amberDark, marginBottom: 6 }}>
+                  No phone number on file — copy this link and send it to your tenant:
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    readOnly
+                    value={inviteMagicLink}
+                    style={{ flex: 1, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '6px 10px', fontSize: 11, fontFamily: 'monospace', color: T.inkMid, outline: 'none' }}
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(inviteMagicLink); setInviteLinkCopied(true); setTimeout(() => setInviteLinkCopied(false), 2000); }}
+                    style={{ ...btn.ghost, fontSize: 12, padding: '6px 12px', flexShrink: 0 }}>
+                    {inviteLinkCopied ? '✓ Copied!' : '📋 Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Quick stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
