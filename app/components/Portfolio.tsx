@@ -37,6 +37,7 @@ function AddressAutocomplete({
   };
 
   const fetchSuggestions = (query: string) => {
+    console.log('fetchAddressSuggestions called with:', query);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.length < 3) { setSuggestions([]); setOpen(false); return; }
     debounceRef.current = setTimeout(async () => {
