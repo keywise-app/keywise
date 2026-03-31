@@ -68,7 +68,12 @@ function AddressAutocomplete({
         style={input}
         value={value}
         placeholder={placeholder || 'Start typing an address…'}
-        onChange={e => { onChange(e.target.value); fetchSuggestions(e.target.value); }}
+        onChange={e => {
+          console.log('MAPBOX TOKEN:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.slice(0, 10));
+          console.log('Query:', e.target.value);
+          onChange(e.target.value);
+          fetchSuggestions(e.target.value);
+        }}
         onFocus={() => { if (suggestions.length > 0) { updateDropdownPos(); setOpen(true); } }}
         autoComplete="off"
       />
