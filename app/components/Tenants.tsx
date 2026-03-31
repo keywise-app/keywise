@@ -113,21 +113,28 @@ export default function Tenants() {
 
   const removeTenant = async () => {
     if (!selected) return;
-    if (!confirm('Remove ' + selected.tenant_name + '? This will also delete their payments, documents, and signing records.')) return;
+    if (!confirm('Remove ' + selected.tenant_name + '? This will delete all their records including payments, documents and signing history.')) return;
 
-    const { error: tokenError } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
-    if (tokenError) { alert('Error deleting signing tokens: ' + tokenError.message); return; }
+    // 1. Delete signing tokens first (references leases)
+    const { error: e1 } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
+    if (e1) { alert('Error removing signing tokens: ' + e1.message); return; }
 
-    const { error: docError } = await supabase.from('documents').delete().eq('lease_id', selected.id);
-    if (docError) { alert('Error deleting documents: ' + docError.message); return; }
+    // 2. Delete payments (references leases)
+    const { error: e2 } = await supabase.from('payments').delete().eq('lease_id', selected.id);
+    if (e2) { alert('Error removing payments: ' + e2.message); return; }
 
-    const { error: payError } = await supabase.from('payments').delete().eq('lease_id', selected.id);
-    if (payError) { alert('Error deleting payments: ' + payError.message); return; }
+    // 3. Delete documents (references leases)
+    const { error: e3 } = await supabase.from('documents').delete().eq('lease_id', selected.id);
+    if (e3) { alert('Error removing documents: ' + e3.message); return; }
 
-    const { error: leaseError } = await supabase.from('leases').delete().eq('id', selected.id);
-    if (leaseError) { alert('Error deleting lease: ' + leaseError.message); return; }
+    // 4. Finally delete the lease
+    const { error: e4 } = await supabase.from('leases').delete().eq('id', selected.id);
+    if (e4) { alert('Error removing lease: ' + e4.message); return; }
 
-    setSelected(null);
+    // Update UI
+    const remaining = leases.filter(l => l.id !== selected.id);
+    setLeases(remaining);
+    setSelected(remaining.length > 0 ? remaining[0] : null);
     await fetchAll();
   };
 
