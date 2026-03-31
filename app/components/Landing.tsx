@@ -35,23 +35,20 @@ function Logo({ size = 32, dark = false }: { size?: number; dark?: boolean }) {
 
 function DashboardMockup() {
   return (
-    <div style={{
+    <div className="landing-mockup" style={{
       width: '100%', maxWidth: 620, borderRadius: 16,
       boxShadow: '0 32px 80px rgba(15,52,96,0.28), 0 8px 24px rgba(15,52,96,0.15)',
       overflow: 'hidden', border: `1px solid ${BORDER}`,
       transform: 'perspective(1200px) rotateY(-4deg) rotateX(2deg)',
       transformOrigin: 'center center',
     }}>
-      {/* Title bar */}
       <div style={{ background: '#1a1a2e', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#FF5F57' }} />
         <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#FEBC2E' }} />
         <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#28C840' }} />
         <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.06)', borderRadius: 6, marginLeft: 8 }} />
       </div>
-      {/* App chrome */}
       <div style={{ display: 'flex', height: 380, background: BG }}>
-        {/* Sidebar */}
         <div style={{ width: 148, background: N, padding: '16px 0', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
           <div style={{ padding: '0 14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 12, position: 'relative' }}>
@@ -75,15 +72,13 @@ function DashboardMockup() {
             </div>
           ))}
         </div>
-        {/* Main */}
         <div style={{ flex: 1, padding: '16px', overflowY: 'hidden' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: N, marginBottom: 12 }}>Dashboard</div>
-          {/* Stat cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
             {[
-              { label: 'Monthly Revenue', value: '$8,400', sub: '4 units', color: N },
-              { label: 'Collected', value: '$6,200', sub: 'This month', color: '#0F7040' },
-              { label: 'Pending', value: '$2,200', sub: '1 tenant', color: '#9A6500' },
+              { label: 'Monthly Revenue', value: '$8,400', color: N },
+              { label: 'Collected', value: '$6,200', color: '#0F7040' },
+              { label: 'Pending', value: '$2,200', color: '#9A6500' },
             ].map(s => (
               <div key={s.label} style={{ background: SURFACE, borderRadius: 10, padding: '10px 12px', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: s.color, letterSpacing: '-0.5px' }}>{s.value}</div>
@@ -91,7 +86,6 @@ function DashboardMockup() {
               </div>
             ))}
           </div>
-          {/* Tenant rows */}
           <div style={{ background: SURFACE, borderRadius: 10, border: `1px solid ${BORDER}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
             <div style={{ padding: '8px 12px', borderBottom: `1px solid ${BORDER}`, fontSize: 10, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tenants</div>
             {[
@@ -128,6 +122,13 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
@@ -137,6 +138,7 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
+      // On successful login the session state in page.tsx fires and Landing unmounts
     }
     setLoading(false);
   };
@@ -158,7 +160,6 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
           </p>
         </div>
 
-        {/* Toggle */}
         <div style={{ display: 'flex', background: BG, borderRadius: 10, padding: 4, marginBottom: 22 }}>
           {(['login', 'signup'] as const).map(m => (
             <button key={m} onClick={() => { setMode(m); setError(''); }}
@@ -177,15 +178,13 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@email.com"
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com"
             style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }} />
         </div>
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
             style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
         </div>
@@ -215,13 +214,48 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
 
 export default function Landing() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
 
-  const openSignup = () => setAuthMode('signup');
-  const openLogin = () => setAuthMode('login');
+  // Read URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('signup') === 'true') setAuthMode('signup');
+    else if (params.get('login') === 'true') setAuthMode('login');
+  }, []);
+
+  // Sync URL when auth modal opens/closes
+  useEffect(() => {
+    if (authMode === 'signup') window.history.replaceState({}, '', '/?signup=true');
+    else if (authMode === 'login') window.history.replaceState({}, '', '/?login=true');
+    else window.history.replaceState({}, '', '/');
+  }, [authMode]);
+
+  const openSignup = () => { setAuthMode('signup'); setMobileMenuOpen(false); };
+  const openLogin = () => { setAuthMode('login'); setMobileMenuOpen(false); };
+  const closeAuth = () => setAuthMode(null);
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleWaitlist = async () => {
+    if (!waitlistEmail || waitlistLoading) return;
+    setWaitlistLoading(true);
+    try {
+      await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+      setWaitlistSuccess(true);
+    } catch {
+      setWaitlistSuccess(true); // Show success regardless — don't block on network errors
+    }
+    setWaitlistLoading(false);
   };
 
   return (
@@ -232,18 +266,54 @@ export default function Landing() {
         body { margin: 0; }
         html { scroll-behavior: smooth; }
         .landing-btn-primary:hover { opacity: 0.88; }
-        .landing-btn-ghost:hover { background: ${BG}; }
+        .landing-btn-ghost:hover { background: ${BG} !important; }
         .landing-btn-teal:hover { opacity: 0.88; }
         .landing-pain-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(15,52,96,0.12); }
         .landing-feature-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(15,52,96,0.12); border-color: ${TEAL}66; }
         .landing-pricing-card:hover { transform: translateY(-4px); }
+        .landing-hamburger { display: none; }
+        .landing-nav-buttons { display: flex; }
+        .landing-mobile-menu { display: none; }
+
+        @media (max-width: 768px) {
+          .landing-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .landing-mockup { display: none !important; }
+          .landing-grid-3 { grid-template-columns: 1fr !important; }
+          .landing-grid-2 { grid-template-columns: 1fr !important; max-width: 400px !important; margin-left: auto !important; margin-right: auto !important; }
+          .landing-pain-grid { grid-template-columns: 1fr !important; }
+          .landing-steps-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .landing-steps-connector { display: none !important; }
+          .landing-h1 { font-size: 36px !important; letter-spacing: -0.5px !important; line-height: 1.12 !important; }
+          .landing-h2 { font-size: 28px !important; letter-spacing: -0.3px !important; }
+          .landing-h2-br { display: none; }
+          .landing-hero-p { font-size: 15px !important; }
+          .landing-section { padding: 60px 20px !important; }
+          .landing-nav-inner { padding: 0 20px !important; }
+          .landing-footer-inner { flex-direction: column !important; align-items: flex-start !important; }
+          .landing-hero-ctas { flex-direction: column !important; align-items: flex-start !important; }
+          .landing-hero-ctas button { width: 100% !important; justify-content: center !important; }
+          .landing-hamburger { display: flex !important; }
+          .landing-nav-buttons { display: none !important; }
+          .landing-mobile-menu { display: block; }
+          .landing-waitlist-form { flex-direction: column !important; }
+          .landing-waitlist-form input { width: 100% !important; }
+          .landing-waitlist-form button { width: 100% !important; }
+          .landing-final-h2 { font-size: 32px !important; }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .landing-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+          .landing-h1 { font-size: 42px !important; }
+          .landing-hero-grid { gap: 32px !important; }
+        }
       `}</style>
 
       {/* NAVBAR */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, padding: '0 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}` }}>
+        <div className="landing-nav-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <Logo size={30} />
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {/* Desktop buttons */}
+          <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
             <button onClick={openLogin} className="landing-btn-ghost"
               style={{ background: 'transparent', color: INK_MID, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
               Log In
@@ -253,25 +323,46 @@ export default function Landing() {
               Start Free
             </button>
           </div>
+          {/* Hamburger */}
+          <button className="landing-hamburger"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
+            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', opacity: mobileMenuOpen ? 0 : 1 }} />
+            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
+          </button>
         </div>
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="landing-mobile-menu" style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button onClick={openLogin}
+              style={{ background: 'transparent', color: N, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
+              Log In
+            </button>
+            <button onClick={openSignup}
+              style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
+              Start Free
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* HERO */}
-      <section style={{ background: `linear-gradient(160deg, ${BG} 0%, #e8f0ff 50%, ${TEAL_LIGHT} 100%)`, padding: '80px 40px 60px', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+      <section className="landing-section" style={{ background: `linear-gradient(160deg, ${BG} 0%, #e8f0ff 50%, ${TEAL_LIGHT} 100%)`, padding: '80px 40px 60px', overflow: 'hidden' }}>
+        <div className="landing-hero-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '5px 14px', marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, display: 'inline-block' }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: TEAL_DARK }}>Built for independent landlords</span>
             </div>
-            <h1 style={{ fontSize: 52, fontWeight: 800, color: N, lineHeight: 1.08, letterSpacing: '-1.5px', margin: '0 0 20px' }}>
+            <h1 className="landing-h1" style={{ fontSize: 52, fontWeight: 800, color: N, lineHeight: 1.08, letterSpacing: '-1.5px', margin: '0 0 20px' }}>
               Property management,<br />
               <span style={{ color: TEAL_DARK }}>made intelligent.</span>
             </h1>
-            <p style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 460 }}>
+            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 460 }}>
               Keywise uses AI to handle the time-consuming parts of being a landlord — lease tracking, rent collection, tenant communications, and maintenance. All in one place.
             </p>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 32, flexWrap: 'wrap' }}>
+            <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
               <button onClick={openSignup} className="landing-btn-primary"
                 style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Start for free →
@@ -281,6 +372,33 @@ export default function Landing() {
                 See how it works
               </button>
             </div>
+
+            {/* Early access capture */}
+            {!waitlistSuccess ? (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 8, fontWeight: 500 }}>Or get early access — no account needed:</div>
+                <div className="landing-waitlist-form" style={{ display: 'flex', gap: 8, maxWidth: 380 }}>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleWaitlist()}
+                    style={{ flex: 1, background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: INK }}
+                  />
+                  <button onClick={handleWaitlist} disabled={waitlistLoading || !waitlistEmail}
+                    style={{ background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: !waitlistEmail || waitlistLoading ? 'default' : 'pointer', opacity: !waitlistEmail || waitlistLoading ? 0.6 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
+                    {waitlistLoading ? '…' : 'Get early access'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: TEAL_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: TEAL_DARK, fontWeight: 700 }}>✓</span>
+                <span style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 600 }}>You're on the list! We'll be in touch soon.</span>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ display: 'flex' }}>
                 {['#FF8A65', '#42A5F5', '#66BB6A', '#AB47BC'].map((c, i) => (
@@ -299,17 +417,17 @@ export default function Landing() {
       </section>
 
       {/* PROBLEM */}
-      <section style={{ background: SURFACE, padding: '80px 40px' }}>
+      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Managing rentals shouldn't feel<br />like a second job.
+            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
+              Managing rentals shouldn't feel<br className="landing-h2-br" />like a second job.
             </h2>
             <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Sound familiar?</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          <div className="landing-pain-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {[
-              { icon: '💸', title: 'Chasing rent payments every month', desc: 'Texting tenants, logging into bank accounts, manually tracking who has and hasn\'t paid.' },
+              { icon: '💸', title: 'Chasing rent payments every month', desc: "Texting tenants, logging into bank accounts, manually tracking who has and hasn't paid." },
               { icon: '📝', title: 'Drafting the same letters over and over', desc: 'Late notices, lease renewals, entry notices — all written from scratch, every time.' },
               { icon: '🗂️', title: 'Losing track of leases and documents', desc: 'Lease terms buried in PDFs, maintenance history in text threads, docs scattered across folders.' },
             ].map(card => (
@@ -325,17 +443,17 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section ref={featuresRef} style={{ background: BG, padding: '80px 40px' }}>
+      <section ref={featuresRef} className="landing-section" style={{ background: BG, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ display: 'inline-block', background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '4px 14px', marginBottom: 16 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Features</span>
             </div>
-            <h2 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Everything you need.<br />Nothing you don't.
+            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
+              Everything you need.<br className="landing-h2-br" />Nothing you don't.
             </h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {[
               { icon: '✦', title: 'AI Lease Extraction', desc: 'Drop a PDF. We extract every term — including late fees, payment dates, and clauses — automatically.', accent: true },
               { icon: '💳', title: 'Online Rent Collection', desc: 'Tenants pay online. You get paid faster. Automatic reminders handle the follow-ups.', accent: false },
@@ -358,17 +476,16 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={{ background: SURFACE, padding: '80px 40px' }}>
+      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <h2 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
+            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
               Up and running in minutes.
             </h2>
             <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No setup calls. No migration headaches. Just sign up and go.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
-            {/* Connector line */}
-            <div style={{ position: 'absolute', top: 36, left: '16.67%', right: '16.67%', height: 2, background: `linear-gradient(90deg, ${TEAL}44, ${TEAL}, ${TEAL}44)`, zIndex: 0 }} />
+          <div className="landing-steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
+            <div className="landing-steps-connector" style={{ position: 'absolute', top: 36, left: '16.67%', right: '16.67%', height: 2, background: `linear-gradient(90deg, ${TEAL}44, ${TEAL}, ${TEAL}44)`, zIndex: 0 }} />
             {[
               { num: '1', title: 'Import your documents', desc: 'Drop your existing leases and documents. AI reads them and sets everything up — tenant names, rent amounts, lease dates, late fees.' },
               { num: '2', title: 'Invite your tenants', desc: 'Send a magic link in one click. Tenants get access to their portal where they can view their lease and pay rent online.' },
@@ -387,16 +504,15 @@ export default function Landing() {
       </section>
 
       {/* PRICING */}
-      <section style={{ background: BG, padding: '80px 40px' }}>
+      <section className="landing-section" style={{ background: BG, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
+            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
               Simple pricing that grows with you.
             </h2>
             <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No contracts. Cancel anytime.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
-            {/* Free */}
+          <div className="landing-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
             <div className="landing-pricing-card"
               style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)', transition: 'all 0.2s' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
@@ -417,7 +533,6 @@ export default function Landing() {
                 Get started free →
               </button>
             </div>
-            {/* Pro */}
             <div className="landing-pricing-card"
               style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2), 0 0 0 1px ${TEAL}22`, transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `${TEAL}12` }} />
@@ -457,10 +572,8 @@ export default function Landing() {
         <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: `${TEAL}08` }} />
         <div style={{ position: 'absolute', bottom: -40, left: -40, width: 200, height: 200, borderRadius: '50%', background: `${TEAL}06` }} />
         <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${TEAL}18`, border: `1px solid ${TEAL}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>
-            🏠
-          </div>
-          <h2 style={{ fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${TEAL}18`, border: `1px solid ${TEAL}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>🏠</div>
+          <h2 className="landing-final-h2" style={{ fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>
             Ready to manage smarter?
           </h2>
           <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.6)', margin: '0 0 36px', lineHeight: 1.6 }}>
@@ -476,9 +589,9 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer style={{ background: INK, padding: '32px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div className="landing-footer-inner" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <Logo size={24} dark />
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
             {['Privacy', 'Terms', 'Contact'].map(link => (
               <a key={link} href="#"
                 style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontWeight: 500 }}
@@ -494,8 +607,7 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* AUTH MODAL */}
-      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} />}
+      {authMode && <AuthModal mode={authMode} onClose={closeAuth} />}
     </div>
   );
 }
