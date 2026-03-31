@@ -10,6 +10,7 @@ import Operations from './components/Operations';
 import Profile from './components/Profile';
 import Onboarding from './components/Onboarding';
 import TenantDashboard from './components/TenantDashboard';
+import Landing from './components/Landing';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
@@ -204,7 +205,7 @@ export default function Home() {
     </div>
   );
 
-  if (!session) return <Auth />;
+  if (!session) return <Landing />;
   if (session && previewLeaseId) return <TenantDashboard previewLeaseId={previewLeaseId} />;
   if (session && userRole === 'tenant') return <TenantDashboard />;
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
