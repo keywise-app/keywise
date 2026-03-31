@@ -36,6 +36,14 @@ const statusColor = { open: '#C0392B', 'in-progress': '#D4701A', resolved: '#2D6
 const statusBg = { open: '#FDECEA', 'in-progress': '#FEF0E4', resolved: '#D8EDDF' };
 
 export default function Maintenance() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -230,7 +238,7 @@ export default function Maintenance() {
   return (
     <div>
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
         {[
           { label: 'Open Issues', value: openCount, color: '#C0392B' },
           { label: 'In Progress', value: inProgressCount, color: '#D4701A' },
@@ -281,7 +289,7 @@ export default function Maintenance() {
 
       {filtered.map(issue => (
         <div key={issue.id} style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: isMobile ? 12 : 0 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{issue.issue}</div>
@@ -300,7 +308,7 @@ export default function Maintenance() {
               {issue.notes && <div style={{ fontSize: 12, color: '#8C8070', marginTop: 6, fontStyle: 'italic' }}>{issue.notes}</div>}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginLeft: 16 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', flexWrap: isMobile ? 'wrap' as const : undefined, gap: 7, marginLeft: isMobile ? 0 : 16 }}>
               {issue.status !== 'resolved' && (
                 <button onClick={() => cycleStatus(issue)}
                   style={{ background: '#1A472A', color: 'white', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>

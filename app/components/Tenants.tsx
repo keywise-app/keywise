@@ -28,6 +28,13 @@ export default function Tenants() {
   const [prForm, setPrForm] = useState({ type: 'Monthly Rent', amount: '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
   const [prSending, setPrSending] = useState(false);
   const [prSuccess, setPrSuccess] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const [prLinkCopied, setPrLinkCopied] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -241,10 +248,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, height: 'calc(100vh - 140px)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 140px)' }}>
 
-      {/* Tenant list */}
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Tenant list — on mobile, hide when a tenant is selected */}
+      {(!isMobile || !selected) && (
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: isMobile ? 'auto' : undefined }}>
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}`, fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {leases.length} Tenant{leases.length !== 1 ? 's' : ''}
         </div>
@@ -281,6 +289,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
           })}
         </div>
       </div>
+      )}
 
       {/* Tenant detail */}
       {selected && (
@@ -288,6 +297,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
           {/* Header */}
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}` }}>
+            {isMobile && (
+              <button onClick={() => setSelected(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: T.navy, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '0 0 12px' }}>
+                ← Back to tenants
+              </button>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>{selected.tenant_name}</div>
@@ -395,7 +409,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, padding: '0 24px' }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, padding: '0 24px', overflowX: 'auto' as const, flexWrap: 'nowrap' as const }}>
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'payments', label: 'Payments (' + tenantPayments.length + ')' },

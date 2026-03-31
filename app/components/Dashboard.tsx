@@ -11,6 +11,13 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
   const [loading, setLoading] = useState(true);
   const [insight, setInsight] = useState('');
   const [insightLoading, setInsightLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -85,7 +92,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       {urgentCount > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {overduePayments.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '11px 16px' }}>
+            <div key={p.id} style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '11px 16px', gap: isMobile ? 10 : 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 15 }}>⚠</span>
                 <div>
@@ -136,7 +143,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       )}
 
       {/* ── QUICK ACTIONS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
         {[
           { icon: '💳', label: 'Mark Rent Paid', desc: 'Update payment status', page: 'tenants', teal: false },
           { icon: '🔧', label: 'Log Maintenance', desc: 'Report a new issue', page: 'operations', teal: false },
@@ -164,7 +171,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       </div>
 
       {/* ── FINANCIAL SUMMARY ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
         {[
           { label: 'Rent Expected', value: '$' + totalRent.toLocaleString(), sub: leases.length + ' active lease' + (leases.length !== 1 ? 's' : ''), color: T.navy },
           { label: 'Collected', value: '$' + collectedThisMonth.toLocaleString(), sub: totalRent > 0 ? Math.round(collectedThisMonth / totalRent * 100) + '% of expected' : 'this month', color: T.greenDark },
@@ -180,7 +187,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       </div>
 
       {/* ── RECENT ACTIVITY + AI BRIEFING (side by side) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'start' }}>
 
         {/* Recent Activity */}
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 22, boxShadow: T.shadow }}>

@@ -17,7 +17,7 @@ export default function Operations() {
   return (
     <div>
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 4, width: 'fit-content', boxShadow: T.shadow }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 4, width: 'fit-content', maxWidth: '100%', overflowX: 'auto' as const, boxShadow: T.shadow }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
             style={{

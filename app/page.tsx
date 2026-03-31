@@ -53,8 +53,16 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -215,82 +223,100 @@ export default function Home() {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       <style>{`* { box-sizing: border-box; } body { margin: 0; } button, input, select, textarea { font-family: inherit; }`}</style>
 
-      {/* Sidebar */}
-      <div style={{ width: 200, background: T.navy, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '20px 20px', pointerEvents: 'none' }} />
-
-        {/* Logo */}
-        <div style={{ padding: '22px 20px 18px', borderBottom: `1px solid rgba(255,255,255,0.08)`, position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <KeywiseLogo size={28} />
-            <div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>Keywise</div>
-              <div style={{ fontSize: 9, color: T.teal, letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 1 }}>Property AI</div>
+      {/* Sidebar — desktop only */}
+      {!isMobile && (
+        <div style={{ width: 200, background: T.navy, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '20px 20px', pointerEvents: 'none' }} />
+          <div style={{ padding: '22px 20px 18px', borderBottom: `1px solid rgba(255,255,255,0.08)`, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <KeywiseLogo size={28} />
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>Keywise</div>
+                <div style={{ fontSize: 9, color: T.teal, letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 1 }}>Property AI</div>
+              </div>
             </div>
           </div>
+          <div style={{ flex: 1, padding: '16px 0', position: 'relative' }}>
+            {NAV.map(item => {
+              const active = page === item.id;
+              return (
+                <div key={item.id} onClick={() => setPage(item.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 20px', cursor: 'pointer',
+                    background: active ? 'rgba(0,212,170,0.12)' : 'transparent',
+                    borderLeft: active ? `2px solid ${T.teal}` : '2px solid transparent',
+                    color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                    fontWeight: active ? 600 : 400, fontSize: 14,
+                    transition: 'all 0.12s', marginBottom: 2,
+                  }}>
+                  <span style={{ fontSize: 15, opacity: active ? 1 : 0.7 }}>{item.icon}</span>
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, position: 'relative' }}>
+            <button onClick={() => supabase.auth.signOut()}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
+              Sign out
+            </button>
+          </div>
         </div>
-
-        {/* Nav */}
-        <div style={{ flex: 1, padding: '16px 0', position: 'relative' }}>
-          {NAV.map(item => {
-            const active = page === item.id;
-            return (
-              <div key={item.id} onClick={() => setPage(item.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 20px', cursor: 'pointer',
-                  background: active ? 'rgba(0,212,170,0.12)' : 'transparent',
-                  borderLeft: active ? `2px solid ${T.teal}` : '2px solid transparent',
-                  color: active ? '#fff' : 'rgba(255,255,255,0.5)',
-                  fontWeight: active ? 600 : 400,
-                  fontSize: 14,
-                  transition: 'all 0.12s',
-                  marginBottom: 2,
-                }}>
-                <span style={{ fontSize: 15, opacity: active ? 1 : 0.7 }}>{item.icon}</span>
-                {item.label}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Sign out */}
-        <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, position: 'relative' }}>
-          <button onClick={() => supabase.auth.signOut()}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
-            Sign out
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {/* Topbar */}
-        <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, letterSpacing: '-0.3px', flexShrink: 0 }}>{PAGE_TITLES[page]}</div>
-
-          {/* Search bar */}
-          <button onClick={openSearch}
-            style={{
-              flex: 1, maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8,
-              background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10,
-              padding: '8px 14px', cursor: 'text', textAlign: 'left',
-            }}>
-            <span style={{ color: T.inkMuted, fontSize: 14 }}>⌕</span>
-            <span style={{ fontSize: 13, color: T.inkMuted }}>Search tenants, payments, maintenance…</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: T.inkMuted, background: T.border, borderRadius: 5, padding: '2px 6px', letterSpacing: '0.3px' }}>⌘K</span>
-          </button>
-
-          <div style={{ fontSize: 12, color: T.inkMuted, flexShrink: 0 }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-          </div>
+        <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '12px 16px' : '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
+          {isMobile ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <KeywiseLogo size={24} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, letterSpacing: '-0.3px' }}>{PAGE_TITLES[page]}</div>
+              <button onClick={() => supabase.auth.signOut()}
+                style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer' }}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, letterSpacing: '-0.3px', flexShrink: 0 }}>{PAGE_TITLES[page]}</div>
+              <button onClick={openSearch}
+                style={{ flex: 1, maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '8px 14px', cursor: 'text', textAlign: 'left' }}>
+                <span style={{ color: T.inkMuted, fontSize: 14 }}>⌕</span>
+                <span style={{ fontSize: 13, color: T.inkMuted }}>Search tenants, payments, maintenance…</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: T.inkMuted, background: T.border, borderRadius: 5, padding: '2px 6px', letterSpacing: '0.3px' }}>⌘K</span>
+              </button>
+              <div style={{ fontSize: 12, color: T.inkMuted, flexShrink: 0 }}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
           {renderPage()}
         </div>
       </div>
+
+      {/* Bottom tab bar — mobile only */}
+      {isMobile && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, background: T.surface, borderTop: `1px solid ${T.border}`, display: 'flex', boxShadow: '0 -2px 12px rgba(15,52,96,0.08)' }}>
+          {NAV.map(item => {
+            const active = page === item.id;
+            return (
+              <button key={item.id} onClick={() => setPage(item.id)}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'transparent', cursor: 'pointer', borderTop: active ? `2px solid ${T.navy}` : '2px solid transparent' }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, color: active ? T.navy : T.inkMuted, letterSpacing: '0.1px' }}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Stripe success toast */}
       {stripeSuccess && (
