@@ -210,7 +210,8 @@ export async function POST(req: Request) {
     console.log('[payment-request] notify_email:', notify_email, '| tenant_email:', tenant_email);
     if (notify_email && tenant_email) {
       try {
-        const emailUrl = new URL('/api/send-email', req.url).href;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
+        const emailUrl = `${baseUrl}/api/send-email`;
         console.log('[payment-request] Calling send-email at:', emailUrl);
         const emailRes = await fetch(emailUrl, {
           method: 'POST',
@@ -243,7 +244,8 @@ export async function POST(req: Request) {
     // Send SMS notification
     if (notify_sms && tenant_phone) {
       try {
-        await fetch(new URL('/api/send-sms', req.url).href, {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
+        await fetch(`${baseUrl}/api/send-sms`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
