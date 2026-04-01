@@ -271,15 +271,15 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           )}
         </div>
 
-        {/* No subscription yet */}
+        {/* No subscription / no customer yet */}
         {(!subscriptionStatus || !stripeCustomerId) && (
           <>
             <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16, lineHeight: 1.6 }}>
-              Start your 14-day free trial to unlock all Pro features — unlimited units, online rent collection, payment reminders, and priority support.
+              Upgrade to Pro to unlock unlimited units, online rent collection, payment reminders, and priority support.
             </div>
             <button onClick={startTrial} disabled={subscribing || !userId}
               style={{ ...btn.primary, opacity: subscribing ? 0.7 : 1, marginBottom: 10 }}>
-              {subscribing ? 'Setting up…' : 'Start Free Trial →'}
+              {subscribing ? 'Setting up…' : 'Upgrade to Pro →'}
             </button>
             <div style={{ fontSize: 12, color: T.inkMuted }}>14-day free trial · then $29/month · cancel anytime</div>
           </>

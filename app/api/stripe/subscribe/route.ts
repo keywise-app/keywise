@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+console.log('[subscribe] STRIPE_PRO_PRICE_ID:', process.env.STRIPE_PRO_PRICE_ID?.slice(0, 20));
+console.log('[subscribe] STRIPE_SECRET_KEY set:', !!process.env.STRIPE_SECRET_KEY);
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const supabase = createClient(
@@ -18,7 +21,8 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.STRIPE_PRO_PRICE_ID) {
-      return NextResponse.json({ error: 'STRIPE_PRO_PRICE_ID is not configured' }, { status: 500 });
+      console.error('[subscribe] STRIPE_PRO_PRICE_ID not set');
+      return NextResponse.json({ error: 'Stripe not configured. Please contact support.' }, { status: 500 });
     }
 
     // Create Stripe customer
