@@ -112,19 +112,15 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   };
 
   const handlePdfUpload = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setPdfError('File is too large. Please use a PDF under 10MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      setPdfError('large');
       return;
     }
     setPdfExtracting(true); setPdfError('');
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          const full = (reader.result as string).split(',')[1];
-          // Truncate to first 3MB to stay under Vercel's 4.5MB request limit
-          resolve(full.slice(0, 3000000));
-        };
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
@@ -408,7 +404,24 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                   </div>
                 </div>
               )}
-              {pdfError && (
+              {pdfError === 'large' && (
+                <div style={{ background: '#FFF0F0', border: `1px solid ${T.coral}44`, borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 13, color: T.coral, fontWeight: 600, marginBottom: 10 }}>
+                    ⚠ Your PDF is larger than 4MB. Please compress it first, or enter your lease details manually.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
+                    <a href="https://smallpdf.com/compress-pdf" target="_blank" rel="noopener noreferrer"
+                      style={{ ...btn.teal, fontSize: 12, padding: '6px 14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+                      Open SmallPDF →
+                    </a>
+                    <button onClick={() => { setMethod('manual'); setStep(1); }}
+                      style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                      Enter Manually →
+                    </button>
+                  </div>
+                </div>
+              )}
+              {pdfError && pdfError !== 'large' && (
                 <div style={{ background: '#FFF0F0', border: `1px solid ${T.coral}44`, borderRadius: 10, padding: '12px 16px', fontSize: 13, color: T.coral }}>
                   ⚠ {pdfError}{' '}
                   <button onClick={() => { setMethod('manual'); setStep(1); }}

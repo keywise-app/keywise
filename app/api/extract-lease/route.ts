@@ -10,6 +10,10 @@ export async function POST(req: Request) {
     console.log('[extract-lease] fileType:', fileType);
     console.log('[extract-lease] base64 length:', base64?.length ?? 'undefined');
 
+    if (!base64 || base64.length < 100) {
+      return NextResponse.json({ error: 'No file data received.' });
+    }
+
     const isImage = fileType?.startsWith('image/');
     const isPDF = fileType === 'application/pdf';
 
