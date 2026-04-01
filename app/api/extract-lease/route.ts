@@ -5,14 +5,13 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const { base64, fileType } = await req.json();
+    const { fileUrl, fileType } = await req.json();
 
     console.log('[extract-lease] fileType:', fileType);
-    console.log('[extract-lease] base64 length:', base64?.length ?? 'undefined');
-    console.log('[extract-lease] base64 starts with:', base64?.slice(0, 100));
+    console.log('[extract-lease] fileUrl:', fileUrl?.slice(0, 100));
 
-    if (!base64 || base64.length < 100) {
-      return NextResponse.json({ error: 'No file data received.' });
+    if (!fileUrl) {
+      return NextResponse.json({ error: 'No file URL received.' });
     }
 
     const isImage = fileType?.startsWith('image/');
@@ -21,6 +20,14 @@ export async function POST(req: Request) {
     if (!isImage && !isPDF) {
       return NextResponse.json({ error: 'Please upload a PDF or image file.' });
     }
+
+    const fileResponse = await fetch(fileUrl);
+    if (!fileResponse.ok) {
+      return NextResponse.json({ error: 'Could not fetch uploaded file: ' + fileResponse.status });
+    }
+    const buffer = await fileResponse.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    console.log('[extract-lease] fetched file, base64 length:', base64.length);
 
     const content: any[] = [];
 

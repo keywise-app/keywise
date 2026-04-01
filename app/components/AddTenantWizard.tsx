@@ -112,29 +112,40 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   };
 
   const handlePdfUpload = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 20 * 1024 * 1024) {
       setPdfError('large');
       return;
     }
     setPdfExtracting(true); setPdfError('');
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          // Strip the "data:application/pdf;base64," prefix explicitly
-          const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-          console.log('[wizard] base64 first 50 chars:', b64.slice(0, 50));
-          resolve(b64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setPdfError('Not signed in. Please sign in and try again.');
+        setPdfExtracting(false);
+        return;
+      }
+
+      const ext = file.name.split('.').pop() || 'pdf';
+      const path = user.id + '/temp-lease-' + Date.now() + '.' + ext;
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
+      if (uploadError) {
+        setPdfError('Upload failed: ' + uploadError.message);
+        setPdfExtracting(false);
+        return;
+      }
+
+      const { data: signedData } = await supabase.storage.from('documents').createSignedUrl(path, 300);
+      const signedUrl = signedData?.signedUrl;
+      if (!signedUrl) {
+        setPdfError('Could not get file URL. Please try again.');
+        setPdfExtracting(false);
+        return;
+      }
 
       const res = await fetch('/api/extract-lease', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, fileType: file.type || 'application/pdf' }),
+        body: JSON.stringify({ fileUrl: signedUrl, fileType: file.type || 'application/pdf' }),
       });
 
       if (!res.ok) {
