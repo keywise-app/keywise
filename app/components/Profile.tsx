@@ -14,6 +14,9 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -31,6 +34,8 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
         address: data.address || '',
       });
       setStripeAccountId(data.stripe_account_id || '');
+      setSubscriptionStatus(data.subscription_status || null);
+      setTrialEndsAt(data.trial_ends_at || null);
     }
     setLoading(false);
   };
@@ -73,6 +78,23 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       setStripeError(err.message || 'Failed to connect Stripe.');
       setStripeConnecting(false);
     }
+  };
+
+  const openBillingPortal = async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/stripe/billing-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || 'Could not open billing portal.');
+    } catch (err: any) {
+      alert(err.message || 'Failed to open billing portal.');
+    }
+    setBillingLoading(false);
   };
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: T.inkMuted }}>Loading profile…</div>;
@@ -178,6 +200,73 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           <div style={{ marginTop: 12, background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '8px 12px', fontSize: 13, color: T.coral }}>
             {stripeError}
           </div>
+        )}
+      </div>
+
+      {/* Subscription */}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 4 }}>Subscription</div>
+            <div style={{ fontSize: 13, color: T.inkMuted }}>Keywise Pro — $29/month</div>
+          </div>
+          {subscriptionStatus && (
+            <span style={{
+              background: subscriptionStatus === 'active' ? T.greenLight
+                : subscriptionStatus === 'trialing' ? '#E0FAF5'
+                : subscriptionStatus === 'past_due' ? '#FFF4EE'
+                : '#F3F4F6',
+              color: subscriptionStatus === 'active' ? T.greenDark
+                : subscriptionStatus === 'trialing' ? T.tealDark
+                : subscriptionStatus === 'past_due' ? '#C2410C'
+                : T.inkMuted,
+              border: `1px solid ${subscriptionStatus === 'active' ? T.green + '33'
+                : subscriptionStatus === 'trialing' ? T.teal + '44'
+                : subscriptionStatus === 'past_due' ? '#FED7AA'
+                : T.border}`,
+              borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 700,
+              whiteSpace: 'nowrap' as const, flexShrink: 0,
+            }}>
+              {subscriptionStatus === 'active' ? '✓ Active'
+                : subscriptionStatus === 'trialing' ? '⏱ Free Trial'
+                : subscriptionStatus === 'past_due' ? '⚠ Past Due'
+                : subscriptionStatus === 'cancelled' ? 'Cancelled'
+                : subscriptionStatus}
+            </span>
+          )}
+        </div>
+
+        {subscriptionStatus === 'trialing' && trialEndsAt && (() => {
+          const daysLeft = Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000));
+          const endDate = new Date(trialEndsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          return (
+            <div style={{ background: '#E0FAF5', border: `1px solid ${T.teal}44`, borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: T.tealDark, marginBottom: 16 }}>
+              Trial ends <strong>{endDate}</strong> ({daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining)
+            </div>
+          );
+        })()}
+
+        {subscriptionStatus === 'past_due' && (
+          <div style={{ background: '#FFF4EE', border: '1px solid #FED7AA', borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: '#C2410C', fontWeight: 600, marginBottom: 16 }}>
+            ⚠ Payment failed — update your payment method to restore access.
+          </div>
+        )}
+
+        {subscriptionStatus === 'cancelled' && (
+          <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+            Your subscription has been cancelled. Reactivate to restore Pro features.
+          </div>
+        )}
+
+        {subscriptionStatus ? (
+          <button
+            onClick={openBillingPortal}
+            disabled={billingLoading}
+            style={{ ...btn.ghost, fontSize: 13, opacity: billingLoading ? 0.7 : 1 }}>
+            {billingLoading ? 'Loading…' : subscriptionStatus === 'cancelled' ? 'Reactivate Plan →' : 'Manage Billing →'}
+          </button>
+        ) : (
+          <div style={{ fontSize: 13, color: T.inkMuted }}>No active subscription.</div>
         )}
       </div>
 

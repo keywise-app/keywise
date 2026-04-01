@@ -362,7 +362,7 @@ export default function Landing() {
             <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 460 }}>
               Keywise uses AI to handle the time-consuming parts of being a landlord — lease tracking, rent collection, tenant communications, and maintenance. All in one place.
             </p>
-            <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
+            <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
               <button onClick={openSignup} className="landing-btn-primary"
                 style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Start for free →
@@ -371,6 +371,9 @@ export default function Landing() {
                 style={{ background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                 See how it works
               </button>
+            </div>
+            <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
+              14-day free trial · Then $29/month · Cancel anytime
             </div>
 
             {/* Early access capture */}

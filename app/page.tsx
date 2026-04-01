@@ -11,6 +11,7 @@ import Profile from './components/Profile';
 import Onboarding from './components/Onboarding';
 import TenantDashboard from './components/TenantDashboard';
 import Landing from './components/Landing';
+import TrialBanner from './components/TrialBanner';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
@@ -54,6 +55,8 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   // ── Notifications bell ──
   const [notifOpen, setNotifOpen] = useState(false);
@@ -203,7 +206,9 @@ export default function Home() {
 
         // Always fetch profile first — role is the source of truth
         const { data: profile } = await supabase
-          .from('profiles').select('full_name, role').eq('id', session.user.id).single();
+          .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
+        if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
+        if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
 
         if (isTenantFlow && profile?.role !== 'landlord') {
           // First-time tenant login via magic link — only if not already a landlord
@@ -421,6 +426,15 @@ export default function Home() {
             </>
           )}
         </div>
+
+        {/* Trial Banner */}
+        {userRole === 'landlord' && (
+          <TrialBanner
+            subscriptionStatus={subscriptionStatus}
+            trialEndsAt={trialEndsAt}
+            userId={session?.user?.id || ''}
+          />
+        )}
 
         {/* Content */}
         <div style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
