@@ -118,15 +118,16 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     }
     setPdfExtracting(true); setPdfError('');
     try {
-      let base64 = await new Promise<string>((resolve, reject) => {
+      const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onload = () => {
+          const full = (reader.result as string).split(',')[1];
+          // Truncate to first 3MB to stay under Vercel's 4.5MB request limit
+          resolve(full.slice(0, 3000000));
+        };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-
-      // Limit to ~first 5 pages worth of data to avoid payload size issues
-      if (base64.length > 500000) base64 = base64.slice(0, 500000);
 
       const res = await fetch('/api/extract-lease', {
         method: 'POST',
