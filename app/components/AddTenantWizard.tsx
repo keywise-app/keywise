@@ -120,7 +120,13 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          // Strip the "data:application/pdf;base64," prefix explicitly
+          const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          console.log('[wizard] base64 first 50 chars:', b64.slice(0, 50));
+          resolve(b64);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });

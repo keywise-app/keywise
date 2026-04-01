@@ -9,6 +9,7 @@ export async function POST(req: Request) {
 
     console.log('[extract-lease] fileType:', fileType);
     console.log('[extract-lease] base64 length:', base64?.length ?? 'undefined');
+    console.log('[extract-lease] base64 starts with:', base64?.slice(0, 100));
 
     if (!base64 || base64.length < 100) {
       return NextResponse.json({ error: 'No file data received.' });
