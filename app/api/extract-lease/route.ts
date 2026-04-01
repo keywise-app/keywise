@@ -7,7 +7,10 @@ export async function POST(req: Request) {
   try {
     const { base64, fileType } = await req.json();
 
-    const isImage = fileType.startsWith('image/');
+    console.log('[extract-lease] fileType:', fileType);
+    console.log('[extract-lease] base64 length:', base64?.length ?? 'undefined');
+
+    const isImage = fileType?.startsWith('image/');
     const isPDF = fileType === 'application/pdf';
 
     if (!isImage && !isPDF) {
@@ -71,19 +74,27 @@ If a field is not found use an empty string. Return only the JSON object.`,
       }),
     });
 
+    console.log('[extract-lease] Claude response status:', response.status);
     const result = await response.json();
+    console.log('[extract-lease] Claude full response:', JSON.stringify(result).slice(0, 600));
 
     if (!response.ok) {
-      console.error('Claude error:', result);
-      return NextResponse.json({ error: 'Could not read the file. Please fill in manually.' });
+      console.error('[extract-lease] Claude error body:', result);
+      return NextResponse.json({ error: 'Claude API error ' + response.status + ': ' + (result?.error?.message || JSON.stringify(result)) });
     }
 
     const text = result.content?.[0]?.text || '';
+    console.log('[extract-lease] extracted text:', text.slice(0, 200));
     const cleaned = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-    return NextResponse.json(parsed);
-  } catch (err) {
-    console.error('Extract error:', err);
-    return NextResponse.json({ error: 'Could not extract lease data. Please fill in manually.' });
+    try {
+      const parsed = JSON.parse(cleaned);
+      return NextResponse.json(parsed);
+    } catch (parseErr) {
+      console.error('[extract-lease] JSON parse error. Raw text:', text.slice(0, 300));
+      return NextResponse.json({ error: 'Could not parse extracted data. Raw: ' + text.slice(0, 100) });
+    }
+  } catch (err: any) {
+    console.error('[extract-lease] Unexpected error:', err?.message ?? err);
+    return NextResponse.json({ error: 'Server error: ' + (err?.message || 'unknown') });
   }
 }
