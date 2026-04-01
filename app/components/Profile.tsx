@@ -19,8 +19,10 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -374,53 +376,105 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       <div style={{ border: '1.5px solid #FCA5A5', borderRadius: T.radius, padding: 24 }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: '#DC2626', marginBottom: 6 }}>Danger Zone</div>
         <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16, lineHeight: 1.6 }}>
-          Permanently delete your account and all associated data — properties, buildings, leases, payments, and documents. This cannot be undone.
+          Permanently delete your account and all associated data. This cannot be undone.
         </div>
-
-        {!deleteConfirm ? (
-          <button onClick={() => setDeleteConfirm(true)}
-            style={{ background: 'transparent', color: '#DC2626', border: '1.5px solid #FCA5A5', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Delete Account
-          </button>
-        ) : (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: T.radiusSm, padding: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#DC2626', marginBottom: 8 }}>
-              Are you sure? This will permanently delete all your data including properties, leases, and payment history.
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={async () => {
-                  setDeleting(true);
-                  try {
-                    const res = await fetch('/api/delete-account', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ user_id: userId }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      await supabase.auth.signOut();
-                    } else {
-                      alert('Error: ' + (data.error || 'Failed to delete account.'));
-                      setDeleting(false);
-                    }
-                  } catch (err: any) {
-                    alert(err.message || 'Failed to delete account.');
-                    setDeleting(false);
-                  }
-                }}
-                disabled={deleting}
-                style={{ background: '#DC2626', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: deleting ? 'default' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
-                {deleting ? 'Deleting…' : 'Yes, delete my account'}
-              </button>
-              <button onClick={() => setDeleteConfirm(false)}
-                style={{ ...btn.ghost, fontSize: 13 }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        <button onClick={() => { setDeleteModalOpen(true); setDeleteText(''); }}
+          style={{ background: 'transparent', color: '#DC2626', border: '1.5px solid #FCA5A5', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Delete Account
+        </button>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteModalOpen && (
+        <div onClick={e => { if (e.target === e.currentTarget && !deleting) { setDeleteModalOpen(false); setDeleteText(''); } }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(3px)' }}>
+          <div style={{ width: '100%', maxWidth: 440, background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', position: 'relative' }}>
+            {!deleting && !deleted && (
+              <button onClick={() => { setDeleteModalOpen(false); setDeleteText(''); }}
+                style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: T.inkMuted, lineHeight: 1 }}>×</button>
+            )}
+
+            {deleted ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 16 }}>👋</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Account deleted</div>
+                <div style={{ fontSize: 13, color: T.inkMuted }}>Your account has been permanently deleted. Redirecting…</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF5F5', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 16 }}>⚠️</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#DC2626', marginBottom: 8 }}>Delete your account?</div>
+                <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16, lineHeight: 1.6 }}>
+                  This will permanently delete all of your data including:
+                </div>
+                <ul style={{ margin: '0 0 20px', padding: '0 0 0 20px', fontSize: 13, color: T.inkMid, lineHeight: 1.9 }}>
+                  <li>Properties and units</li>
+                  <li>Leases and tenant records</li>
+                  <li>Payment history</li>
+                  <li>Documents and maintenance records</li>
+                  <li>Your Stripe subscription (cancelled immediately)</li>
+                </ul>
+                <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 12, color: '#DC2626', fontWeight: 600, marginBottom: 20 }}>
+                  This action is irreversible and cannot be undone.
+                </div>
+                <label style={{ ...label, marginBottom: 6, display: 'block' }}>
+                  Type <strong>DELETE</strong> to confirm
+                </label>
+                <input
+                  style={{ ...input, marginBottom: 20, borderColor: deleteText === 'DELETE' ? '#DC2626' : undefined }}
+                  type="text"
+                  placeholder="DELETE"
+                  value={deleteText}
+                  onChange={e => setDeleteText(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    disabled={deleteText !== 'DELETE' || deleting}
+                    onClick={async () => {
+                      setDeleting(true);
+                      try {
+                        const res = await fetch('/api/delete-account', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_id: userId }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setDeleted(true);
+                          setTimeout(async () => {
+                            await supabase.auth.signOut();
+                          }, 1500);
+                        } else {
+                          alert('Error: ' + (data.error || 'Failed to delete account.'));
+                          setDeleting(false);
+                        }
+                      } catch (err: any) {
+                        alert(err.message || 'Failed to delete account.');
+                        setDeleting(false);
+                      }
+                    }}
+                    style={{
+                      flex: 1, background: deleteText === 'DELETE' ? '#DC2626' : '#F3F4F6',
+                      color: deleteText === 'DELETE' ? '#fff' : T.inkMuted,
+                      border: 'none', borderRadius: T.radiusSm, padding: '11px', fontSize: 13,
+                      fontWeight: 700, cursor: deleteText !== 'DELETE' || deleting ? 'default' : 'pointer',
+                      opacity: deleting ? 0.7 : 1, transition: 'all 0.15s',
+                    }}>
+                    {deleting ? 'Deleting…' : 'Permanently Delete Account'}
+                  </button>
+                  <button onClick={() => { setDeleteModalOpen(false); setDeleteText(''); }}
+                    disabled={deleting}
+                    style={{ ...btn.ghost, fontSize: 13, opacity: deleting ? 0.5 : 1 }}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
