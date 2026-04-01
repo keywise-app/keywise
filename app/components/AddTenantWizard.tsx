@@ -104,10 +104,20 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
   const fetchProperties = async () => {
     const [bRes, uRes] = await Promise.all([
-      supabase.from('properties').select('id,address,name').eq('is_unit', false).order('address'),
+      supabase.from('buildings').select('id,address,name').order('address'),
       supabase.from('properties').select('id,building_id,unit_number,address,beds,baths,current_rent').eq('is_unit', true).order('unit_number'),
     ]);
-    if (bRes.data) setBuildings(bRes.data);
+    // Fall back to properties table if no buildings table rows exist
+    if (bRes.data && bRes.data.length > 0) {
+      setBuildings(bRes.data);
+    } else {
+      const { data: fallback } = await supabase
+        .from('properties')
+        .select('id,address,name')
+        .eq('is_unit', false)
+        .order('address');
+      if (fallback) setBuildings(fallback);
+    }
     if (uRes.data) setUnits(uRes.data);
   };
 
@@ -480,7 +490,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                         <option value="">— Select a unit (optional) —</option>
                         {units.filter(u => u.building_id === form.building_id).map(u => (
                           <option key={u.id} value={u.id}>
-                            {u.unit_number ? 'Unit ' + u.unit_number : u.address}
+                            {u.unit_number ? 'Unit ' + u.unit_number + (u.beds ? ' · ' + u.beds + 'bd' : '') : u.address}
                             {(u.beds || u.baths) ? ` — ${u.beds || '?'}bd/${u.baths || '?'}ba` : ''}
                             {u.current_rent ? ` · $${u.current_rent}/mo` : ''}
                           </option>
