@@ -134,42 +134,36 @@ Give me exactly 3 specific, actionable priorities for today. Number them 1, 2, 3
   };
 
   return (
-    <div style={{ background: T.navy, borderRadius: T.radius, padding: 24, boxShadow: T.shadowMd, position: 'relative', overflow: 'hidden', minHeight: 180 }}>
-      <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: T.teal, opacity: 0.07, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -30, left: -10, width: 80, height: 80, borderRadius: '50%', background: T.teal, opacity: 0.05, pointerEvents: 'none' }} />
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: T.teal, fontSize: 16 }}>✦</span>
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>AI Daily Digest</div>
-          </div>
-          <button onClick={fetchDigest} disabled={loading}
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
-            {loading ? '…' : '↺ Refresh'}
-          </button>
+    <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderLeft: `4px solid ${T.teal}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: T.teal, fontSize: 16 }}>✦</span>
+          <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>AI Daily Digest</div>
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
-          {today} · Based on your live portfolio
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[90, 75, 85].map((w, i) => (
-              <div key={i} style={{ height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.1)', width: `${w}%` }} />
-            ))}
-          </div>
-        ) : digest ? (
-          <div style={{ background: 'rgba(0,212,170,0.08)', border: `1px solid ${T.teal}22`, borderRadius: T.radiusSm, padding: '14px 16px', fontSize: 13, lineHeight: 1.85, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.88)' }}>
-            {digest}
-          </div>
-        ) : (
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7 }}>
-            {leases.length === 0
-              ? 'Add leases and properties to get your daily digest.'
-              : `${leases.length} leases · ${payments.filter(p => p.status === 'overdue').length} overdue · ${maintenance.filter(m => m.status !== 'resolved').length} open issues`}
-          </div>
-        )}
+        <button onClick={fetchDigest} disabled={loading}
+          style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, color: T.inkMuted, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
+          {loading ? '…' : '↺ Refresh'}
+        </button>
       </div>
+      <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 16 }}>
+        {today} · Based on your live portfolio
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[90, 75, 85].map((w, i) => <Skeleton key={i} h={14} w={`${w}%`} />)}
+        </div>
+      ) : digest ? (
+        <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '14px 16px', fontSize: 13, lineHeight: 1.85, whiteSpace: 'pre-wrap', color: T.ink }}>
+          {digest}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.7 }}>
+          {leases.length === 0
+            ? 'Add leases and properties to get your daily digest.'
+            : `${leases.length} leases · ${payments.filter(p => p.status === 'overdue').length} overdue · ${maintenance.filter(m => m.status !== 'resolved').length} open issues`}
+        </div>
+      )}
     </div>
   );
 }
@@ -387,6 +381,65 @@ function NotificationsWidget({ overduePayments, expiringLeases, staleMaint, onNa
   );
 }
 
+// ── ACTIVE LEASES TABLE ───────────────────────────────────────────────────────
+function ActiveLeasesTable({ leases, onNavigate }: { leases: any[]; onNavigate: (p: string) => void }) {
+  if (leases.length === 0) return null;
+  const now = new Date();
+
+  const rows = leases.map(l => {
+    const daysLeft = l.end_date
+      ? Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000)
+      : null;
+    const status = daysLeft === null ? 'active' : daysLeft < 0 ? 'expired' : daysLeft <= 60 ? 'expiring' : 'active';
+    return { ...l, daysLeft, status };
+  });
+
+  const statusStyle = (s: string) => {
+    if (s === 'expired') return { bg: T.coralLight, color: T.coral };
+    if (s === 'expiring') return { bg: T.amberLight, color: T.amberDark };
+    return { bg: T.greenLight, color: T.greenDark };
+  };
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 16 }}>Active Leases</div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr>
+              {['Tenant', 'Property', 'Rent / mo', 'Status', 'Lease End', 'Days Left'].map(h => (
+                <th key={h} style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', padding: '0 12px 10px 0', whiteSpace: 'nowrap', borderBottom: `1px solid ${T.border}` }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((l, i) => {
+              const ss = statusStyle(l.status);
+              return (
+                <tr key={l.id} onClick={() => onNavigate('tenants')}
+                  style={{ cursor: 'pointer', borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = T.bg}
+                  onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ''}>
+                  <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.ink }}>{l.tenant_name || '—'}</td>
+                  <td style={{ padding: '11px 12px 11px 0', color: T.inkMid, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.property?.split(',')[0] || '—'}</td>
+                  <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.navy }}>${(l.rent || 0).toLocaleString()}</td>
+                  <td style={{ padding: '11px 12px 11px 0' }}>
+                    <span style={{ background: ss.bg, color: ss.color, fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, textTransform: 'capitalize' }}>{l.status}</span>
+                  </td>
+                  <td style={{ padding: '11px 12px 11px 0', color: T.inkMid }}>{l.end_date || '—'}</td>
+                  <td style={{ padding: '11px 0 11px 0', color: l.daysLeft !== null && l.daysLeft < 0 ? T.coral : l.daysLeft !== null && l.daysLeft <= 60 ? T.amberDark : T.inkMid, fontWeight: l.daysLeft !== null && l.daysLeft <= 60 ? 700 : 400 }}>
+                    {l.daysLeft !== null ? (l.daysLeft < 0 ? `${Math.abs(l.daysLeft)}d ago` : `${l.daysLeft}d`) : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 export default function Dashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [leases, setLeases] = useState<any[]>([]);
@@ -447,11 +500,6 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
     if (m.status === 'resolved' || !m.created_at) return false;
     return (now.getTime() - new Date(m.created_at).getTime()) > 7 * 86400000;
   });
-
-  const recentActivity = [
-    ...payments.slice(0, 5).map(p => ({ kind: 'payment' as const, date: p.due_date, data: p })),
-    ...maintenance.slice(0, 3).map(m => ({ kind: 'maintenance' as const, date: m.created_at?.slice(0, 10) || '', data: m })),
-  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
 
   const urgentCount = overduePayments.length + expiringLeases.length + highPrioMaint.length;
 
@@ -524,64 +572,20 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
         ))}
       </div>
 
-      {/* ── ROW 2: QUICK ACTIONS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 14 }}>
-        {[
-          { icon: '💳', label: 'Mark Rent Paid', desc: 'Update payment status', page: 'tenants', teal: false },
-          { icon: '🔧', label: 'Log Maintenance', desc: 'Report a new issue', page: 'operations', teal: false },
-          { icon: '✦', label: 'Draft Message', desc: 'AI-written tenant notice', page: 'tenants', teal: true },
-          { icon: '📋', label: 'View Documents', desc: 'Leases & reports', page: 'operations', teal: false },
-        ].map(a => (
-          <div key={a.label} onClick={() => onNavigate(a.page)}
-            style={{ background: a.teal ? T.navy : T.surface, border: `1px solid ${a.teal ? T.navy : T.border}`, borderRadius: T.radius, padding: '16px 18px', cursor: 'pointer', boxShadow: T.shadow, transition: 'transform 0.1s, box-shadow 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = T.shadowMd; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = T.shadow; }}>
-            <div style={{ fontSize: 20, marginBottom: 8 }}>{a.icon}</div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: a.teal ? '#fff' : T.navy, marginBottom: 3 }}>{a.label}</div>
-            <div style={{ fontSize: 12, color: a.teal ? 'rgba(255,255,255,0.6)' : T.inkMuted }}>{a.desc}</div>
-          </div>
-        ))}
-      </div>
+      {/* ── ROW 2: AI DAILY DIGEST (full width) ── */}
+      <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
 
-      {/* ── ROW 3: AI DIGEST + ONBOARDING ── */}
+      {/* ── ROW 3: CASH FLOW + ONBOARDING ── */}
       <div style={{ display: 'grid', gridTemplateColumns: colGrid(3, 2), gap: 20, alignItems: 'start' }}>
-        <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
+        <CashFlowChart payments={payments} expenses={expenses} />
         <OnboardingChecklist onNavigate={onNavigate} />
       </div>
 
-      {/* ── ROW 4: CASH FLOW + NOTIFICATIONS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: colGrid(3, 2), gap: 20, alignItems: 'start' }}>
-        <CashFlowChart payments={payments} expenses={expenses} />
-        <NotificationsWidget overduePayments={overduePayments} expiringLeases={expiringLeases} staleMaint={staleMaint} onNavigate={onNavigate} />
-      </div>
-
-      {/* ── ROW 5: LEASE TIMELINE ── */}
+      {/* ── ROW 4: LEASE TIMELINE ── */}
       <LeaseTimeline leases={leases} onNavigate={onNavigate} />
 
-      {/* ── ROW 6: RECENT ACTIVITY ── */}
-      {recentActivity.length > 0 && (
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 22, boxShadow: T.shadow }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 16 }}>Recent Activity</div>
-          {recentActivity.map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < recentActivity.length - 1 ? `1px solid ${T.border}` : 'none' }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: item.kind === 'payment' ? (item.data.status === 'paid' ? T.greenLight : item.data.status === 'overdue' ? T.coralLight : T.amberLight) : '#FFF4EE', fontSize: 15 }}>
-                {item.kind === 'payment' ? '💳' : '🔧'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.kind === 'payment' ? (item.data.tenant_name || 'Unknown') + ' — $' + (item.data.amount || 0).toLocaleString() : (item.data.issue || 'Maintenance issue')}
-                </div>
-                <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>
-                  {item.kind === 'payment' ? item.data.status + ' · ' + item.date : (item.data.property?.split(',')[0] || '') + ' · ' + (item.data.priority || 'normal') + ' priority'}
-                </div>
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, textTransform: 'uppercase', background: item.kind === 'payment' ? (item.data.status === 'paid' ? T.greenLight : item.data.status === 'overdue' ? T.coralLight : T.amberLight) : (item.data.status === 'resolved' ? T.greenLight : '#FFF4EE'), color: item.kind === 'payment' ? (item.data.status === 'paid' ? T.greenDark : item.data.status === 'overdue' ? T.coral : T.amberDark) : (item.data.status === 'resolved' ? T.greenDark : '#C2410C') }}>
-                {item.kind === 'payment' ? item.data.status : item.data.status || 'open'}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ── ROW 5: ACTIVE LEASES TABLE ── */}
+      <ActiveLeasesTable leases={leases} onNavigate={onNavigate} />
 
       {/* ── EMPTY STATE ── */}
       {leases.length === 0 && (
