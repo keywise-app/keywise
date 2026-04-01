@@ -112,7 +112,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   };
 
   const handlePdfUpload = async (file: File) => {
-    if (file.size > 4 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       setPdfError('large');
       return;
     }
@@ -413,7 +413,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
               {pdfError === 'large' && (
                 <div style={{ background: '#FFF0F0', border: `1px solid ${T.coral}44`, borderRadius: 10, padding: '14px 16px' }}>
                   <div style={{ fontSize: 13, color: T.coral, fontWeight: 600, marginBottom: 10 }}>
-                    ⚠ Your PDF is larger than 4MB. Please compress it first, or enter your lease details manually.
+                    ⚠ Your PDF is larger than 10MB. Please compress it first, or enter your lease details manually.
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
                     <a href="https://smallpdf.com/compress-pdf" target="_blank" rel="noopener noreferrer"
