@@ -115,45 +115,56 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
   const handlePdfUpload = async (file: File) => {
     setPdfExtracting(true); setPdfError('');
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const base64 = (e.target?.result as string).split(',')[1];
-        const res = await fetch('/api/extract-lease', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, fileType: file.type }),
-        });
-        const data = await res.json();
-        if (data.error) { setPdfError(data.error); setPdfExtracting(false); return; }
-        upd({
-          tenant_name: data.tenant_name || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.property || '',
-          rent: data.rent ? data.rent + '' : '',
-          monthly_rent: data.rent ? data.rent + '' : '',
-          deposit: data.deposit ? data.deposit + '' : '',
-          start_date: data.start_date || '',
-          end_date: data.end_date || '',
-          payment_day: data.payment_day ? data.payment_day + '' : '1',
-          late_fee_percent: data.late_fee_percent ? data.late_fee_percent + '' : data.late_fee_fixed ? data.late_fee_fixed + '' : '',
-          late_fee_days: data.late_fee_days ? data.late_fee_days + '' : '3',
-          late_fee_type: data.late_fee_type || 'percent',
-          lease_terms_raw: data.late_fee_clause || '',
-          beds: data.beds ? data.beds + '' : '1',
-          baths: data.baths ? data.baths + '' : '1',
-          sqft: data.sqft ? data.sqft + '' : '',
-        });
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/extract-lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, fileType: file.type || 'application/pdf' }),
+      });
+
+      const data = await res.json();
+      console.log('[extract-lease] response:', data);
+
+      if (data.error) {
+        setPdfError('Could not read lease: ' + data.error);
         setPdfExtracting(false);
-        setMethod('pdf');
-        setStep(1);
-      } catch {
-        setPdfError('Could not read the file. Please fill in manually.');
-        setPdfExtracting(false);
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      upd({
+        tenant_name: data.tenant_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        address: data.property || '',
+        rent: data.rent ? data.rent + '' : '',
+        monthly_rent: data.rent ? data.rent + '' : '',
+        deposit: data.deposit ? data.deposit + '' : '',
+        start_date: data.start_date || '',
+        end_date: data.end_date || '',
+        payment_day: data.payment_day ? data.payment_day + '' : '1',
+        late_fee_percent: data.late_fee_percent ? data.late_fee_percent + '' : data.late_fee_fixed ? data.late_fee_fixed + '' : '',
+        late_fee_days: data.late_fee_days ? data.late_fee_days + '' : '3',
+        late_fee_type: data.late_fee_type || 'percent',
+        lease_terms_raw: data.late_fee_clause || '',
+        beds: data.beds ? data.beds + '' : '1',
+        baths: data.baths ? data.baths + '' : '1',
+        sqft: data.sqft ? data.sqft + '' : '',
+      });
+      setPdfExtracting(false);
+      setMethod('pdf');
+      setStep(1);
+    } catch (err: any) {
+      console.error('[extract-lease] upload error:', err);
+      setPdfError('Upload failed: ' + (err?.message || 'unknown error'));
+      setPdfExtracting(false);
+    }
   };
 
   const pickPdf = () => {
