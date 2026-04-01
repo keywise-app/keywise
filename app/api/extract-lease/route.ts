@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   try {
     const { base64, fileType } = await req.json();

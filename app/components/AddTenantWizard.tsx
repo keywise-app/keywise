@@ -127,6 +127,14 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
         body: JSON.stringify({ base64, fileType: file.type || 'application/pdf' }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('[extract-lease] HTTP error:', res.status, text);
+        setPdfError('Server error (' + res.status + '). Please try again or enter manually.');
+        setPdfExtracting(false);
+        return;
+      }
+
       const data = await res.json();
       console.log('[extract-lease] response:', data);
 
