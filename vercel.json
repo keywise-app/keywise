@@ -1,7 +1,21 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/monthly-snapshot",
+      "schedule": "0 8 1 * *"
+    }
+  ],
   "functions": {
     "app/api/extract-lease/route.ts": {
       "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/process-document/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/cron/monthly-snapshot/route.ts": {
+      "maxDuration": 300,
       "memory": 1024
     }
   }
