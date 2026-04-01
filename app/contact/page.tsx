@@ -31,15 +31,10 @@ export default function ContactPage() {
     if (!form.name || !form.email || !form.message) return;
     setStatus('sending');
     try {
-      const res = await fetch('/api/send-email', {
+      const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: 'hello@keywise.app',
-          subject: `Contact form: ${form.name}`,
-          from_name: 'Keywise Contact Form',
-          html: `<p><strong>From:</strong> ${form.name} (${form.email})</p><p><strong>Message:</strong></p><p>${form.message.replace(/\n/g, '<br>')}</p>`,
-        }),
+        body: JSON.stringify({ name: form.name, email: form.email, message: form.message }),
       });
       const data = await res.json();
       setStatus(data.success ? 'sent' : 'error');
