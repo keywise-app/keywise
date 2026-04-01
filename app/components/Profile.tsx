@@ -16,7 +16,11 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const [saved, setSaved] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -36,6 +40,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       setStripeAccountId(data.stripe_account_id || '');
       setSubscriptionStatus(data.subscription_status || null);
       setTrialEndsAt(data.trial_ends_at || null);
+      setStripeCustomerId(data.stripe_customer_id || null);
     }
     setLoading(false);
   };
@@ -78,6 +83,34 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       setStripeError(err.message || 'Failed to connect Stripe.');
       setStripeConnecting(false);
     }
+  };
+
+  const startTrial = async () => {
+    setSubscribing(true);
+    try {
+      const res = await fetch('/api/stripe/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, email: profile.email, name: profile.full_name }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); setSubscribing(false); return; }
+      // Subscription created — open billing portal to add payment method
+      setSubscriptionStatus('trialing');
+      setTrialEndsAt(data.trialEndsAt || null);
+      setStripeCustomerId(data.stripeCustomerId || stripeCustomerId);
+      // Immediately open billing portal so they can add a payment method
+      const portalRes = await fetch('/api/stripe/billing-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const portalData = await portalRes.json();
+      if (portalData.url) window.location.href = portalData.url;
+    } catch (err: any) {
+      alert(err.message || 'Failed to start trial.');
+    }
+    setSubscribing(false);
   };
 
   const openBillingPortal = async () => {
@@ -227,46 +260,88 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
               borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 700,
               whiteSpace: 'nowrap' as const, flexShrink: 0,
             }}>
-              {subscriptionStatus === 'active' ? '✓ Active'
+              {subscriptionStatus === 'active' ? '✓ Pro Active'
                 : subscriptionStatus === 'trialing' ? '⏱ Free Trial'
-                : subscriptionStatus === 'past_due' ? '⚠ Past Due'
+                : subscriptionStatus === 'past_due' ? '⚠ Payment Failed'
                 : subscriptionStatus === 'cancelled' ? 'Cancelled'
                 : subscriptionStatus}
             </span>
           )}
         </div>
 
-        {subscriptionStatus === 'trialing' && trialEndsAt && (() => {
-          const daysLeft = Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000));
-          const endDate = new Date(trialEndsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-          return (
-            <div style={{ background: '#E0FAF5', border: `1px solid ${T.teal}44`, borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: T.tealDark, marginBottom: 16 }}>
-              Trial ends <strong>{endDate}</strong> ({daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining)
+        {/* No subscription yet */}
+        {(!subscriptionStatus || !stripeCustomerId) && (
+          <>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16, lineHeight: 1.6 }}>
+              Start your 14-day free trial to unlock all Pro features — unlimited units, online rent collection, payment reminders, and priority support.
             </div>
+            <button onClick={startTrial} disabled={subscribing || !userId}
+              style={{ ...btn.primary, opacity: subscribing ? 0.7 : 1, marginBottom: 10 }}>
+              {subscribing ? 'Setting up…' : 'Start Free Trial →'}
+            </button>
+            <div style={{ fontSize: 12, color: T.inkMuted }}>14-day free trial · then $29/month · cancel anytime</div>
+          </>
+        )}
+
+        {/* Trialing */}
+        {subscriptionStatus === 'trialing' && (() => {
+          const daysLeft = trialEndsAt
+            ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+            : null;
+          const endDate = trialEndsAt
+            ? new Date(trialEndsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            : null;
+          return (
+            <>
+              <div style={{ background: '#E0FAF5', border: `1px solid ${T.teal}44`, borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: T.tealDark, marginBottom: 16, lineHeight: 1.5 }}>
+                {daysLeft !== null && <><strong>{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</strong> · </>}
+                {endDate && <>Trial ends {endDate}</>}
+              </div>
+              <button onClick={openBillingPortal} disabled={billingLoading}
+                style={{ ...btn.teal, opacity: billingLoading ? 0.7 : 1 }}>
+                {billingLoading ? 'Loading…' : 'Add Payment Method →'}
+              </button>
+            </>
           );
         })()}
 
+        {/* Active */}
+        {subscriptionStatus === 'active' && (
+          <>
+            <button onClick={openBillingPortal} disabled={billingLoading}
+              style={{ ...btn.ghost, fontSize: 13, opacity: billingLoading ? 0.7 : 1, marginBottom: 10 }}>
+              {billingLoading ? 'Loading…' : 'Manage Billing →'}
+            </button>
+            <div style={{ fontSize: 12, color: T.inkMuted }}>
+              Opens Stripe's secure portal to update your payment method or cancel.
+            </div>
+          </>
+        )}
+
+        {/* Past due */}
         {subscriptionStatus === 'past_due' && (
-          <div style={{ background: '#FFF4EE', border: '1px solid #FED7AA', borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: '#C2410C', fontWeight: 600, marginBottom: 16 }}>
-            ⚠ Payment failed — update your payment method to restore access.
-          </div>
+          <>
+            <div style={{ background: '#FFF4EE', border: '1px solid #FED7AA', borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13, color: '#C2410C', fontWeight: 600, marginBottom: 16 }}>
+              ⚠ Payment failed — update your payment method to restore access.
+            </div>
+            <button onClick={openBillingPortal} disabled={billingLoading}
+              style={{ background: '#C2410C', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1 }}>
+              {billingLoading ? 'Loading…' : 'Update Payment Method →'}
+            </button>
+          </>
         )}
 
+        {/* Cancelled */}
         {subscriptionStatus === 'cancelled' && (
-          <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
-            Your subscription has been cancelled. Reactivate to restore Pro features.
-          </div>
-        )}
-
-        {subscriptionStatus ? (
-          <button
-            onClick={openBillingPortal}
-            disabled={billingLoading}
-            style={{ ...btn.ghost, fontSize: 13, opacity: billingLoading ? 0.7 : 1 }}>
-            {billingLoading ? 'Loading…' : subscriptionStatus === 'cancelled' ? 'Reactivate Plan →' : 'Manage Billing →'}
-          </button>
-        ) : (
-          <div style={{ fontSize: 13, color: T.inkMuted }}>No active subscription.</div>
+          <>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+              Your subscription has been cancelled. Reactivate to restore Pro features.
+            </div>
+            <button onClick={startTrial} disabled={subscribing}
+              style={{ ...btn.primary, opacity: subscribing ? 0.7 : 1 }}>
+              {subscribing ? 'Setting up…' : 'Reactivate Plan →'}
+            </button>
+          </>
         )}
       </div>
 
@@ -284,7 +359,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
 
       {/* Import */}
       {onImport && (
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: T.shadow }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 6 }}>Import Documents</div>
           <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
             Bulk upload leases, insurance certificates, and receipts — AI organizes everything automatically.
@@ -294,6 +369,58 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           </button>
         </div>
       )}
+
+      {/* Danger Zone */}
+      <div style={{ border: '1.5px solid #FCA5A5', borderRadius: T.radius, padding: 24 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: '#DC2626', marginBottom: 6 }}>Danger Zone</div>
+        <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16, lineHeight: 1.6 }}>
+          Permanently delete your account and all associated data — properties, buildings, leases, payments, and documents. This cannot be undone.
+        </div>
+
+        {!deleteConfirm ? (
+          <button onClick={() => setDeleteConfirm(true)}
+            style={{ background: 'transparent', color: '#DC2626', border: '1.5px solid #FCA5A5', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Delete Account
+          </button>
+        ) : (
+          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: T.radiusSm, padding: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#DC2626', marginBottom: 8 }}>
+              Are you sure? This will permanently delete all your data including properties, leases, and payment history.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    const res = await fetch('/api/delete-account', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ user_id: userId }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      await supabase.auth.signOut();
+                    } else {
+                      alert('Error: ' + (data.error || 'Failed to delete account.'));
+                      setDeleting(false);
+                    }
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to delete account.');
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                style={{ background: '#DC2626', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: deleting ? 'default' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
+                {deleting ? 'Deleting…' : 'Yes, delete my account'}
+              </button>
+              <button onClick={() => setDeleteConfirm(false)}
+                style={{ ...btn.ghost, fontSize: 13 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
