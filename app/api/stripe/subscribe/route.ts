@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[subscribe] STRIPE_PRO_PRICE_ID:', process.env.STRIPE_PRO_PRICE_ID?.slice(0, 20));
-console.log('[subscribe] STRIPE_SECRET_KEY set:', !!process.env.STRIPE_SECRET_KEY);
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +12,9 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const { user_id, email, name } = await req.json();
+
+    console.log('[subscribe] Price ID being used:', process.env.STRIPE_PRO_PRICE_ID);
+    console.log('[subscribe] Stripe key prefix:', process.env.STRIPE_SECRET_KEY?.slice(0, 12));
 
     if (!user_id || !email) {
       return NextResponse.json({ error: 'user_id and email are required' }, { status: 400 });
@@ -28,6 +28,10 @@ export async function POST(req: Request) {
     // Create Stripe customer
     const customer = await stripe.customers.create({ email, name: name || email });
     console.log('[subscribe] Created Stripe customer:', customer.id, 'for', email);
+
+    // Verify the price exists before creating subscription
+    const price = await stripe.prices.retrieve(process.env.STRIPE_PRO_PRICE_ID!);
+    console.log('[subscribe] Price retrieved:', price.id, price.active);
 
     // Create subscription with 14-day trial
     const subscription = await stripe.subscriptions.create({
