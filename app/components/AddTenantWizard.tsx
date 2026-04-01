@@ -23,12 +23,13 @@ const emptyForm = {
   late_fee_type: 'percent', lease_terms_raw: '',
 };
 
-export default function AddTenantWizard({ onClose, onComplete }: {
+export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }: {
   onClose: () => void;
   onComplete?: (lease: any) => void;
+  preselectedUnit?: { id: string; address?: string; unit_number?: string; building_id?: string; current_rent?: number } | null;
 }) {
-  const [step, setStep] = useState<Step>(0);
-  const [method, setMethod] = useState<'pdf' | 'manual' | null>(null);
+  const [step, setStep] = useState<Step>(preselectedUnit ? 2 : 0);
+  const [method, setMethod] = useState<'pdf' | 'manual' | null>(preselectedUnit ? 'manual' : null);
   const [buildings, setBuildings] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -54,16 +55,28 @@ export default function AddTenantWizard({ onClose, onComplete }: {
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const d = JSON.parse(saved);
-        if (d.step && d.step !== 0 && d.step !== 'done') {
-          setStep(d.step); setMethod(d.method);
-          setForm({ ...emptyForm, ...d.form });
+    if (preselectedUnit) {
+      // Pre-fill from the unit and skip draft restore
+      upd({
+        property_id: preselectedUnit.id,
+        building_id: preselectedUnit.building_id || '',
+        address: preselectedUnit.address || '',
+        unit_number: preselectedUnit.unit_number || '',
+        monthly_rent: preselectedUnit.current_rent ? preselectedUnit.current_rent + '' : '',
+        rent: preselectedUnit.current_rent ? preselectedUnit.current_rent + '' : '',
+      });
+    } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const d = JSON.parse(saved);
+          if (d.step && d.step !== 0 && d.step !== 'done') {
+            setStep(d.step); setMethod(d.method);
+            setForm({ ...emptyForm, ...d.form });
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
     fetchProperties();
   }, []);
 
@@ -239,7 +252,8 @@ export default function AddTenantWizard({ onClose, onComplete }: {
 
   const goNext = () => setStep(s => ((s as number) + 1) as Step);
   const goBack = () => {
-    if (step === 1) { setStep(0); setMethod(null); }
+    if (preselectedUnit && step === 2) { onClose(); }
+    else if (step === 1) { setStep(0); setMethod(null); }
     else setStep(s => ((s as number) - 1) as Step);
   };
 
@@ -310,6 +324,13 @@ export default function AddTenantWizard({ onClose, onComplete }: {
             <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600 }}>
               Step {stepNum} of 5 — {STEPS_LABELS[stepNum - 1]}
             </div>
+          </div>
+        )}
+
+        {/* ── Pre-selected unit banner ── */}
+        {preselectedUnit && step !== 'done' && (
+          <div style={{ padding: '10px 20px', background: T.tealLight, borderBottom: `1px solid ${T.teal}44`, fontSize: 12, color: T.tealDark, fontWeight: 600, flexShrink: 0 }}>
+            📍 Adding tenant for {preselectedUnit.unit_number ? 'Unit ' + preselectedUnit.unit_number + ' · ' : ''}{preselectedUnit.address || 'selected unit'}
           </div>
         )}
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
 import AddressInput from './AddressInput';
+import AddTenantWizard from './AddTenantWizard';
 
 type Building = {
   id: string;
@@ -55,6 +56,8 @@ export default function Portfolio() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBuilding, setExpandedBuilding] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardUnit, setWizardUnit] = useState<Unit | null>(null);
   const [showAddBuilding, setShowAddBuilding] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
@@ -520,7 +523,11 @@ export default function Portfolio() {
                                 Vacant
                               </span>
                             )}
-                            <div style={{ display: 'flex', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
+                                style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px' }}>
+                                + Tenant
+                              </button>
                               <button onClick={() => openEditUnit(unit)}
                                 style={{ background: 'none', border: 'none', color: T.inkMuted, fontSize: 12, cursor: 'pointer', padding: '2px 4px' }}>
                                 ✏️
@@ -547,9 +554,13 @@ export default function Portfolio() {
                           </div>
                         ) : (
                           <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
-                            <div style={{ fontSize: 12, color: T.inkMuted }}>
+                            <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 8 }}>
                               Market rent: <span style={{ fontWeight: 700, color: T.navy }}>${(unit.current_rent || 0).toLocaleString()}/mo</span>
                             </div>
+                            <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
+                              style={{ ...btn.primary, fontSize: 12, padding: '6px 14px' }}>
+                              + Add Tenant
+                            </button>
                           </div>
                         )}
                       </div>
@@ -813,6 +824,14 @@ export default function Portfolio() {
             </div>
           </div>
         </div>
+      )}
+
+      {showWizard && (
+        <AddTenantWizard
+          preselectedUnit={wizardUnit}
+          onComplete={() => { setShowWizard(false); setWizardUnit(null); fetchAll(); }}
+          onClose={() => { setShowWizard(false); setWizardUnit(null); }}
+        />
       )}
     </div>
   );
