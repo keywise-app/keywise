@@ -70,10 +70,8 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const d = JSON.parse(saved);
-          if (d.step && d.step !== 0 && d.step !== 'done') {
-            setStep(d.step); setMethod(d.method);
-            setForm({ ...emptyForm, ...d.form });
-          }
+          // Always start at step 0 (method choice), but restore form data
+          if (d.form) setForm({ ...emptyForm, ...d.form });
         }
       } catch {}
     }
@@ -425,7 +423,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                     <select style={input} value={form.building_id}
                       onChange={e => upd({ building_id: e.target.value, property_id: '' })}>
                       <option value="">— Select a building —</option>
-                      {buildings.map(b => <option key={b.id} value={b.id}>{b.address}</option>)}
+                      {buildings.map(b => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
                     </select>
                   </div>
                   {form.building_id && (
@@ -437,7 +435,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                         {units.filter(u => u.building_id === form.building_id).map(u => (
                           <option key={u.id} value={u.id}>
                             {u.unit_number ? 'Unit ' + u.unit_number : u.address}
-                            {u.beds ? ` · ${u.beds}bd` : ''}
+                            {(u.beds || u.baths) ? ` — ${u.beds || '?'}bd/${u.baths || '?'}ba` : ''}
                             {u.current_rent ? ` · $${u.current_rent}/mo` : ''}
                           </option>
                         ))}
