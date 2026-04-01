@@ -28,8 +28,8 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   onComplete?: (lease: any) => void;
   preselectedUnit?: { id: string; address?: string; unit_number?: string; building_id?: string; current_rent?: number } | null;
 }) {
-  const [step, setStep] = useState<Step>(preselectedUnit ? 2 : 0);
-  const [method, setMethod] = useState<'pdf' | 'manual' | null>(preselectedUnit ? 'manual' : null);
+  const [step, setStep] = useState<Step>(0);
+  const [method, setMethod] = useState<'pdf' | 'manual' | null>(null);
   const [buildings, setBuildings] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -159,7 +159,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       });
       setPdfExtracting(false);
       setMethod('pdf');
-      setStep(1);
+      setStep(preselectedUnit ? 2 : 1);
     } catch (err: any) {
       console.error('[extract-lease] upload error:', err);
       setPdfError('Upload failed: ' + (err?.message || 'unknown error'));
@@ -261,10 +261,15 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     })));
   };
 
-  const goNext = () => setStep(s => ((s as number) + 1) as Step);
+  const goNext = () => {
+    // Skip step 1 if unit is pre-selected
+    if (preselectedUnit && step === 0) { setStep(2); return; }
+    setStep(s => ((s as number) + 1) as Step);
+  };
   const goBack = () => {
-    if (preselectedUnit && step === 2) { onClose(); }
-    else if (step === 1) { setStep(0); setMethod(null); }
+    // Skip step 1 going back if unit is pre-selected
+    if (preselectedUnit && step === 2) { setStep(0); return; }
+    if (step === 1) { setStep(0); setMethod(null); }
     else setStep(s => ((s as number) - 1) as Step);
   };
 
