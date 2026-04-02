@@ -9,7 +9,17 @@
       "Bash(npx tsc:*)",
       "Bash(npm i:*)",
       "Bash(npm run:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(grep '\"\"type\"\"' package.json)",
+      "Bash(grep -n \"checkout\\\\|Checkout\" /Users/chriscolwell/propos/node_modules/next/dist/docs/*.md)",
+      "Bash(grep \"checkout.sessions.create\\\\|stripe.checkout\" /Users/chriscolwell/propos/app/api/stripe/*.ts)",
+      "Bash(pip3 install:*)",
+      "Bash(mkdir -p /tmp/keywise-screenshots)",
+      "Bash(__NEW_LINE_2f047dd8bad3aa1e__ python3:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''Email sent!'''' if d.get\\(''''success''''\\) else f''''Failed: {d}''''\\)\")",
+      "Bash(git -C /Users/chriscolwell/propos add -A)",
+      "Bash(git -C /Users/chriscolwell/propos commit -m \"Remove /api/debug-env — exposes env var info publicly\")",
+      "Bash(git -C /Users/chriscolwell/propos push)"
     ]
   }
 }
