@@ -114,15 +114,15 @@ function DashboardMockup() {
 }
 
 function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; onClose: () => void }) {
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
 
-  // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
@@ -132,16 +132,31 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
+    if (mode === 'forgot') {
+      if (!email) { setError('Please enter your email address.'); setLoading(false); return; }
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://keywise.app/reset-password',
+      });
+      setLoading(false);
+      if (error) { setError(error.message); return; }
+      setResetSent(true);
+      return;
+    }
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setError(error.message);
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-      // On successful login the session state in page.tsx fires and Landing unmounts
     }
     setLoading(false);
   };
+
+  const subtitle = mode === 'forgot'
+    ? 'Enter your email to receive a reset link.'
+    : mode === 'login'
+    ? 'Welcome back. Sign in to your portfolio.'
+    : 'Start managing your properties smarter.';
 
   return (
     <div
@@ -155,58 +170,107 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <Logo size={36} />
           </div>
-          <p style={{ fontSize: 13, color: INK_MUTED, margin: 0 }}>
-            {mode === 'login' ? 'Welcome back. Sign in to your portfolio.' : 'Start managing your properties smarter.'}
-          </p>
+          <p style={{ fontSize: 13, color: INK_MUTED, margin: 0 }}>{subtitle}</p>
         </div>
 
-        <div style={{ display: 'flex', background: BG, borderRadius: 10, padding: 4, marginBottom: 22 }}>
-          {(['login', 'signup'] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); setError(''); }}
-              style={{
-                flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: mode === m ? SURFACE : 'transparent',
-                fontWeight: mode === m ? 700 : 400, fontSize: 13,
-                color: mode === m ? N : INK_MUTED,
-                boxShadow: mode === m ? '0 1px 3px rgba(15,52,96,0.08)' : 'none',
-                fontFamily: 'inherit', transition: 'all 0.15s',
-              }}>
-              {m === 'login' ? 'Log In' : 'Sign Up'}
+        {mode === 'forgot' ? (
+          resetSent ? (
+            <>
+              <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10, padding: '14px 16px', fontSize: 13, color: '#166534', lineHeight: 1.6, marginBottom: 20 }}>
+                ✓ Check your email for a reset link. It may take a minute to arrive.
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span onClick={() => { setMode('login'); setResetSent(false); setError(''); }}
+                  style={{ fontSize: 13, color: TEAL, fontWeight: 600, cursor: 'pointer' }}>
+                  ← Back to login
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com"
+                  style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }}
+                  onKeyDown={e => e.key === 'Enter' && handleSubmit()} autoFocus />
+              </div>
+              {error && (
+                <div style={{ background: CORAL_LIGHT, border: `1px solid ${CORAL}33`, borderRadius: 10, padding: '10px 14px', fontSize: 13, color: CORAL, marginBottom: 16 }}>
+                  {error}
+                </div>
+              )}
+              <button onClick={handleSubmit} disabled={loading}
+                style={{ width: '100%', background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 16 }}>
+                {loading ? 'Sending…' : 'Send Reset Link'}
+              </button>
+              <div style={{ textAlign: 'center' }}>
+                <span onClick={() => { setMode('login'); setError(''); }}
+                  style={{ fontSize: 13, color: TEAL, fontWeight: 600, cursor: 'pointer' }}>
+                  ← Back to login
+                </span>
+              </div>
+            </>
+          )
+        ) : (
+          <>
+            <div style={{ display: 'flex', background: BG, borderRadius: 10, padding: 4, marginBottom: 22 }}>
+              {(['login', 'signup'] as const).map(m => (
+                <button key={m} onClick={() => { setMode(m); setError(''); }}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: mode === m ? SURFACE : 'transparent',
+                    fontWeight: mode === m ? 700 : 400, fontSize: 13,
+                    color: mode === m ? N : INK_MUTED,
+                    boxShadow: mode === m ? '0 1px 3px rgba(15,52,96,0.08)' : 'none',
+                    fontFamily: 'inherit', transition: 'all 0.15s',
+                  }}>
+                  {m === 'login' ? 'Log In' : 'Sign Up'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com"
+                style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }} />
+            </div>
+
+            <div style={{ marginBottom: 6 }}>
+              <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+                style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+            </div>
+
+            {mode === 'login' && (
+              <div style={{ textAlign: 'right', marginBottom: 18 }}>
+                <span onClick={() => { setMode('forgot'); setError(''); }}
+                  style={{ fontSize: 12, color: TEAL, fontWeight: 600, cursor: 'pointer' }}>
+                  Forgot password?
+                </span>
+              </div>
+            )}
+
+            {error && (
+              <div style={{ background: CORAL_LIGHT, border: `1px solid ${CORAL}33`, borderRadius: 10, padding: '10px 14px', fontSize: 13, color: CORAL, marginBottom: 16 }}>
+                {error}
+              </div>
+            )}
+
+            <button onClick={handleSubmit} disabled={loading}
+              style={{ width: '100%', background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'inherit', marginTop: mode === 'signup' ? 20 : 0 }}>
+              {loading ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Create Account'}
             </button>
-          ))}
-        </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com"
-            style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }} />
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-            style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK }}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-        </div>
-
-        {error && (
-          <div style={{ background: CORAL_LIGHT, border: `1px solid ${CORAL}33`, borderRadius: 10, padding: '10px 14px', fontSize: 13, color: CORAL, marginBottom: 16 }}>
-            {error}
-          </div>
+            <div style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 18 }}>
+              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
+                style={{ color: N, fontWeight: 600, cursor: 'pointer' }}>
+                {mode === 'login' ? 'Sign up free' : 'Log In'}
+              </span>
+            </div>
+          </>
         )}
-
-        <button onClick={handleSubmit} disabled={loading}
-          style={{ width: '100%', background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'inherit' }}>
-          {loading ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Create Account'}
-        </button>
-
-        <div style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 18 }}>
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
-            style={{ color: N, fontWeight: 600, cursor: 'pointer' }}>
-            {mode === 'login' ? 'Sign up free' : 'Log In'}
-          </span>
-        </div>
       </div>
     </div>
   );
