@@ -4,6 +4,11 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { payment_id, tenant_name, tenant_email, property, amount, paid_date, method, landlord_name, landlord_email } = await req.json();
 

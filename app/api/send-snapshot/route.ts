@@ -6,6 +6,11 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (!process.env.CRON_SECRET || !authHeader.includes(process.env.CRON_SECRET)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { user_id } = await req.json();
 
