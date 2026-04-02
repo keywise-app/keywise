@@ -49,6 +49,45 @@ const BUILDING_TYPES = [
   'Multi-Unit (5+)', 'Apartment Building', 'Condo', 'Townhouse', 'Other',
 ];
 
+// ── UPGRADE MODAL ─────────────────────────────────────────────────────────────
+function UpgradeModal({ reason, onClose, onUpgrade }: {
+  reason: 'unit' | 'building';
+  onClose: () => void;
+  onUpgrade: () => void;
+}) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: T.surface, borderRadius: T.radius, padding: 36, maxWidth: 420, width: '100%', boxShadow: '0 24px 80px rgba(15,52,96,0.25)', textAlign: 'center' }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+        <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 10 }}>Upgrade to Keywise Pro</div>
+        <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.7, marginBottom: 24 }}>
+          Your {reason === 'unit' ? 'free' : 'free'} plan includes up to{' '}
+          {reason === 'unit' ? '2 units' : '1 building'}.{' '}
+          Upgrade to Pro for:
+        </div>
+        <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 20px', marginBottom: 28, textAlign: 'left' }}>
+          {[
+            'Unlimited units and buildings',
+            'Online rent collection',
+            'Automated payment reminders',
+            'Priority support',
+          ].map(f => (
+            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 13, color: T.ink }}>
+              <span style={{ color: T.teal, fontWeight: 700 }}>✓</span> {f}
+            </div>
+          ))}
+        </div>
+        <button onClick={onUpgrade}
+          style={{ ...btn.primary, width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, marginBottom: 12 }}>
+          Upgrade Now — $29/month →
+        </button>
+        <span onClick={onClose} style={{ fontSize: 13, color: T.inkMuted, cursor: 'pointer' }}>Maybe later</span>
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -70,6 +109,8 @@ export default function Portfolio() {
   const [unitLookingUp, setUnitLookingUp] = useState(false);
   const [unitLookupResult, setUnitLookupResult] = useState<string | null>(null);
   const [unitAddressSelected, setUnitAddressSelected] = useState(false);
+  const [plan, setPlan] = useState<{ canAddUnit: boolean; canAddBuilding: boolean; unitCount: number; maxUnits: number; buildingCount: number; maxBuildings: number } | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState<'unit' | 'building' | null>(null);
 
   const emptyBuilding = {
     address: '', name: '', type: 'Duplex', year_built: '',
@@ -87,16 +128,18 @@ export default function Portfolio() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [bRes, uRes, lRes, eRes] = await Promise.all([
+    const [bRes, uRes, lRes, eRes, planRes] = await Promise.all([
       supabase.from('buildings').select('*').order('address'),
       supabase.from('properties').select('*').eq('is_unit', true).order('unit_number'),
       supabase.from('leases').select('*').order('tenant_name'),
       supabase.from('expenses').select('*').order('date', { ascending: false }),
+      fetch('/api/check-plan').then(r => r.json()).catch(() => null),
     ]);
     if (bRes.data) setBuildings(bRes.data);
     if (uRes.data) setUnits(uRes.data);
     if (lRes.data) setLeases(lRes.data);
     if (eRes.data) setExpenses(eRes.data);
+    if (planRes && !planRes.error) setPlan(planRes);
     if (bRes.data && bRes.data.length > 0 && !expandedBuilding) {
       setExpandedBuilding(bRes.data[0].id);
     }
@@ -358,13 +401,17 @@ export default function Portfolio() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {buildings.length > 0 && (
-            <button onClick={() => { setUnitForm({ ...emptyUnit, building_id: buildings[0].id }); setEditingUnit(null); setShowAddUnit(true); }}
-              style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>
+            <button onClick={() => {
+              if (plan && !plan.canAddUnit) { setShowUpgrade('unit'); return; }
+              setUnitForm({ ...emptyUnit, building_id: buildings[0].id }); setEditingUnit(null); setShowAddUnit(true);
+            }} style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>
               + Add Unit
             </button>
           )}
-          <button onClick={() => { setBuildingForm(emptyBuilding); setEditingBuilding(null); setShowAddBuilding(true); }}
-            style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>
+          <button onClick={() => {
+            if (plan && !plan.canAddBuilding) { setShowUpgrade('building'); return; }
+            setBuildingForm(emptyBuilding); setEditingBuilding(null); setShowAddBuilding(true);
+          }} style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>
             + Add Building
           </button>
         </div>
@@ -475,8 +522,10 @@ export default function Portfolio() {
                   <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Units ({buildingUnits.length})
                   </div>
-                  <button onClick={() => { setUnitForm({ ...emptyUnit, building_id: building.id }); setEditingUnit(null); setShowAddUnit(true); }}
-                    style={{ ...btn.ghost, fontSize: 11, padding: '5px 12px' }}>
+                  <button onClick={() => {
+                    if (plan && !plan.canAddUnit) { setShowUpgrade('unit'); return; }
+                    setUnitForm({ ...emptyUnit, building_id: building.id }); setEditingUnit(null); setShowAddUnit(true);
+                  }} style={{ ...btn.ghost, fontSize: 11, padding: '5px 12px' }}>
                     + Add Unit
                   </button>
                 </div>
@@ -831,6 +880,14 @@ export default function Portfolio() {
           preselectedUnit={wizardUnit}
           onComplete={() => { setShowWizard(false); setWizardUnit(null); fetchAll(); }}
           onClose={() => { setShowWizard(false); setWizardUnit(null); }}
+        />
+      )}
+
+      {showUpgrade && (
+        <UpgradeModal
+          reason={showUpgrade}
+          onClose={() => setShowUpgrade(null)}
+          onUpgrade={() => { setShowUpgrade(null); window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'settings' })); }}
         />
       )}
     </div>

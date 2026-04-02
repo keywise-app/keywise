@@ -49,6 +49,7 @@ export default function Payments() {
   const [schedulePreview, setSchedulePreview] = useState<{ date: string; amount: number }[]>([]);
   const [landlordUserId, setLandlordUserId] = useState('');
   const [landlordStripeConnected, setLandlordStripeConnected] = useState(false);
+  const [onlinePayments, setOnlinePayments] = useState(true);
   const [payNowLoading, setPayNowLoading] = useState<Record<string, boolean>>({});
   const [showRequest, setShowRequest] = useState(false);
   const [requestForm, setRequestForm] = useState({ lease_id: '', tenant_name: '', property: '', amount: '', description: '', due_date: '' });
@@ -74,6 +75,9 @@ export default function Payments() {
         .single();
       setLandlordStripeConnected(!!profile?.stripe_account_id);
     });
+    fetch('/api/check-plan').then(r => r.json()).then(d => {
+      if (!d.error) setOnlinePayments(d.onlinePayments);
+    }).catch(() => {});
   }, []);
 
   const fetchAll = async () => {
@@ -482,7 +486,13 @@ export default function Payments() {
                               </button>
                             )}
                             {p.status !== 'paid' && (
-                              landlordStripeConnected ? (
+                              !onlinePayments ? (
+                                <span
+                                  onClick={() => window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'settings' }))}
+                                  style={{ fontSize: 10, color: T.teal, fontWeight: 600, cursor: 'pointer', alignSelf: 'center' }}>
+                                  Upgrade to collect online
+                                </span>
+                              ) : landlordStripeConnected ? (
                                 <button
                                   onClick={() => openPayNow(p)}
                                   disabled={payNowLoading[p.id]}

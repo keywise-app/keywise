@@ -79,6 +79,13 @@ export default function Home() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Allow child components to navigate via custom event
+  useEffect(() => {
+    const handler = (e: Event) => setPage((e as CustomEvent).detail);
+    window.addEventListener('kw:navigate', handler);
+    return () => window.removeEventListener('kw:navigate', handler);
+  }, []);
+
   // Load read IDs from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('kw_notif_read');
