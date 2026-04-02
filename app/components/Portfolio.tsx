@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
+import { getLimits } from '../lib/planLimits';
 import AddressInput from './AddressInput';
 import AddTenantWizard from './AddTenantWizard';
 
@@ -157,18 +158,33 @@ export default function Portfolio() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [bRes, uRes, lRes, eRes, planRes] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser();
+    const [bRes, uRes, lRes, eRes, profileRes] = await Promise.all([
       supabase.from('buildings').select('*').order('address'),
       supabase.from('properties').select('*').eq('is_unit', true).order('unit_number'),
       supabase.from('leases').select('*').order('tenant_name'),
       supabase.from('expenses').select('*').order('date', { ascending: false }),
-      fetch('/api/check-plan').then(r => r.json()).catch(() => null),
+      user ? supabase.from('profiles').select('subscription_status').eq('id', user.id).single() : Promise.resolve({ data: null }),
     ]);
     if (bRes.data) setBuildings(bRes.data);
     if (uRes.data) setUnits(uRes.data);
     if (lRes.data) setLeases(lRes.data);
     if (eRes.data) setExpenses(eRes.data);
-    if (planRes && !planRes.error) setPlan(planRes);
+
+    // Derive plan limits client-side — no API round-trip needed
+    const status = (profileRes as any).data?.subscription_status ?? 'free';
+    const limits = getLimits(status);
+    const unitCount = uRes.data?.length ?? 0;
+    const buildingCount = bRes.data?.length ?? 0;
+    setPlan({
+      canAddUnit: unitCount < limits.maxUnits,
+      canAddBuilding: buildingCount < limits.maxBuildings,
+      unitCount,
+      buildingCount,
+      maxUnits: limits.maxUnits,
+      maxBuildings: limits.maxBuildings,
+    });
+
     if (bRes.data && bRes.data.length > 0 && !expandedBuilding) {
       setExpandedBuilding(bRes.data[0].id);
     }

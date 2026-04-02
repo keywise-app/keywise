@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
+import { getLimits } from '../lib/planLimits';
 
 type Payment = {
   id: string;
@@ -75,9 +76,11 @@ export default function Payments() {
         .single();
       setLandlordStripeConnected(!!profile?.stripe_account_id);
     });
-    fetch('/api/check-plan').then(r => r.json()).then(d => {
-      if (!d.error) setOnlinePayments(d.onlinePayments);
-    }).catch(() => {});
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('profiles').select('subscription_status').eq('id', user.id).single()
+        .then(({ data }) => { setOnlinePayments(getLimits(data?.subscription_status ?? 'free').onlinePayments); });
+    });
   }, []);
 
   const fetchAll = async () => {
