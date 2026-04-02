@@ -50,11 +50,37 @@ const BUILDING_TYPES = [
 ];
 
 // ── UPGRADE MODAL ─────────────────────────────────────────────────────────────
-function UpgradeModal({ reason, onClose, onUpgrade }: {
+function UpgradeModal({ reason, onClose }: {
   reason: 'unit' | 'building';
   onClose: () => void;
-  onUpgrade: () => void;
 }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not signed in.'); setLoading(false); return; }
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, email: user.email, return_path: 'portfolio' }),
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        setError(data.error || 'Failed to start checkout.');
+        setLoading(false);
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -62,7 +88,7 @@ function UpgradeModal({ reason, onClose, onUpgrade }: {
         <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
         <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 10 }}>Upgrade to Keywise Pro</div>
         <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.7, marginBottom: 24 }}>
-          Your {reason === 'unit' ? 'free' : 'free'} plan includes up to{' '}
+          Your free plan includes up to{' '}
           {reason === 'unit' ? '2 units' : '1 building'}.{' '}
           Upgrade to Pro for:
         </div>
@@ -78,9 +104,12 @@ function UpgradeModal({ reason, onClose, onUpgrade }: {
             </div>
           ))}
         </div>
-        <button onClick={onUpgrade}
-          style={{ ...btn.primary, width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, marginBottom: 12 }}>
-          Upgrade Now — $29/month →
+        {error && (
+          <div style={{ fontSize: 12, color: T.coral, marginBottom: 12 }}>{error}</div>
+        )}
+        <button onClick={handleUpgrade} disabled={loading}
+          style={{ ...btn.primary, width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, marginBottom: 12, opacity: loading ? 0.7 : 1 }}>
+          {loading ? 'Redirecting to checkout…' : 'Upgrade Now — $29/month →'}
         </button>
         <span onClick={onClose} style={{ fontSize: 13, color: T.inkMuted, cursor: 'pointer' }}>Maybe later</span>
       </div>
@@ -887,7 +916,6 @@ export default function Portfolio() {
         <UpgradeModal
           reason={showUpgrade}
           onClose={() => setShowUpgrade(null)}
-          onUpgrade={() => { setShowUpgrade(null); window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'settings' })); }}
         />
       )}
     </div>

@@ -57,6 +57,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [showUpgradedBanner, setShowUpgradedBanner] = useState(false);
 
   // ── Notifications bell ──
   const [notifOpen, setNotifOpen] = useState(false);
@@ -189,7 +190,11 @@ export default function Home() {
     if (params.get('tenant_preview') === 'true' && params.get('lease_id')) {
       setPreviewLeaseId(params.get('lease_id'));
     }
-    if (params.has('page') || params.has('stripe') || params.has('tenant_preview')) {
+    if (params.get('upgraded') === 'true') {
+      setShowUpgradedBanner(true);
+      setTimeout(() => setShowUpgradedBanner(false), 5000);
+    }
+    if (params.has('page') || params.has('stripe') || params.has('tenant_preview') || params.has('upgraded')) {
       window.history.replaceState({}, '', '/');
     }
   }, []);
@@ -523,6 +528,13 @@ export default function Home() {
       {stripeSuccess && (
         <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 2000, background: T.greenLight, border: `1px solid ${T.green}44`, borderRadius: T.radiusSm, padding: '12px 20px', fontSize: 13, fontWeight: 600, color: T.greenDark, boxShadow: T.shadowMd, display: 'flex', alignItems: 'center', gap: 8 }}>
           ✓ Stripe connected successfully!
+        </div>
+      )}
+
+      {showUpgradedBanner && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: T.teal, borderRadius: T.radiusSm, padding: '13px 24px', fontSize: 14, fontWeight: 600, color: '#fff', boxShadow: T.shadowMd, display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+          🎉 Welcome to Keywise Pro! You now have unlimited units and online rent collection.
+          <span onClick={() => setShowUpgradedBanner(false)} style={{ marginLeft: 8, cursor: 'pointer', opacity: 0.7, fontSize: 18, lineHeight: 1 }}>×</span>
         </div>
       )}
 
