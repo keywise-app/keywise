@@ -106,17 +106,28 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     setStep(2);
   };
 
+  const DEFAULT_WELCOME = 'Welcome to Keywise! Your documents have been imported and your portfolio is ready. Head to your dashboard to get started.';
+
   const getAiWelcome = async () => {
     setLoadingWelcome(true);
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Write a short, warm, smart welcome message for ' + (profile.full_name || 'a landlord') + ' who just set up their Keywise account. They manage rental properties. Reference that their AI-powered property management is now active. Mention 2-3 specific things Keywise will help them with today (late rent reminders, lease renewals, maintenance tracking). Keep it under 60 words, conversational and encouraging. No bullet points.',
-      }),
-    });
-    const data = await res.json();
-    setAiWelcome(data.result);
+    try {
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Write a short, warm, smart welcome message for ' + (profile.full_name || 'a landlord') + ' who just set up their Keywise account. They manage rental properties. Reference that their AI-powered property management is now active. Mention 2-3 specific things Keywise will help them with today (late rent reminders, lease renewals, maintenance tracking). Keep it under 60 words, conversational and encouraging. No bullet points.',
+          max_tokens: 150,
+        }),
+      });
+      const data = await res.json();
+      if (!data.result || data.result.includes('rate_limit') || data.result.includes('API Error') || data.result.includes('Error:')) {
+        setAiWelcome(DEFAULT_WELCOME);
+      } else {
+        setAiWelcome(data.result);
+      }
+    } catch {
+      setAiWelcome(DEFAULT_WELCOME);
+    }
     setLoadingWelcome(false);
   };
 
@@ -241,20 +252,30 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         await supabase.storage.from('documents').upload(filePath, blob);
 
         if (r.document_type === 'lease' && r.property_address) {
-          const { data: existing } = await supabase.from('properties').select('id').eq('user_id', user.id).ilike('address', r.property_address.trim()).single();
-          if (!existing) {
-            await supabase.from('properties').insert({
+          const { data: existingProps } = await supabase.from('properties').select('id, address').eq('user_id', user.id);
+          const propExists = existingProps?.some((p: any) =>
+            p.address?.toLowerCase().includes(r.property_address.split(',')[0].toLowerCase())
+          );
+          if (!propExists) {
+            const { error: propError } = await supabase.from('properties').insert({
               user_id: user.id, address: r.property_address,
               type: r.property_type || 'apartment',
               beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
+              is_unit: false,
             });
-            log.push('✓ Created property: ' + r.property_address.split(',')[0]);
+            if (propError) {
+              log.push('✗ Could not create property: ' + propError.message);
+            } else {
+              log.push('✓ Created property: ' + r.property_address.split(',')[0]);
+            }
+          } else {
+            log.push('→ Property already exists: ' + r.property_address.split(',')[0]);
           }
         }
 
         if (r.document_type === 'lease' && r.tenant_name && r.property_address) {
-          const { data: existing } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
-          if (!existing) {
+          const { data: existingLease } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
+          if (!existingLease) {
             await supabase.from('leases').insert({
               user_id: user.id, tenant_name: r.tenant_name, property: r.property_address,
               rent: +r.monthly_rent || 0, deposit: +r.deposit || 0,
@@ -265,6 +286,37 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               late_fee_type: r.late_fee_type || 'percent', lease_terms_raw: r.late_fee_clause || '',
             });
             log.push('✓ Created lease: ' + r.tenant_name);
+
+            // Generate payment schedule from today forward
+            const { data: newLease } = await supabase.from('leases').select('*').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
+            if (newLease?.end_date && newLease.rent) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const payDay = newLease.payment_day || 1;
+              const endDate = new Date(newLease.end_date);
+
+              let current = new Date(today.getFullYear(), today.getMonth(), payDay);
+              if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
+
+              let paymentCount = 0;
+              while (current <= endDate) {
+                await supabase.from('payments').insert({
+                  user_id: user.id,
+                  lease_id: newLease.id,
+                  tenant_name: newLease.tenant_name,
+                  property: newLease.property,
+                  amount: newLease.rent,
+                  due_date: current.toISOString().split('T')[0],
+                  status: 'pending',
+                });
+                current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
+                paymentCount++;
+              }
+
+              if (paymentCount > 0) {
+                log.push('✓ Created ' + paymentCount + ' payment' + (paymentCount !== 1 ? 's' : '') + ' from today forward');
+              }
+            }
           }
         }
 
@@ -305,6 +357,8 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     setImporting(false);
     setStep(4);
     setImportLog(log);
+    setLoadingWelcome(true);
+    await new Promise(resolve => setTimeout(resolve, 15000));
     getAiWelcome();
   };
 
@@ -626,7 +680,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 18, marginBottom: 24, maxWidth: 480, margin: '0 auto 24px' }}>
               {loadingWelcome ? (
                 <div style={{ fontSize: 13, color: T.tealDark, animation: 'pulse 1.5s ease-in-out infinite' }}>
-                  ✦ Generating your personalized welcome…
+                  ✦ Preparing your personalized welcome…
                 </div>
               ) : aiWelcome ? (
                 <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.7, fontStyle: 'italic' }}>

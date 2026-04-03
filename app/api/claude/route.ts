@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, max_tokens } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        max_tokens: Math.min(max_tokens || 1024, 1024),
         messages: [{ role: 'user', content: sanitized }],
       }),
     });
