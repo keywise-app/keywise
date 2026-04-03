@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { T, input, label, btn } from '../lib/theme';
 
@@ -38,8 +38,12 @@ function KeywiseLogo({ size = 36 }: { size?: number }) {
   );
 }
 
-function ProgressBar({ step }: { step: number }) {
-  const steps = ['Welcome', 'Profile', 'Import', 'Review', 'Done'];
+function ProgressBar({ step, skipProfile }: { step: number; skipProfile?: boolean }) {
+  const steps = skipProfile
+    ? ['Welcome', 'Import', 'Review', 'Done']
+    : ['Welcome', 'Profile', 'Import', 'Review', 'Done'];
+  // Map actual step number to display index
+  const displayStep = skipProfile && step >= 2 ? step - 1 : step;
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 36 }}>
       {steps.map((s, i) => (
@@ -47,19 +51,19 @@ function ProgressBar({ step }: { step: number }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div style={{
               width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: i < step ? T.teal : i === step ? T.navy : T.border,
-              color: i < step ? T.navy : 'white',
-              fontSize: i < step ? 14 : 13, fontWeight: 700,
+              background: i < displayStep ? T.teal : i === displayStep ? T.navy : T.border,
+              color: i < displayStep ? T.navy : 'white',
+              fontSize: i < displayStep ? 14 : 13, fontWeight: 700,
               transition: 'all 0.3s',
             }}>
-              {i < step ? '✓' : i + 1}
+              {i < displayStep ? '✓' : i + 1}
             </div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: i === step ? T.navy : T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: i === displayStep ? T.navy : T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {s}
             </div>
           </div>
           {i < steps.length - 1 && (
-            <div style={{ width: 48, height: 2, background: i < step ? T.teal : T.border, margin: '0 4px', marginBottom: 20, transition: 'background 0.3s' }} />
+            <div style={{ width: 48, height: 2, background: i < displayStep ? T.teal : T.border, margin: '0 4px', marginBottom: 20, transition: 'background 0.3s' }} />
           )}
         </div>
       ))}
@@ -70,6 +74,7 @@ function ProgressBar({ step }: { step: number }) {
 export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({ full_name: '', email: '', phone: '', company: '', address: '' });
+  const [profileComplete, setProfileComplete] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -79,6 +84,18 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [aiWelcome, setAiWelcome] = useState('');
   const [loadingWelcome, setLoadingWelcome] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (p?.full_name) {
+        setProfile({ full_name: p.full_name || '', email: p.email || '', phone: p.phone || '', company: p.company || '', address: p.address || '' });
+        setProfileComplete(true);
+      }
+    })();
+  }, []);
 
   const saveProfile = async () => {
     setSavingProfile(true);
@@ -305,36 +322,44 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           </div>
         </div>
 
-        {step < 4 && <ProgressBar step={step} />}
+        {step < 4 && <ProgressBar step={step} skipProfile={profileComplete} />}
 
         {/* STEP 0 — Welcome */}
         {step === 0 && (
           <div style={{ background: T.surface, borderRadius: 20, padding: 48, textAlign: 'center', boxShadow: T.shadowMd, border: `1px solid ${T.border}` }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🏠</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: T.navy, marginBottom: 12, letterSpacing: '-0.4px' }}>
-              Property management,<br />made intelligent.
+              {profileComplete
+                ? <>Import more documents<br />to your portfolio</>
+                : <>Property management,<br />made intelligent.</>
+              }
             </div>
             <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 32, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 32px' }}>
-              Keywise uses AI to handle the time-consuming parts of being a landlord — so you can focus on what matters.
+              {profileComplete
+                ? 'Upload lease PDFs, insurance docs, or receipts — Keywise will extract the data and organize everything automatically.'
+                : 'Keywise uses AI to handle the time-consuming parts of being a landlord — so you can focus on what matters.'
+              }
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 40, textAlign: 'left' }}>
-              {[
-                { icon: '📄', title: 'Smart lease tracking', desc: 'Upload a PDF — we extract every term including late fee clauses' },
-                { icon: '💳', title: 'Rent on autopilot', desc: 'Payment schedules aligned to your actual contract terms' },
-                { icon: '✦', title: 'AI-powered drafts', desc: 'Notices, reminders, and renewals written in seconds' },
-              ].map(item => (
-                <div key={item.title} style={{ background: T.bg, borderRadius: T.radius, padding: 18, border: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: T.navy, marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 12, color: T.inkMuted, lineHeight: 1.5 }}>{item.desc}</div>
-                </div>
-              ))}
-            </div>
+            {!profileComplete && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 40, textAlign: 'left' }}>
+                {[
+                  { icon: '📄', title: 'Smart lease tracking', desc: 'Upload a PDF — we extract every term including late fee clauses' },
+                  { icon: '💳', title: 'Rent on autopilot', desc: 'Payment schedules aligned to your actual contract terms' },
+                  { icon: '✦', title: 'AI-powered drafts', desc: 'Notices, reminders, and renewals written in seconds' },
+                ].map(item => (
+                  <div key={item.title} style={{ background: T.bg, borderRadius: T.radius, padding: 18, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: T.navy, marginBottom: 4 }}>{item.title}</div>
+                    <div style={{ fontSize: 12, color: T.inkMuted, lineHeight: 1.5 }}>{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            <button onClick={() => setStep(1)}
+            <button onClick={() => setStep(profileComplete ? 2 : 1)}
               style={{ ...btn.primary, padding: '13px 40px', fontSize: 15, borderRadius: 12 }}>
-              Get Started →
+              {profileComplete ? 'Import Documents →' : 'Get Started →'}
             </button>
             <div style={{ marginTop: 14 }}>
               <button onClick={onComplete}
