@@ -2,15 +2,25 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { base64, fileType, fileName } = await req.json();
+    const { base64, fileType, fileName, fileUrl } = await req.json();
 
-    const isImage = fileType.startsWith('image/');
+    let finalBase64 = base64;
+    let finalFileType = fileType;
+
+    if (fileUrl) {
+      const response = await fetch(fileUrl);
+      const buffer = await response.arrayBuffer();
+      finalBase64 = Buffer.from(buffer).toString('base64');
+      finalFileType = response.headers.get('content-type') || fileType || 'application/pdf';
+    }
+
+    const isImage = finalFileType.startsWith('image/');
     const content: any[] = [];
 
     if (isImage) {
-      content.push({ type: 'image', source: { type: 'base64', media_type: fileType, data: base64 } });
+      content.push({ type: 'image', source: { type: 'base64', media_type: finalFileType, data: finalBase64 } });
     } else {
-      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } });
+      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: finalBase64 } });
     }
 
     content.push({

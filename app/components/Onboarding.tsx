@@ -131,22 +131,28 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   };
 
   const processFile = async (fileStatus: FileStatus): Promise<FileStatus> => {
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(fileStatus.file);
-    });
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Upload to Supabase Storage first (avoids Vercel 4.5MB body limit for large PDFs)
+      const ext = fileStatus.file.name.split('.').pop();
+      const path = (user?.id || 'anon') + '/import-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, fileStatus.file);
+
+      if (uploadError) {
+        return { ...fileStatus, status: 'error', error: 'Upload failed: ' + uploadError.message };
+      }
+
+      const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 300);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
       const res = await fetch('/api/process-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base64,
+          fileUrl: urlData?.signedUrl,
           fileType: fileStatus.file.type || 'application/pdf',
           fileName: fileStatus.file.name,
         }),
@@ -154,7 +160,16 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       });
       clearTimeout(timeout);
 
+      if (!res.ok) {
+        await supabase.storage.from('documents').remove([path]);
+        return { ...fileStatus, status: 'error', error: 'Processing failed: ' + res.status };
+      }
+
       const data = await res.json();
+
+      // Clean up temp file after processing
+      await supabase.storage.from('documents').remove([path]);
+
       if (data.error) return { ...fileStatus, status: 'error', error: data.error };
 
       const actions: string[] = [];
@@ -163,11 +178,11 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         if (data.tenant_name) actions.push('Create lease: ' + data.tenant_name);
         if (data.monthly_rent) actions.push('Rent: $' + data.monthly_rent + '/mo');
       }
-      if (data.document_type === 'insurance_renters' || data.document_type === 'insurance_property') {
+      if (['insurance_renters', 'insurance_property'].includes(data.document_type)) {
         actions.push('Store insurance document');
         if (data.expiry_date) actions.push('Track expiry: ' + data.expiry_date);
       }
-      if (data.document_type === 'repair_receipt' || data.document_type === 'improvement') {
+      if (['repair_receipt', 'improvement'].includes(data.document_type)) {
         if (data.amount) actions.push('Create expense: $' + data.amount);
         if (data.vendor) actions.push('Vendor: ' + data.vendor);
       }
@@ -177,8 +192,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
       return { ...fileStatus, status: 'done', result: data, actions };
     } catch (err: any) {
-      clearTimeout(timeout);
-      const msg = err.name === 'AbortError' ? 'Timed out after 30 seconds' : (err.message || 'Processing failed');
+      const msg = err.name === 'AbortError' ? 'Timed out after 30 seconds' : (err.message || 'Could not process file');
       return { ...fileStatus, status: 'error', error: msg };
     }
   };
