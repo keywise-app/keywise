@@ -101,25 +101,33 @@ export default function Payments() {
   const generatePaymentDates = (lease: Lease): { date: string; amount: number }[] => {
     if (!lease.start_date || !lease.end_date || !lease.rent) return [];
     const dates: { date: string; amount: number }[] = [];
-    const start = new Date(lease.start_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const end = new Date(lease.end_date);
     const payDay = lease.payment_day || 1;
 
     if (!lease.payment_frequency || lease.payment_frequency === 'monthly') {
-      let current = new Date(start.getFullYear(), start.getMonth(), payDay);
-      if (current < start) current = new Date(start.getFullYear(), start.getMonth() + 1, payDay);
+      // Start from the next occurrence of payDay that is >= today
+      let current = new Date(today.getFullYear(), today.getMonth(), payDay);
+      if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
       while (current <= end) {
         dates.push({ date: current.toISOString().split('T')[0], amount: lease.rent });
         current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
       }
     } else if (lease.payment_frequency === 'bi-weekly') {
+      // Find next bi-weekly date from lease start that is >= today
+      const start = new Date(lease.start_date);
       let current = new Date(start);
+      while (current < today) current = new Date(current.getTime() + 14 * 86400000);
       while (current <= end) {
         dates.push({ date: current.toISOString().split('T')[0], amount: Math.round(lease.rent / 2) });
         current = new Date(current.getTime() + 14 * 86400000);
       }
     } else if (lease.payment_frequency === 'weekly') {
+      // Find next weekly date from lease start that is >= today
+      const start = new Date(lease.start_date);
       let current = new Date(start);
+      while (current < today) current = new Date(current.getTime() + 7 * 86400000);
       while (current <= end) {
         dates.push({ date: current.toISOString().split('T')[0], amount: Math.round(lease.rent / 4) });
         current = new Date(current.getTime() + 7 * 86400000);
@@ -157,7 +165,7 @@ export default function Payments() {
           property: selectedLease.property,
           amount: Math.round(amount),
           due_date: date,
-          status: date < today ? 'overdue' : 'pending',
+          status: 'pending',
         });
         created++;
       } else { skipped++; }
@@ -656,23 +664,24 @@ export default function Payments() {
 
             {/* Preview */}
             <div style={{ marginBottom: 20 }}>
+              <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.inkMuted, lineHeight: 1.5 }}>
+                Payments will be tracked starting from today. Historical payments before {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} are not imported.
+              </div>
               <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
                 Preview — {schedulePreview.length} payments · ${schedulePreview.reduce((s, p) => s + p.amount, 0).toLocaleString()} total
               </div>
               <div style={{ maxHeight: 220, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: T.radiusSm }}>
                 {schedulePreview.slice(0, 36).map((p, i) => {
-                  const isPast = p.date < new Date().toISOString().split('T')[0];
                   const graceDays = selectedLease.late_fee_days || 3;
                   const lateDate = new Date(p.date);
                   lateDate.setDate(lateDate.getDate() + graceDays);
                   return (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: i < schedulePreview.length - 1 ? `1px solid ${T.border}` : 'none', fontSize: 13 }}>
-                      <span style={{ color: isPast ? T.inkMuted : T.ink }}>{p.date}</span>
+                      <span style={{ color: T.ink }}>{p.date}</span>
                       <span style={{ fontSize: 11, color: T.inkMuted }}>
                         Late fee after {lateDate.toISOString().split('T')[0]}
                       </span>
-                      <span style={{ fontWeight: 600, color: isPast ? T.inkMuted : T.navy }}>${p.amount.toLocaleString()}</span>
-                      {isPast && <span style={{ fontSize: 11, color: T.coral, fontWeight: 600 }}>PAST DUE</span>}
+                      <span style={{ fontWeight: 600, color: T.navy }}>${p.amount.toLocaleString()}</span>
                     </div>
                   );
                 })}

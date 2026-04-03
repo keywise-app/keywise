@@ -695,23 +695,30 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                     ))}
                   </div>
 
-                  {(form.rent || form.monthly_rent) && (
-                    <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '14px 16px' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>First 3 payments</div>
-                      {[0, 1, 2].map(i => {
-                        const rent = +(form.rent || form.monthly_rent);
-                        const day = Math.min(+form.payment_day || 1, 28);
-                        const base = form.start_date ? new Date(form.start_date + 'T12:00:00') : new Date();
-                        const d = new Date(base.getFullYear(), base.getMonth() + i, day);
-                        return (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none' }}>
-                            <span style={{ fontSize: 13, color: T.ink }}>{d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>${rent.toLocaleString()}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {(form.rent || form.monthly_rent) && (() => {
+                    const rent = +(form.rent || form.monthly_rent);
+                    const day = Math.min(+form.payment_day || 1, 28);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    // Start from the next occurrence of payment day that is >= today
+                    let first = new Date(today.getFullYear(), today.getMonth(), day);
+                    if (first < today) first = new Date(today.getFullYear(), today.getMonth() + 1, day);
+                    return (
+                      <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12, padding: '14px 16px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Payments starting from {today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                        <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 10 }}>Historical payments are not imported.</div>
+                        {[0, 1, 2].map(i => {
+                          const d = new Date(first.getFullYear(), first.getMonth() + i, day);
+                          return (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none' }}>
+                              <span style={{ fontSize: 13, color: T.ink }}>{d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>${rent.toLocaleString()}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
             </div>
