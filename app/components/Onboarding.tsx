@@ -121,59 +121,74 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       reader.readAsDataURL(fileStatus.file);
     });
 
-    const res = await fetch('/api/process-document', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        base64,
-        fileType: fileStatus.file.type || 'application/pdf',
-        fileName: fileStatus.file.name,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const data = await res.json();
-    if (data.error) return { ...fileStatus, status: 'error', error: data.error };
+    try {
+      const res = await fetch('/api/process-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64,
+          fileType: fileStatus.file.type || 'application/pdf',
+          fileName: fileStatus.file.name,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
 
-    const actions: string[] = [];
-    if (data.document_type === 'lease') {
-      if (data.property_address) actions.push('Create property: ' + data.property_address.split(',')[0]);
-      if (data.tenant_name) actions.push('Create lease: ' + data.tenant_name);
-      if (data.monthly_rent) actions.push('Rent: $' + data.monthly_rent + '/mo');
-    }
-    if (data.document_type === 'insurance_renters' || data.document_type === 'insurance_property') {
-      actions.push('Store insurance document');
-      if (data.expiry_date) actions.push('Track expiry: ' + data.expiry_date);
-    }
-    if (data.document_type === 'repair_receipt' || data.document_type === 'improvement') {
-      if (data.amount) actions.push('Create expense: $' + data.amount);
-      if (data.vendor) actions.push('Vendor: ' + data.vendor);
-    }
-    if (!actions.length) {
-      actions.push('Store as ' + (DOC_TYPE_LABELS[data.document_type]?.label || 'document'));
-    }
+      const data = await res.json();
+      if (data.error) return { ...fileStatus, status: 'error', error: data.error };
 
-    return { ...fileStatus, status: 'done', result: data, actions };
+      const actions: string[] = [];
+      if (data.document_type === 'lease') {
+        if (data.property_address) actions.push('Create property: ' + data.property_address.split(',')[0]);
+        if (data.tenant_name) actions.push('Create lease: ' + data.tenant_name);
+        if (data.monthly_rent) actions.push('Rent: $' + data.monthly_rent + '/mo');
+      }
+      if (data.document_type === 'insurance_renters' || data.document_type === 'insurance_property') {
+        actions.push('Store insurance document');
+        if (data.expiry_date) actions.push('Track expiry: ' + data.expiry_date);
+      }
+      if (data.document_type === 'repair_receipt' || data.document_type === 'improvement') {
+        if (data.amount) actions.push('Create expense: $' + data.amount);
+        if (data.vendor) actions.push('Vendor: ' + data.vendor);
+      }
+      if (!actions.length) {
+        actions.push('Store as ' + (DOC_TYPE_LABELS[data.document_type]?.label || 'document'));
+      }
+
+      return { ...fileStatus, status: 'done', result: data, actions };
+    } catch (err: any) {
+      clearTimeout(timeout);
+      const msg = err.name === 'AbortError' ? 'Timed out after 30 seconds' : (err.message || 'Processing failed');
+      return { ...fileStatus, status: 'error', error: msg };
+    }
   };
 
-const processAll = async () => {
-  if (files.filter(f => f.status === 'pending').length === 0) {
+  const [processProgress, setProcessProgress] = useState({ current: 0, total: 0 });
+
+  const processAll = async () => {
+    const pending = files.filter(f => f.status === 'pending');
+    if (pending.length === 0) { setStep(3); return; }
+    setProcessing(true);
+    setProcessProgress({ current: 0, total: pending.length });
+
+    // Mark all as processing, then process in parallel
+    setFiles(prev => prev.map(p => p.status === 'pending' ? { ...p, status: 'processing' } : p));
+
+    const results = await Promise.all(
+      pending.map(async (f) => {
+        const result = await processFile(f);
+        setProcessProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        setFiles(prev => prev.map(p => p.file.name === f.file.name ? result : p));
+        return result;
+      })
+    );
+
+    setProcessing(false);
     setStep(3);
-    return;
-  }
-  setProcessing(true);
-  const pending = files.filter(f => f.status === 'pending');
-  for (const f of pending) {
-    setFiles(prev => prev.map(p => p.file.name === f.file.name ? { ...p, status: 'processing' } : p));
-    const result = await processFile(f);
-    setFiles(prev => prev.map(p => p.file.name === f.file.name ? result : p));
-    // Wait 3 seconds between files to avoid rate limits
-    if (pending.indexOf(f) < pending.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-  }
-  setProcessing(false);
-  setStep(3);
-};
+  };
   const importAll = async () => {
     setImporting(true);
     const log: string[] = [];
@@ -444,7 +459,7 @@ const processAll = async () => {
             {processing && (
               <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: T.tealDark, display: 'flex', gap: 10, alignItems: 'center' }}>
                 <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⚙️</span>
-                <span>Claude is reading your documents and extracting data… ~10 seconds per file.</span>
+                <span>Processing {processProgress.current} of {processProgress.total} file{processProgress.total !== 1 ? 's' : ''}…</span>
               </div>
             )}
 
