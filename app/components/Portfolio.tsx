@@ -158,18 +158,20 @@ export default function Portfolio() {
 
   const fetchAll = async () => {
     setLoading(true);
+    try {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
     const [bRes, uRes, lRes, eRes, profileRes] = await Promise.all([
-      supabase.from('buildings').select('*').order('address'),
-      supabase.from('properties').select('*').eq('is_unit', true).order('unit_number'),
-      supabase.from('leases').select('*').order('tenant_name'),
-      supabase.from('expenses').select('*').order('date', { ascending: false }),
-      user ? supabase.from('profiles').select('subscription_status').eq('id', user.id).single() : Promise.resolve({ data: null }),
+      supabase.from('buildings').select('*').eq('user_id', user.id).order('address'),
+      supabase.from('properties').select('*').eq('user_id', user.id).eq('is_unit', true).order('unit_number'),
+      supabase.from('leases').select('*').eq('user_id', user.id).order('tenant_name'),
+      supabase.from('expenses').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+      supabase.from('profiles').select('subscription_status').eq('id', user.id).single(),
     ]);
-    if (bRes.data) setBuildings(bRes.data);
-    if (uRes.data) setUnits(uRes.data);
-    if (lRes.data) setLeases(lRes.data);
-    if (eRes.data) setExpenses(eRes.data);
+    setBuildings(bRes.data || []);
+    setUnits(uRes.data || []);
+    setLeases(lRes.data || []);
+    setExpenses(eRes.data || []);
 
     // Derive plan limits client-side — no API round-trip needed
     const status = (profileRes as any).data?.subscription_status ?? 'free';
@@ -187,6 +189,9 @@ export default function Portfolio() {
 
     if (bRes.data && bRes.data.length > 0 && !expandedBuilding) {
       setExpandedBuilding(bRes.data[0].id);
+    }
+    } catch (err) {
+      console.error('[Portfolio] fetchAll error:', err);
     }
     setLoading(false);
   };
