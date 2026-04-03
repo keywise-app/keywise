@@ -143,70 +143,91 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   };
 
   const processFile = async (fileStatus: FileStatus): Promise<FileStatus> => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
+    const MAX_RETRIES = 3;
+    let lastError = '';
 
-      // Upload to Supabase Storage first (avoids Vercel 4.5MB body limit for large PDFs)
-      const ext = fileStatus.file.name.split('.').pop();
-      const path = (user?.id || 'anon') + '/import-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
-      const { error: uploadError } = await supabase.storage.from('documents').upload(path, fileStatus.file);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
 
-      if (uploadError) {
-        return { ...fileStatus, status: 'error', error: 'Upload failed: ' + uploadError.message };
-      }
+        // Upload to Supabase Storage first (avoids Vercel 4.5MB body limit for large PDFs)
+        const ext = fileStatus.file.name.split('.').pop();
+        const path = (user?.id || 'anon') + '/import-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+        const { error: uploadError } = await supabase.storage.from('documents').upload(path, fileStatus.file);
 
-      const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 300);
+        if (uploadError) {
+          lastError = 'Upload failed: ' + uploadError.message;
+          throw new Error(lastError);
+        }
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+        const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 300);
 
-      const res = await fetch('/api/process-document', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileUrl: urlData?.signedUrl,
-          fileType: fileStatus.file.type || 'application/pdf',
-          fileName: fileStatus.file.name,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
 
-      if (!res.ok) {
+        const res = await fetch('/api/process-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileUrl: urlData?.signedUrl,
+            fileType: fileStatus.file.type || 'application/pdf',
+            fileName: fileStatus.file.name,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+          await supabase.storage.from('documents').remove([path]);
+          lastError = 'Processing failed: ' + res.status;
+          throw new Error(lastError);
+        }
+
+        const data = await res.json();
+
+        // Clean up temp file after processing
         await supabase.storage.from('documents').remove([path]);
-        return { ...fileStatus, status: 'error', error: 'Processing failed: ' + res.status };
-      }
 
-      const data = await res.json();
+        if (data.error) {
+          lastError = data.error;
+          throw new Error(lastError);
+        }
 
-      // Clean up temp file after processing
-      await supabase.storage.from('documents').remove([path]);
+        const actions: string[] = [];
+        if (data.document_type === 'lease') {
+          if (data.property_address) actions.push('Create property: ' + data.property_address.split(',')[0]);
+          if (data.tenant_name) actions.push('Create lease: ' + data.tenant_name);
+          if (data.monthly_rent) actions.push('Rent: $' + data.monthly_rent + '/mo');
+        }
+        if (['insurance_renters', 'insurance_property'].includes(data.document_type)) {
+          actions.push('Store insurance document');
+          if (data.expiry_date) actions.push('Track expiry: ' + data.expiry_date);
+        }
+        if (['repair_receipt', 'improvement'].includes(data.document_type)) {
+          if (data.amount) actions.push('Create expense: $' + data.amount);
+          if (data.vendor) actions.push('Vendor: ' + data.vendor);
+        }
+        if (!actions.length) {
+          actions.push('Store as ' + (DOC_TYPE_LABELS[data.document_type]?.label || 'document'));
+        }
 
-      if (data.error) return { ...fileStatus, status: 'error', error: data.error };
+        return { ...fileStatus, status: 'done', result: data, actions };
+      } catch (err: any) {
+        lastError = err.name === 'AbortError' ? 'Timed out after 30 seconds' : (err.message || lastError || 'Could not process file');
+        console.log(`[processFile] Attempt ${attempt} failed for ${fileStatus.file.name}:`, lastError);
 
-      const actions: string[] = [];
-      if (data.document_type === 'lease') {
-        if (data.property_address) actions.push('Create property: ' + data.property_address.split(',')[0]);
-        if (data.tenant_name) actions.push('Create lease: ' + data.tenant_name);
-        if (data.monthly_rent) actions.push('Rent: $' + data.monthly_rent + '/mo');
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          setFiles(prev => prev.map(p =>
+            p.file.name === fileStatus.file.name
+              ? { ...p, status: 'processing' as const, error: `Retrying (${attempt}/${MAX_RETRIES})...` }
+              : p
+          ));
+        }
       }
-      if (['insurance_renters', 'insurance_property'].includes(data.document_type)) {
-        actions.push('Store insurance document');
-        if (data.expiry_date) actions.push('Track expiry: ' + data.expiry_date);
-      }
-      if (['repair_receipt', 'improvement'].includes(data.document_type)) {
-        if (data.amount) actions.push('Create expense: $' + data.amount);
-        if (data.vendor) actions.push('Vendor: ' + data.vendor);
-      }
-      if (!actions.length) {
-        actions.push('Store as ' + (DOC_TYPE_LABELS[data.document_type]?.label || 'document'));
-      }
-
-      return { ...fileStatus, status: 'done', result: data, actions };
-    } catch (err: any) {
-      const msg = err.name === 'AbortError' ? 'Timed out after 30 seconds' : (err.message || 'Could not process file');
-      return { ...fileStatus, status: 'error', error: msg };
     }
+
+    return { ...fileStatus, status: 'error', error: 'Failed after ' + MAX_RETRIES + ' attempts: ' + lastError };
   };
 
   const [processProgress, setProcessProgress] = useState({ current: 0, total: 0 });
@@ -238,6 +259,9 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setImporting(false); return; }
 
+    // Track buildings created in this session to prevent duplicates
+    const createdBuildings = new Map<string, string>(); // key -> buildingId
+
     for (const fileStatus of files.filter(f => f.status === 'done' && f.result)) {
       const r = fileStatus.result;
       try {
@@ -254,28 +278,37 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
         if (r.document_type === 'lease' && (r.building_address || r.property_address)) {
           const unitNum = r.unit_number || '';
-          // Strip unit from property_address as fallback
           const buildingAddress = r.building_address ||
             r.property_address?.replace(/,?\s*(unit|apt|apartment|suite|#)\s*[\w]+/gi, '').trim();
+          const buildingKey = buildingAddress.split(',')[0].toLowerCase().trim();
 
-          // Check for existing building in buildings table
-          const { data: existingBuildings } = await supabase.from('buildings').select('id, address').eq('user_id', user.id);
-          const existingBld = existingBuildings?.find((b: any) =>
-            b.address?.toLowerCase().includes(buildingAddress.split(',')[0].toLowerCase())
-          );
+          let buildingId: string | null = null;
 
-          let buildingId: string | null = existingBld?.id || null;
+          // Check in-memory cache first (prevents duplicates within same import)
+          if (createdBuildings.has(buildingKey)) {
+            buildingId = createdBuildings.get(buildingKey)!;
+          } else {
+            // Check existing buildings in DB
+            const { data: existingBuildings } = await supabase.from('buildings').select('id, address').eq('user_id', user.id);
+            const existingBld = existingBuildings?.find((b: any) =>
+              b.address?.toLowerCase().includes(buildingKey)
+            );
+            buildingId = existingBld?.id || null;
+          }
+
           if (!buildingId) {
-            const { data: newBld, error: bldError } = await supabase.from('buildings').insert({
+            const { data: newBldArr } = await supabase.from('buildings').insert({
               user_id: user.id, address: buildingAddress,
               type: r.property_type || (unitNum ? 'apartment' : 'Single Family'),
               num_units: unitNum ? 2 : 1, mortgage: 0, insurance: 0,
-            }).select('id').single();
-            if (bldError) {
-              log.push('✗ Could not create building: ' + bldError.message);
-            } else {
+            }).select('id');
+            const newBld = newBldArr?.[0];
+            if (newBld) {
               buildingId = newBld.id;
+              createdBuildings.set(buildingKey, newBld.id);
               log.push('✓ Created property: ' + buildingAddress.split(',')[0]);
+            } else {
+              log.push('✗ Could not create building');
             }
           }
 
@@ -291,7 +324,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                 address: r.property_address,
                 unit_number: unitNum, is_unit: true,
                 beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
-                current_rent: +r.monthly_rent || 0,
+                current_rent: parseFloat(r.monthly_rent) || 0,
               });
               if (unitError) {
                 log.push('✗ Could not create unit: ' + unitError.message);
@@ -306,47 +339,54 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
         if (r.document_type === 'lease' && r.tenant_name && (r.building_address || r.property_address)) {
           const leaseProperty = (r.building_address || r.property_address) + (r.unit_number ? ', Unit ' + r.unit_number : '');
-          const { data: existingLease } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
+          const { data: existingLeaseArr } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name);
+          const existingLease = existingLeaseArr?.[0] || null;
           if (!existingLease) {
-            await supabase.from('leases').insert({
+            const validDate = (d: string) => d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+            const { error: leaseError } = await supabase.from('leases').insert({
               user_id: user.id, tenant_name: r.tenant_name, property: leaseProperty,
-              rent: +r.monthly_rent || 0, deposit: +r.deposit || 0,
-              start_date: r.lease_start || null, end_date: r.lease_end || null,
+              rent: parseFloat(r.monthly_rent) || 0, deposit: parseFloat(r.deposit) || 0,
+              start_date: validDate(r.lease_start), end_date: validDate(r.lease_end),
               email: '', phone: '', status: 'active',
-              payment_day: +r.payment_day || 1, payment_frequency: r.payment_frequency || 'monthly',
-              late_fee_percent: +r.late_fee_percent || 5, late_fee_days: +r.late_fee_days || 3,
+              payment_day: parseInt(r.payment_day) || 1, payment_frequency: r.payment_frequency || 'monthly',
+              late_fee_percent: parseFloat(r.late_fee_percent) || 5, late_fee_days: parseInt(r.late_fee_days) || 3,
               late_fee_type: r.late_fee_type || 'percent', lease_terms_raw: r.late_fee_clause || '',
             });
-            log.push('✓ Created lease: ' + r.tenant_name);
+            if (leaseError) {
+              log.push('✗ Could not create lease: ' + leaseError.message);
+            } else {
+              log.push('✓ Created lease: ' + r.tenant_name);
 
-            // Generate payment schedule from today forward
-            const { data: newLease } = await supabase.from('leases').select('*').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
-            if (newLease?.end_date && newLease.rent) {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const payDay = newLease.payment_day || 1;
-              const endDate = new Date(newLease.end_date);
+              // Generate payment schedule from today forward
+              const { data: newLeaseArr } = await supabase.from('leases').select('*').eq('user_id', user.id).eq('tenant_name', r.tenant_name);
+              const newLease = newLeaseArr?.[0] || null;
+              if (newLease?.end_date && newLease.rent) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const payDay = newLease.payment_day || 1;
+                const endDate = new Date(newLease.end_date);
 
-              let current = new Date(today.getFullYear(), today.getMonth(), payDay);
-              if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
+                let current = new Date(today.getFullYear(), today.getMonth(), payDay);
+                if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
 
-              let paymentCount = 0;
-              while (current <= endDate) {
-                await supabase.from('payments').insert({
-                  user_id: user.id,
-                  lease_id: newLease.id,
-                  tenant_name: newLease.tenant_name,
-                  property: newLease.property,
-                  amount: newLease.rent,
-                  due_date: current.toISOString().split('T')[0],
-                  status: 'pending',
-                });
-                current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
-                paymentCount++;
-              }
+                let paymentCount = 0;
+                while (current <= endDate) {
+                  await supabase.from('payments').insert({
+                    user_id: user.id,
+                    lease_id: newLease.id,
+                    tenant_name: newLease.tenant_name,
+                    property: newLease.property,
+                    amount: newLease.rent,
+                    due_date: current.toISOString().split('T')[0],
+                    status: 'pending',
+                  });
+                  current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
+                  paymentCount++;
+                }
 
-              if (paymentCount > 0) {
-                log.push('✓ Created ' + paymentCount + ' payment' + (paymentCount !== 1 ? 's' : '') + ' from today forward');
+                if (paymentCount > 0) {
+                  log.push('✓ Created ' + paymentCount + ' payment' + (paymentCount !== 1 ? 's' : '') + ' from today forward');
+                }
               }
             }
           }
@@ -566,8 +606,15 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                 <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {files.map((f, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.bg, borderRadius: T.radiusSm, padding: '8px 12px', border: `1px solid ${T.border}` }}>
-                      <span style={{ fontSize: 16 }}>📄</span>
-                      <div style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 500 }}>{f.file.name}</div>
+                      <span style={{ fontSize: 16 }}>
+                        {f.status === 'processing' ? <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⚙️</span> : '📄'}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: T.ink, fontWeight: 500 }}>{f.file.name}</div>
+                        {f.status === 'processing' && f.error && (
+                          <div style={{ fontSize: 11, color: T.tealDark, marginTop: 2 }}>{f.error}</div>
+                        )}
+                      </div>
                       <div style={{ fontSize: 11, color: T.inkMuted }}>{(f.file.size / 1024).toFixed(0)} KB</div>
                       {f.status === 'pending' && (
                         <button onClick={() => setFiles(files.filter((_, j) => j !== i))}
