@@ -388,7 +388,7 @@ export default function Portfolio() {
     setAnalyzing(building.id);
     const buildingUnits = units.filter(u => u.building_id === building.id);
     const totalRent = buildingUnits.reduce((s, u) => {
-      const lease = leases.find(l => l.property?.includes(building.address));
+      const lease = leases.find(l => l.property?.includes(building.address || ''));
       return s + (lease?.rent || u.current_rent || 0);
     }, 0);
     const monthlyFixed = (building.mortgage || 0) + (building.insurance || 0) + (building.hoa_fee || 0);
@@ -407,14 +407,15 @@ export default function Portfolio() {
   };
 
   const getBuildingCashFlow = (building: Building) => {
+    if (!building) return { totalRent: 0, fixed: 0, net: 0 };
     const buildingUnits = units.filter(u => u.building_id === building.id);
     const totalRent = buildingUnits.reduce((s, u) => {
-      const lease = leases.find(l => l.property?.includes(u.address || building.address));
+      const lease = leases.find(l => l.property?.includes(u.address || building.address || ''));
       return s + (lease?.rent || u.current_rent || 0);
     }, 0);
     const fixed = (building.mortgage || 0) + (building.insurance || 0) + (building.hoa_fee || 0);
     const buildingExpenses = expenses.filter(e =>
-      e.building_id === building.id || e.property?.includes(building.address)
+      e.building_id === building.id || (building.address && e.property?.includes(building.address))
     );
     const monthExpenses = buildingExpenses
       .filter(e => e.date?.startsWith(new Date().toISOString().slice(0, 7)))
@@ -423,7 +424,7 @@ export default function Portfolio() {
   };
 
   const getUnitLease = (unit: Unit) =>
-    leases.find(l => l.property === unit.address || l.property?.includes('Unit ' + unit.unit_number));
+    leases.find(l => (unit.address && l.property === unit.address) || (unit.unit_number && l.property?.includes('Unit ' + unit.unit_number)));
 
   const getDaysLeft = (endDate: string) =>
     Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / 86400000);
@@ -496,7 +497,7 @@ export default function Portfolio() {
                       <div style={{ fontSize: 13, color: T.inkMuted }}>{building.address}</div>
                     )}
                     <span style={{ background: T.bg, color: T.inkMid, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, border: `1px solid ${T.border}` }}>
-                      {building.type} · {building.num_units} unit{building.num_units !== 1 ? 's' : ''}
+                      {building.type || 'Property'} · {building.num_units || 1} unit{(building.num_units || 1) !== 1 ? 's' : ''}
                     </span>
                     {building.year_built && (
                       <span style={{ fontSize: 11, color: T.inkMuted }}>Built {building.year_built}</span>
