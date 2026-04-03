@@ -434,8 +434,10 @@ export default function Portfolio() {
   const getDaysLeft = (endDate: string) =>
     Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / 86400000);
 
-  const formatBaths = (baths: number) =>
-    baths % 1 === 0 ? baths.toString() : baths.toFixed(1);
+  const formatBaths = (baths: number) => {
+    if (baths == null) return '1';
+    return baths % 1 === 0 ? baths.toString() : baths.toFixed(1);
+  };
 
   // Bathroom options including half baths
   const BATH_OPTIONS = ['1', '1.5', '2', '2.5', '3', '3.5', '4'];
@@ -602,7 +604,7 @@ export default function Portfolio() {
                               {unit.unit_number ? 'Unit ' + unit.unit_number : unit.address}
                             </div>
                             <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>
-                              {unit.beds === 0 ? 'Studio' : unit.beds + 'bd'} · {formatBaths(unit.baths)}ba
+                              {unit.beds === 0 ? 'Studio' : (unit.beds || 1) + 'bd'} · {formatBaths(unit.baths)}ba
                               {unit.sqft ? ' · ' + unit.sqft.toLocaleString() + ' sqft' : ''}
                             </div>
                             <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>
