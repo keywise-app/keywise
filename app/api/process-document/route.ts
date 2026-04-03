@@ -68,7 +68,7 @@ Return only the JSON object.`
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
+        max_tokens: 400,
         messages: [{ role: 'user', content }],
       }),
     });

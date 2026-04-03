@@ -106,27 +106,28 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     setStep(2);
   };
 
-  const DEFAULT_WELCOME = 'Welcome to Keywise! Your documents have been imported and your portfolio is ready. Head to your dashboard to get started.';
-
   const getAiWelcome = async () => {
     setLoadingWelcome(true);
+    // Wait 20 seconds after document processing before calling Claude
+    await new Promise(resolve => setTimeout(resolve, 20000));
+
     try {
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: 'Write a short, warm, smart welcome message for ' + (profile.full_name || 'a landlord') + ' who just set up their Keywise account. They manage rental properties. Reference that their AI-powered property management is now active. Mention 2-3 specific things Keywise will help them with today (late rent reminders, lease renewals, maintenance tracking). Keep it under 60 words, conversational and encouraging. No bullet points.',
-          max_tokens: 150,
+          prompt: 'Write a 1-sentence welcome message for a landlord who just set up Keywise. Be warm and brief.',
         }),
       });
       const data = await res.json();
-      if (!data.result || data.result.includes('rate_limit') || data.result.includes('API Error') || data.result.includes('Error:')) {
-        setAiWelcome(DEFAULT_WELCOME);
+
+      if (!data.result || data.result.includes('error') || data.result.includes('Error')) {
+        setAiWelcome('Your portfolio is set up and ready. Head to your dashboard to get started.');
       } else {
         setAiWelcome(data.result);
       }
     } catch {
-      setAiWelcome(DEFAULT_WELCOME);
+      setAiWelcome('Your portfolio is set up and ready. Head to your dashboard to get started.');
     }
     setLoadingWelcome(false);
   };
@@ -357,8 +358,6 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     setImporting(false);
     setStep(4);
     setImportLog(log);
-    setLoadingWelcome(true);
-    await new Promise(resolve => setTimeout(resolve, 15000));
     getAiWelcome();
   };
 
