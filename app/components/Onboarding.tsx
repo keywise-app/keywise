@@ -253,52 +253,53 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         await supabase.storage.from('documents').upload(filePath, blob);
 
         if (r.document_type === 'lease' && (r.building_address || r.property_address)) {
-          const buildingAddr = r.building_address || r.property_address;
           const unitNum = r.unit_number || '';
-          const fullAddress = buildingAddr + (unitNum ? ', Unit ' + unitNum : '');
+          // Strip unit from property_address as fallback
+          const buildingAddress = r.building_address ||
+            r.property_address?.replace(/,?\s*(unit|apt|apartment|suite|#)\s*[\w]+/gi, '').trim();
 
           // Check for existing building in buildings table
           const { data: existingBuildings } = await supabase.from('buildings').select('id, address').eq('user_id', user.id);
           const existingBld = existingBuildings?.find((b: any) =>
-            b.address?.toLowerCase().includes(buildingAddr.split(',')[0].toLowerCase())
+            b.address?.toLowerCase().includes(buildingAddress.split(',')[0].toLowerCase())
           );
 
           let buildingId: string | null = existingBld?.id || null;
           if (!buildingId) {
             const { data: newBld, error: bldError } = await supabase.from('buildings').insert({
-              user_id: user.id, address: buildingAddr, name: null,
+              user_id: user.id, address: buildingAddress,
               type: r.property_type || (unitNum ? 'apartment' : 'Single Family'),
-              num_units: unitNum ? 1 : 1, mortgage: 0, insurance: 0,
+              num_units: unitNum ? 2 : 1, mortgage: 0, insurance: 0,
             }).select('id').single();
             if (bldError) {
               log.push('✗ Could not create building: ' + bldError.message);
             } else {
               buildingId = newBld.id;
-              log.push('✓ Created building: ' + buildingAddr.split(',')[0]);
+              log.push('✓ Created property: ' + buildingAddress.split(',')[0]);
             }
           }
 
-          // Create unit in properties table linked to the building
-          if (buildingId) {
+          // Only create a unit record if there's a unit number (multi-unit)
+          if (buildingId && unitNum) {
             const { data: existingUnits } = await supabase.from('properties').select('id, unit_number').eq('building_id', buildingId).eq('is_unit', true);
             const unitExists = existingUnits?.some((u: any) =>
-              unitNum ? u.unit_number?.toLowerCase() === unitNum.toLowerCase() : u.unit_number === null || u.unit_number === ''
+              u.unit_number?.toLowerCase() === unitNum.toLowerCase()
             );
             if (!unitExists) {
               const { error: unitError } = await supabase.from('properties').insert({
-                user_id: user.id, building_id: buildingId, address: fullAddress,
-                unit_number: unitNum || null, is_unit: true,
+                user_id: user.id, building_id: buildingId,
+                address: r.property_address,
+                unit_number: unitNum, is_unit: true,
                 beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
                 current_rent: +r.monthly_rent || 0,
               });
               if (unitError) {
                 log.push('✗ Could not create unit: ' + unitError.message);
-              } else if (unitNum) {
+              } else {
                 log.push('✓ Created unit: Unit ' + unitNum);
               }
             } else {
-              if (unitNum) log.push('→ Unit ' + unitNum + ' already exists');
-              else log.push('→ Property already exists: ' + buildingAddr.split(',')[0]);
+              log.push('→ Unit ' + unitNum + ' already exists');
             }
           }
         }
