@@ -252,33 +252,63 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         const blob = await fetch('data:' + fileStatus.file.type + ';base64,' + base64).then(r => r.blob());
         await supabase.storage.from('documents').upload(filePath, blob);
 
-        if (r.document_type === 'lease' && r.property_address) {
-          const { data: existingProps } = await supabase.from('properties').select('id, address').eq('user_id', user.id);
-          const propExists = existingProps?.some((p: any) =>
-            p.address?.toLowerCase().includes(r.property_address.split(',')[0].toLowerCase())
+        if (r.document_type === 'lease' && (r.building_address || r.property_address)) {
+          const buildingAddr = r.building_address || r.property_address;
+          const unitNum = r.unit_number || '';
+          const fullAddress = buildingAddr + (unitNum ? ', Unit ' + unitNum : '');
+
+          // Check for existing building in buildings table
+          const { data: existingBuildings } = await supabase.from('buildings').select('id, address').eq('user_id', user.id);
+          const existingBld = existingBuildings?.find((b: any) =>
+            b.address?.toLowerCase().includes(buildingAddr.split(',')[0].toLowerCase())
           );
-          if (!propExists) {
-            const { error: propError } = await supabase.from('properties').insert({
-              user_id: user.id, address: r.property_address,
-              type: r.property_type || 'apartment',
-              beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
-              is_unit: false,
-            });
-            if (propError) {
-              log.push('✗ Could not create property: ' + propError.message);
+
+          let buildingId: string | null = existingBld?.id || null;
+          if (!buildingId) {
+            const { data: newBld, error: bldError } = await supabase.from('buildings').insert({
+              user_id: user.id, address: buildingAddr, name: null,
+              type: r.property_type || (unitNum ? 'apartment' : 'Single Family'),
+              num_units: unitNum ? 1 : 1, mortgage: 0, insurance: 0,
+            }).select('id').single();
+            if (bldError) {
+              log.push('✗ Could not create building: ' + bldError.message);
             } else {
-              log.push('✓ Created property: ' + r.property_address.split(',')[0]);
+              buildingId = newBld.id;
+              log.push('✓ Created building: ' + buildingAddr.split(',')[0]);
             }
-          } else {
-            log.push('→ Property already exists: ' + r.property_address.split(',')[0]);
+          }
+
+          // Create unit in properties table linked to the building
+          if (buildingId) {
+            const { data: existingUnits } = await supabase.from('properties').select('id, unit_number').eq('building_id', buildingId).eq('is_unit', true);
+            const unitExists = existingUnits?.some((u: any) =>
+              unitNum ? u.unit_number?.toLowerCase() === unitNum.toLowerCase() : u.unit_number === null || u.unit_number === ''
+            );
+            if (!unitExists) {
+              const { error: unitError } = await supabase.from('properties').insert({
+                user_id: user.id, building_id: buildingId, address: fullAddress,
+                unit_number: unitNum || null, is_unit: true,
+                beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
+                current_rent: +r.monthly_rent || 0,
+              });
+              if (unitError) {
+                log.push('✗ Could not create unit: ' + unitError.message);
+              } else if (unitNum) {
+                log.push('✓ Created unit: Unit ' + unitNum);
+              }
+            } else {
+              if (unitNum) log.push('→ Unit ' + unitNum + ' already exists');
+              else log.push('→ Property already exists: ' + buildingAddr.split(',')[0]);
+            }
           }
         }
 
-        if (r.document_type === 'lease' && r.tenant_name && r.property_address) {
+        if (r.document_type === 'lease' && r.tenant_name && (r.building_address || r.property_address)) {
+          const leaseProperty = (r.building_address || r.property_address) + (r.unit_number ? ', Unit ' + r.unit_number : '');
           const { data: existingLease } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name).single();
           if (!existingLease) {
             await supabase.from('leases').insert({
-              user_id: user.id, tenant_name: r.tenant_name, property: r.property_address,
+              user_id: user.id, tenant_name: r.tenant_name, property: leaseProperty,
               rent: +r.monthly_rent || 0, deposit: +r.deposit || 0,
               start_date: r.lease_start || null, end_date: r.lease_end || null,
               email: '', phone: '', status: 'active',
