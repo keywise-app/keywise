@@ -260,8 +260,31 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setImporting(false); return; }
 
-    // Track buildings created in this session to prevent duplicates
-    const createdBuildings = new Map<string, string>(); // key -> buildingId
+    // Pre-fetch all existing buildings and leases to avoid per-file queries and 406 errors
+    const allBuildings: any[] = await supabase.from('buildings').select('*').eq('user_id', user.id).then(r => r.data || []);
+    const allLeases: any[] = await supabase.from('leases').select('id, tenant_name').eq('user_id', user.id).then(r => r.data || []);
+    const validDate = (d: string) => d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+
+    const getOrCreateBuilding = async (buildingAddress: string, unitNum: string, propertyType: string) => {
+      const key = buildingAddress.split(',')[0].toLowerCase().trim();
+      const existing = allBuildings.find((b: any) => b.address?.toLowerCase().includes(key));
+      if (existing) return existing;
+
+      const { data: newBld, error } = await supabase.from('buildings').insert({
+        user_id: user.id, address: buildingAddress,
+        type: propertyType || (unitNum ? 'apartment' : 'Single Family'),
+        num_units: unitNum ? 2 : 1, mortgage: 0, insurance: 0,
+      }).select().single();
+
+      if (error || !newBld) {
+        log.push('✗ Could not create building: ' + (error?.message || 'unknown error'));
+        return null;
+      }
+
+      allBuildings.push(newBld);
+      log.push('✓ Created property: ' + key);
+      return newBld;
+    };
 
     for (const fileStatus of files.filter(f => f.status === 'done' && f.result)) {
       const r = fileStatus.result;
@@ -281,47 +304,18 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           const unitNum = r.unit_number || '';
           const buildingAddress = r.building_address ||
             r.property_address?.replace(/,?\s*(unit|apt|apartment|suite|#)\s*[\w]+/gi, '').trim();
-          const buildingKey = buildingAddress.split(',')[0].toLowerCase().trim();
 
-          let buildingId: string | null = null;
-
-          // Check in-memory cache first (prevents duplicates within same import)
-          if (createdBuildings.has(buildingKey)) {
-            buildingId = createdBuildings.get(buildingKey)!;
-          } else {
-            // Check existing buildings in DB
-            const { data: existingBuildings } = await supabase.from('buildings').select('id, address').eq('user_id', user.id);
-            const existingBld = existingBuildings?.find((b: any) =>
-              b.address?.toLowerCase().includes(buildingKey)
-            );
-            buildingId = existingBld?.id || null;
-          }
-
-          if (!buildingId) {
-            const { data: newBldArr } = await supabase.from('buildings').insert({
-              user_id: user.id, address: buildingAddress,
-              type: r.property_type || (unitNum ? 'apartment' : 'Single Family'),
-              num_units: unitNum ? 2 : 1, mortgage: 0, insurance: 0,
-            }).select('id');
-            const newBld = newBldArr?.[0];
-            if (newBld) {
-              buildingId = newBld.id;
-              createdBuildings.set(buildingKey, newBld.id);
-              log.push('✓ Created property: ' + buildingAddress.split(',')[0]);
-            } else {
-              log.push('✗ Could not create building');
-            }
-          }
+          const building = await getOrCreateBuilding(buildingAddress, unitNum, r.property_type);
 
           // Only create a unit record if there's a unit number (multi-unit)
-          if (buildingId && unitNum) {
-            const { data: existingUnits } = await supabase.from('properties').select('id, unit_number').eq('building_id', buildingId).eq('is_unit', true);
+          if (building && unitNum) {
+            const { data: existingUnits } = await supabase.from('properties').select('id, unit_number').eq('building_id', building.id).eq('is_unit', true);
             const unitExists = existingUnits?.some((u: any) =>
               u.unit_number?.toLowerCase() === unitNum.toLowerCase()
             );
             if (!unitExists) {
               const { error: unitError } = await supabase.from('properties').insert({
-                user_id: user.id, building_id: buildingId,
+                user_id: user.id, building_id: building.id,
                 address: r.property_address,
                 unit_number: unitNum, is_unit: true,
                 beds: +r.beds || null, baths: +r.baths || null, sqft: +r.sqft || null,
@@ -340,11 +334,11 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
         if (r.document_type === 'lease' && r.tenant_name && (r.building_address || r.property_address)) {
           const leaseProperty = (r.building_address || r.property_address) + (r.unit_number ? ', Unit ' + r.unit_number : '');
-          const { data: existingLeaseArr } = await supabase.from('leases').select('id').eq('user_id', user.id).eq('tenant_name', r.tenant_name);
-          const existingLease = existingLeaseArr?.[0] || null;
-          if (!existingLease) {
-            const validDate = (d: string) => d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
-            const { error: leaseError } = await supabase.from('leases').insert({
+          const leaseExists = allLeases.some((l: any) =>
+            l.tenant_name?.toLowerCase() === r.tenant_name.toLowerCase()
+          );
+          if (!leaseExists) {
+            const { data: newLeaseData, error: leaseError } = await supabase.from('leases').insert({
               user_id: user.id, tenant_name: r.tenant_name, property: leaseProperty,
               rent: parseFloat(r.monthly_rent) || 0, deposit: parseFloat(r.deposit) || 0,
               start_date: validDate(r.lease_start), end_date: validDate(r.lease_end),
@@ -352,20 +346,20 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               payment_day: parseInt(r.payment_day) || 1, payment_frequency: r.payment_frequency || 'monthly',
               late_fee_percent: parseFloat(r.late_fee_percent) || 5, late_fee_days: parseInt(r.late_fee_days) || 3,
               late_fee_type: r.late_fee_type || 'percent', lease_terms_raw: r.late_fee_clause || '',
-            });
+            }).select().single();
+
             if (leaseError) {
               log.push('✗ Could not create lease: ' + leaseError.message);
             } else {
+              allLeases.push({ id: newLeaseData.id, tenant_name: r.tenant_name });
               log.push('✓ Created lease: ' + r.tenant_name);
 
               // Generate payment schedule from today forward
-              const { data: newLeaseArr } = await supabase.from('leases').select('*').eq('user_id', user.id).eq('tenant_name', r.tenant_name);
-              const newLease = newLeaseArr?.[0] || null;
-              if (newLease?.end_date && newLease.rent) {
+              if (newLeaseData.end_date && newLeaseData.rent) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const payDay = newLease.payment_day || 1;
-                const endDate = new Date(newLease.end_date);
+                const payDay = newLeaseData.payment_day || 1;
+                const endDate = new Date(newLeaseData.end_date);
 
                 let current = new Date(today.getFullYear(), today.getMonth(), payDay);
                 if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
@@ -374,10 +368,10 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                 while (current <= endDate) {
                   await supabase.from('payments').insert({
                     user_id: user.id,
-                    lease_id: newLease.id,
-                    tenant_name: newLease.tenant_name,
-                    property: newLease.property,
-                    amount: newLease.rent,
+                    lease_id: newLeaseData.id,
+                    tenant_name: newLeaseData.tenant_name,
+                    property: newLeaseData.property,
+                    amount: newLeaseData.rent,
                     due_date: current.toISOString().split('T')[0],
                     status: 'pending',
                   });
