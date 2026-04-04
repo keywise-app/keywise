@@ -876,7 +876,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
             {/* DOCUMENTS */}
             {tab === 'documents' && selected && (() => {
-              const docs = tenantDocs.filter(d => d.tenant_name === selected.tenant_name || d.lease_id === selected.id);
+              const docs = tenantDocs.filter(d => (d.tenant_name === selected.tenant_name || d.lease_id === selected.id) && d.type !== 'move_in' && d.type !== 'move_out' && d.type !== 'inspection');
               const hasLease = docs.some((d: any) => d.type === 'lease');
               const insurance = docs.find((d: any) => d.type === 'insurance_renters');
               const insuranceExpired = insurance?.expiry_date && new Date(insurance.expiry_date) < new Date();
@@ -935,23 +935,27 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                         const isExpired = d.expiry_date && new Date(d.expiry_date) < new Date();
                         const isExpiring = d.expiry_date && !isExpired && Math.ceil((new Date(d.expiry_date).getTime() - Date.now()) / 86400000) <= 60;
                         return (
-                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 14px' }}>
-                            <span style={{ fontSize: 20, flexShrink: 0 }}>{DOC_ICONS[d.type] || '📎'}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
-                              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: T.inkMuted, background: T.surface, border: `1px solid ${T.border}`, padding: '1px 6px', borderRadius: 10, textTransform: 'capitalize' }}>{(d.type || 'other').replace(/_/g, ' ')}</span>
-                                {d.signed_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed</span>}
-                                {isExpired && <span style={{ fontSize: 10, fontWeight: 700, color: T.coral, background: T.coralLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRED</span>}
-                                {isExpiring && <span style={{ fontSize: 10, fontWeight: 700, color: T.amberDark, background: T.amberLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRING</span>}
-                                {d.expiry_date && !isExpired && !isExpiring && <span style={{ fontSize: 10, color: T.inkMuted }}>Exp: {d.expiry_date}</span>}
+                          <div key={d.id} style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{DOC_ICONS[d.type] || '📎'}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                                <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: T.inkMuted, background: T.surface, border: `1px solid ${T.border}`, padding: '1px 6px', borderRadius: 10, textTransform: 'capitalize' }}>{(d.type || 'other').replace(/_/g, ' ')}</span>
+                                  {d.signed_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed</span>}
+                                  {isExpired && <span style={{ fontSize: 10, fontWeight: 700, color: T.coral, background: T.coralLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRED</span>}
+                                  {isExpiring && <span style={{ fontSize: 10, fontWeight: 700, color: T.amberDark, background: T.amberLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRING</span>}
+                                  {d.expiry_date && !isExpired && !isExpiring && <span style={{ fontSize: 10, color: T.inkMuted }}>Exp: {d.expiry_date}</span>}
+                                </div>
                               </div>
                             </div>
-                            <button onClick={async () => {
-                              if (!d.file_path) return;
-                              const { data } = await supabase.storage.from('documents').createSignedUrl(d.file_path, 300);
-                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                            }} style={{ ...btn.ghost, fontSize: 11, padding: '5px 10px', flexShrink: 0 }}>View</button>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                              <button onClick={async () => {
+                                if (!d.file_path) return;
+                                const { data } = await supabase.storage.from('documents').createSignedUrl(d.file_path, 300);
+                                if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                              }} style={{ ...btn.ghost, fontSize: 11, padding: '6px 12px', minHeight: 36 }}>View</button>
+                            </div>
                           </div>
                         );
                       })}
@@ -990,7 +994,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                           <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Expiry Date (optional)</label>
                           <input style={input} type="date" value={docForm.expiry_date} onChange={e => setDocForm({ ...docForm, expiry_date: e.target.value })} />
                         </div>
-                        <div style={{ display: 'flex', gap: 10 }}>
+                        <div style={{ position: 'sticky', bottom: 0, background: T.surface, paddingTop: 16, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
                           <button onClick={saveDoc} disabled={docSaving || !docFile} style={{ ...btn.primary, flex: 1, opacity: !docFile ? 0.5 : 1 }}>
                             {docSaving ? 'Saving...' : 'Save Document'}
                           </button>

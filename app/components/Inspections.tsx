@@ -189,6 +189,14 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
     }
     await supabase.from('signing_tokens').delete().eq('inspection_id', id);
     await supabase.from('inspection_photos').delete().eq('inspection_id', id);
+    // Delete associated document records (inspection reports stored as documents)
+    const inspection = inspections.find(i => i.id === id);
+    if (inspection) {
+      await supabase.from('documents').delete()
+        .eq('lease_id', lease.id)
+        .eq('tenant_name', inspection.tenant_name)
+        .in('type', ['move_in', 'move_out', 'inspection']);
+    }
     const { error } = await supabase.from('inspections').delete().eq('id', id);
     if (error) { alert('Error deleting: ' + error.message); return; }
     if (viewingInspection?.id === id) setViewingInspection(null);
@@ -312,6 +320,34 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
             <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 14, marginTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.tealDark, textTransform: 'uppercase', marginBottom: 6 }}>General Notes</div>
               <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{vi.notes}</div>
+            </div>
+          )}
+
+          {/* Report text */}
+          {vi.report_text && (
+            <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16, marginTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 8 }}>AI Report</div>
+              <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{vi.report_text}</div>
+            </div>
+          )}
+
+          {/* Signatures */}
+          {(vi.landlord_signature || vi.tenant_signature) && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+              {vi.landlord_signature && (
+                <div style={{ flex: 1, background: '#E8F8F0', border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Landlord</div>
+                  <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{vi.landlord_signature}</div>
+                  <div style={{ fontSize: 10, color: T.greenDark, marginTop: 2 }}>{vi.landlord_signed_at ? new Date(vi.landlord_signed_at).toLocaleDateString() : ''}</div>
+                </div>
+              )}
+              {vi.tenant_signature && (
+                <div style={{ flex: 1, background: '#E8F8F0', border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Tenant</div>
+                  <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{vi.tenant_signature}</div>
+                  <div style={{ fontSize: 10, color: T.greenDark, marginTop: 2 }}>{vi.tenant_signed_at ? new Date(vi.tenant_signed_at).toLocaleDateString() : ''}</div>
+                </div>
+              )}
             </div>
           )}
         </div>
