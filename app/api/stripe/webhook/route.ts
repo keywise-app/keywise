@@ -95,6 +95,59 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── Checkout session completed (Payment Links use this) ───────────────
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      console.log('[webhook] checkout.session.completed:', session.id);
+      console.log('[webhook] metadata:', JSON.stringify(session.metadata));
+      console.log('[webhook] payment_link:', session.payment_link);
+
+      const { lease_id, tenant_name, due_date } = session.metadata || {};
+      const today = new Date().toISOString().split('T')[0];
+
+      // Try to match by metadata first (lease_id + due_date)
+      if (lease_id && due_date) {
+        const { error } = await supabase
+          .from('payments')
+          .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
+          .eq('lease_id', lease_id)
+          .eq('due_date', due_date)
+          .neq('status', 'paid');
+        if (error) console.error('[webhook] checkout update error (lease_id):', error);
+        else console.log(`[webhook] Marked payment as paid: lease=${lease_id} due=${due_date}`);
+      }
+      // Fallback: match by tenant_name + due_date
+      else if (tenant_name && due_date) {
+        const { error } = await supabase
+          .from('payments')
+          .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
+          .eq('tenant_name', tenant_name)
+          .eq('due_date', due_date)
+          .neq('status', 'paid');
+        if (error) console.error('[webhook] checkout update error (tenant):', error);
+        else console.log(`[webhook] Marked payment as paid: tenant=${tenant_name} due=${due_date}`);
+      }
+      // Last resort: match by payment_link URL
+      else if (session.payment_link) {
+        const linkId = typeof session.payment_link === 'string' ? session.payment_link : session.payment_link;
+        // Fetch the payment link to get its URL
+        try {
+          const link = await stripe.paymentLinks.retrieve(linkId as string);
+          if (link.url) {
+            const { error } = await supabase
+              .from('payments')
+              .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
+              .eq('payment_link_url', link.url)
+              .neq('status', 'paid');
+            if (error) console.error('[webhook] checkout update error (link url):', error);
+            else console.log(`[webhook] Marked payment as paid via payment_link_url`);
+          }
+        } catch (e: any) {
+          console.error('[webhook] Could not retrieve payment link:', e.message);
+        }
+      }
+    }
+
     // ── Subscription created ────────────────────────────────────────────────
     if (event.type === 'customer.subscription.created') {
       const sub = event.data.object as Stripe.Subscription;
