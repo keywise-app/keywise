@@ -206,9 +206,32 @@ export default function Home() {
           .eq('lease_id', leaseId)
           .eq('status', 'pending');
         if (dueDate) query.eq('due_date', dueDate);
-        query.then(({ error }) => {
-          if (error) console.error('[payment_success] update error:', error);
-          else console.log('[payment_success] Marked payment as paid');
+        query.then(async ({ error }) => {
+          if (error) { console.error('[payment_success] update error:', error); return; }
+          console.log('[payment_success] Marked payment as paid');
+
+          // Send landlord notification email
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data: prof } = await supabase.from('profiles').select('email, full_name, notify_payment').eq('id', user.id).single();
+            if (!prof?.email || prof.notify_payment === false) return;
+            const { data: pmt } = await supabase.from('payments').select('*').eq('lease_id', leaseId).eq('status', 'paid').order('paid_date', { ascending: false }).limit(1).single();
+            if (!pmt) return;
+            const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            fetch('/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: prof.email,
+                subject: `Payment received — ${pmt.tenant_name}`,
+                from_name: 'Keywise',
+                html: `<html><body style="font-family:Arial,sans-serif;background:#F0F4FF;padding:40px 20px;"><div style="max-width:500px;margin:0 auto;background:white;border-radius:12px;padding:32px;"><div style="color:#0F3460;font-size:20px;font-weight:700;margin-bottom:4px;">Keywise</div><div style="color:#00D4AA;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;">Property AI</div><div style="background:#E8F8F0;border-radius:10px;padding:20px;text-align:center;margin-bottom:24px;"><div style="font-size:28px;margin-bottom:6px;">&#10003;</div><div style="font-size:20px;font-weight:700;color:#0F7040;">Payment Received</div><div style="font-size:26px;font-weight:700;color:#0F3460;margin-top:8px;">$${(pmt.amount || 0).toLocaleString()}</div></div><table style="width:100%;font-size:13px;color:#4A5068;"><tr><td style="padding:8px 0;border-bottom:1px solid #E0E6F0;">Tenant</td><td style="text-align:right;font-weight:600;color:#1A1A2E;">${pmt.tenant_name}</td></tr><tr><td style="padding:8px 0;border-bottom:1px solid #E0E6F0;">Property</td><td style="text-align:right;font-weight:600;color:#1A1A2E;">${pmt.property || ''}</td></tr><tr><td style="padding:8px 0;border-bottom:1px solid #E0E6F0;">Date</td><td style="text-align:right;font-weight:600;color:#1A1A2E;">${today}</td></tr><tr><td style="padding:8px 0;">Method</td><td style="text-align:right;font-weight:600;color:#1A1A2E;">Online (Stripe)</td></tr></table><div style="text-align:center;margin-top:24px;"><a href="https://keywise.app" style="background:#0F3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View Dashboard →</a></div><p style="color:#8892A4;font-size:12px;text-align:center;margin-top:24px;">Powered by Keywise · keywise.app</p></div></body></html>`,
+              }),
+            });
+          } catch (e) {
+            console.error('[payment_success] email error:', e);
+          }
         });
       }
       setShowPaymentBanner(true);

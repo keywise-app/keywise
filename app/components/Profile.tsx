@@ -23,6 +23,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const [deleteText, setDeleteText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [notifications, setNotifications] = useState({ notify_payment: true, notify_overdue: true, notify_renewal: true });
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -43,6 +44,11 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       setSubscriptionStatus(data.subscription_status || null);
       setTrialEndsAt(data.trial_ends_at || null);
       setStripeCustomerId(data.stripe_customer_id || null);
+      setNotifications({
+        notify_payment: data.notify_payment !== false,
+        notify_overdue: data.notify_overdue !== false,
+        notify_renewal: data.notify_renewal !== false,
+      });
     }
     setLoading(false);
   };
@@ -58,6 +64,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
       phone: profile.phone,
       company: profile.company,
       address: profile.address,
+      ...notifications,
     });
     if (error) { alert('Error saving: ' + error.message); }
     else { setSaved(true); setTimeout(() => setSaved(false), 3000); }
@@ -371,6 +378,40 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           </button>
         </div>
       )}
+
+      {/* Notifications */}
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow, marginBottom: 24 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 16 }}>Email Notifications</div>
+        {[
+          { key: 'notify_payment', label: 'Payment received', desc: 'Get notified when a tenant makes a payment' },
+          { key: 'notify_overdue', label: 'Rent overdue', desc: 'Get notified when rent is past due' },
+          { key: 'notify_renewal', label: 'Lease expiring', desc: 'Get notified when a lease expires within 60 days' },
+        ].map(n => (
+          <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${T.border}` }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{n.label}</div>
+              <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>{n.desc}</div>
+            </div>
+            <button
+              onClick={() => setNotifications(prev => ({ ...prev, [n.key]: !prev[n.key as keyof typeof prev] }))}
+              style={{
+                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: notifications[n.key as keyof typeof notifications] ? T.teal : T.border,
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: 'white',
+                position: 'absolute', top: 2,
+                left: notifications[n.key as keyof typeof notifications] ? 22 : 2,
+                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+        ))}
+        <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 12 }}>
+          Changes are saved when you click "Save Profile" above.
+        </div>
+      </div>
 
       {/* Danger Zone */}
       <div style={{ border: '1.5px solid #FCA5A5', borderRadius: T.radius, padding: 24 }}>
