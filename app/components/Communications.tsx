@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, btn, card } from '../lib/theme';
 
 type Tenant = {
@@ -125,13 +126,8 @@ export default function Communications() {
     setLoading(true);
     setResult('');
     setSmsStatus('');
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: getPrompt() }),
-    });
-    const data = await res.json();
-    setResult(data.result);
+    const result = await callClaude(getPrompt());
+    setResult(result);
     setLoading(false);
   };
 
@@ -155,15 +151,7 @@ const sendAll = async () => {
       statuses.push('✗ SMS failed — no phone number on file');
     } else {
       // Generate a short SMS version
-      const smsRes = await fetch('/api/claude', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: 'Summarize this landlord message into a short, friendly SMS text message. Maximum 300 characters. No formal headers or signatures — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + result,
-        }),
-      });
-      const smsData = await smsRes.json();
-      const shortMessage = smsData.result;
+      const shortMessage = await callClaude('Summarize this landlord message into a short, friendly SMS text message. Maximum 300 characters. No formal headers or signatures — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + result);
 
       const res = await fetch('/api/send-sms', {
         method: 'POST',
@@ -226,13 +214,8 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
   const generateTransition = async (t: Tenant) => {
     setTransitionMsgs(prev => ({ ...prev, [t.id]: { ...prev[t.id], text: '', loading: true, copied: false, smsStatus: '', sending: false } }));
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: getTransitionPrompt(t) }),
-    });
-    const data = await res.json();
-    setTransitionMsgs(prev => ({ ...prev, [t.id]: { text: data.result, loading: false, copied: false, smsStatus: '', sending: false } }));
+    const result = await callClaude(getTransitionPrompt(t));
+    setTransitionMsgs(prev => ({ ...prev, [t.id]: { text: result, loading: false, copied: false, smsStatus: '', sending: false } }));
   };
 
   const generateAllTransitions = async () => {
@@ -260,18 +243,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       return;
     }
     setTransitionMsgs(prev => ({ ...prev, [t.id]: { ...prev[t.id], sending: true, smsStatus: '' } }));
-    const smsRes = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Summarize this landlord message into a short, friendly SMS. Maximum 300 characters. No formal headers — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + text,
-      }),
-    });
-    const smsData = await smsRes.json();
+    const smsResult = await callClaude('Summarize this landlord message into a short, friendly SMS. Maximum 300 characters. No formal headers — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + text);
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: t.phone, message: smsData.result }),
+      body: JSON.stringify({ to: t.phone, message: smsResult }),
     });
     const data = await res.json();
     const status = data.error ? '✗ SMS failed: ' + data.error : '✓ SMS sent to ' + t.phone;

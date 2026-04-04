@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 
 type Document = {
   id: string;
@@ -296,15 +297,8 @@ export default function Documents() {
       const pDocs = documents.filter(d => d.property === p && d.ownership_level === 'property');
       return p + ': ' + (pDocs.length === 0 ? 'NO DOCUMENTS' : pDocs.map(d => d.type).join(', '));
     }).join('\n');
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Review this landlord\'s document inventory and flag anything missing or concerning:\n\nTenant Documents:\n' + docSummary + '\n\nProperty Documents:\n' + propDocs + '\n\nFor each tenant check: signed lease, renters insurance, move-in checklist.\nFor each property check: property insurance, inspection report.\nFlag expiring documents and critical gaps. Be specific about what\'s missing and why it matters legally or financially.',
-      }),
-    });
-    const data = await res.json();
-    setAiFlags(data.result);
+    const result = await callClaude('Review this landlord\'s document inventory and flag anything missing or concerning:\n\nTenant Documents:\n' + docSummary + '\n\nProperty Documents:\n' + propDocs + '\n\nFor each tenant check: signed lease, renters insurance, move-in checklist.\nFor each property check: property insurance, inspection report.\nFlag expiring documents and critical gaps. Be specific about what\'s missing and why it matters legally or financially.');
+    setAiFlags(result);
     setFlagging(false);
   };
 

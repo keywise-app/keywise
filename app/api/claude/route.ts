@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: Math.min(max_tokens || 1024, 1024),
+        max_tokens: Math.min(max_tokens || 500, 1024),
         messages: [{ role: 'user', content: sanitized }],
       }),
     });
@@ -54,6 +54,13 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       console.error('Anthropic error:', data);
+      if (data.error?.type === 'rate_limit_error' || response.status === 429) {
+        return NextResponse.json({
+          result: null,
+          error: 'rate_limit',
+          message: 'Too many requests. Please wait 30 seconds and try again.',
+        });
+      }
       return NextResponse.json({ result: 'API Error: ' + JSON.stringify(data) });
     }
 

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import AddTenantWizard from './AddTenantWizard';
 
@@ -190,13 +191,8 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
       'violation': 'Draft a lease violation notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Violation: ' + (context || 'describe violation') + '. Include correction required and deadline.',
       'general': 'Draft a professional message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Message: ' + (context || 'general communication'),
     };
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompts[msgType] }),
-    });
-    const data = await res.json();
-    setDraft(data.result);
+    const result = await callClaude(prompts[msgType]);
+    setDraft(result);
     setDrafting(false);
   };
 
@@ -224,13 +220,8 @@ Include:
 - The landlord's name and contact info as a closing signature
 
 Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`;
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    setTransitionMsgs(prev => ({ ...prev, [lease.id]: { text: data.result, loading: false, copied: false, smsStatus: '', sending: false } }));
+    const result = await callClaude(prompt);
+    setTransitionMsgs(prev => ({ ...prev, [lease.id]: { text: result, loading: false, copied: false, smsStatus: '', sending: false } }));
   };
 
   const copyTransition = (id: string, text: string) => {
@@ -245,18 +236,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       return;
     }
     setTransitionMsgs(prev => ({ ...prev, [lease.id]: { ...prev[lease.id], sending: true, smsStatus: '' } }));
-    const smsRes = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Summarize this landlord message into a short, friendly SMS. Maximum 300 characters. No formal headers — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + text,
-      }),
-    });
-    const smsData = await smsRes.json();
+    const smsResult = await callClaude('Summarize this landlord message into a short, friendly SMS. Maximum 300 characters. No formal headers — just the key info conversationally. End with the landlord\'s first name if available (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\nOriginal message:\n' + text);
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: lease.phone, message: smsData.result }),
+      body: JSON.stringify({ to: lease.phone, message: smsResult }),
     });
     const data = await res.json();
     const status = data.error ? '✗ SMS failed: ' + data.error : '✓ SMS sent to ' + lease.phone;
@@ -351,23 +335,31 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 ← Back to tenants
               </button>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>{selected.tenant_name}</div>
+                <div style={{ fontWeight: 700, fontSize: isMobile ? 18 : 20, color: T.navy }}>{selected.tenant_name}</div>
                 <div style={{ fontSize: 13, color: T.inkMuted, marginTop: 2 }}>{selected.property}</div>
-                <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
                   {selected.email && <span style={{ fontSize: 12, color: T.inkMid }}>📧 {selected.email}</span>}
                   {selected.phone && <span style={{ fontSize: 12, color: T.inkMid }}>📞 {selected.phone}</span>}
                 </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: T.navy }}>${(selected.rent || 0).toLocaleString()}/mo</div>
-                  <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>
-                    {selected.start_date} → {selected.end_date}
+                {isMobile && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: T.navy }}>${(selected.rent || 0).toLocaleString()}/mo</div>
+                    <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>{selected.start_date} → {selected.end_date}</div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'flex-start' : 'flex-end', gap: 8, width: isMobile ? '100%' : 'auto' }}>
+                {!isMobile && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: T.navy }}>${(selected.rent || 0).toLocaleString()}/mo</div>
+                    <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>
+                      {selected.start_date} → {selected.end_date}
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
                   {selected.invite_sent && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: T.inkMuted, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' as const }}>
                       ✓ Invited {selected.invite_sent_at ? new Date(selected.invite_sent_at).toLocaleDateString() : ''}
@@ -395,20 +387,22 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       setTimeout(() => setInviteSuccess(false), 3000);
                     }
                   }}
-                    style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: inviteSending ? 'default' : 'pointer', opacity: inviteSending ? 0.7 : 1 }}>
-                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Link generated!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite to Keywise'}
+                    style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: isMobile ? '5px 10px' : '6px 14px', fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: inviteSending ? 'default' : 'pointer', opacity: inviteSending ? 0.7 : 1 }}>
+                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Link generated!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite'}
                   </button>
-                  <button
-                    onClick={() => window.open(`/?tenant_preview=true&lease_id=${selected.id}`, '_blank')}
-                    style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
-                    👁 Preview
-                  </button>
+                  {!isMobile && (
+                    <button
+                      onClick={() => window.open(`/?tenant_preview=true&lease_id=${selected.id}`, '_blank')}
+                      style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                      👁 Preview
+                    </button>
+                  )}
                   <button onClick={() => { setTab('overview'); openEdit(); }}
-                    style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                    style={{ ...btn.ghost, fontSize: isMobile ? 11 : 12, padding: isMobile ? '5px 10px' : '6px 14px' }}>
                     ✏️ Edit
                   </button>
                   <button onClick={removeTenant}
-                    style={{ ...btn.danger, fontSize: 12, padding: '6px 14px' }}>
+                    style={{ ...btn.danger, fontSize: isMobile ? 11 : 12, padding: isMobile ? '5px 10px' : '6px 14px' }}>
                     Remove
                   </button>
                 </div>
@@ -443,7 +437,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             )}
 
             {/* Quick stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
               {[
                 { label: 'Total Paid', value: '$' + totalPaid.toLocaleString(), color: T.greenDark },
                 { label: 'Outstanding', value: '$' + outstanding.toLocaleString(), color: outstanding > 0 ? T.coral : T.inkMuted },
@@ -458,7 +452,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, padding: '0 24px', overflowX: 'auto' as const, flexWrap: 'nowrap' as const }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, padding: isMobile ? '0 16px' : '0 24px', overflowX: 'auto' as const, flexWrap: 'nowrap' as const, WebkitOverflowScrolling: 'touch' as any }}>
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'payments', label: 'Payments (' + tenantPayments.length + ')' },
@@ -473,11 +467,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 }
               }}
                 style={{
-                  padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
-                  fontSize: 13, fontWeight: tab === t.id ? 700 : 400,
+                  padding: isMobile ? '10px 12px' : '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
+                  fontSize: isMobile ? 12 : 13, fontWeight: tab === t.id ? 700 : 400,
                   color: tab === t.id ? T.navy : T.inkMuted,
                   borderBottom: tab === t.id ? `2px solid ${T.navy}` : '2px solid transparent',
-                  marginBottom: -1, fontFamily: 'inherit',
+                  marginBottom: -1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const,
                 }}>
                 {t.label}
               </button>

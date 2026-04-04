@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 
 type Lease = {
@@ -291,30 +292,16 @@ export default function Leases() {
 
     const termDescription = renewalOptions.newTerm === 'month-to-month' ? 'month-to-month' : renewalOptions.newTerm + '-month lease';
 
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Draft a professional lease renewal offer letter with today\'s date at the top.\n\nDate: ' + today + '\n\nTo: ' + renewalWizard.tenant_name + '\nProperty: ' + renewalWizard.property + '\n\nFrom:\n' + signature + '\n\nLease details:\n- Current rent: $' + currentRent + '/mo\n- Lease expires: ' + renewalWizard.end_date + '\n- Proposed new term: ' + termDescription + '\n- Rent change: ' + rentDescription + '\n' + (renewalOptions.notes ? '- Additional notes: ' + renewalOptions.notes : '') + '\n\n' + (renewalOptions.increaseType === 'market' ? 'Research typical rents for similar units in this area and justify the proposed rent increase with market data. ' : '') + 'Write a warm professional letter. Include the date at the top. Request a response within 30 days. End with a proper signature block.',
-      }),
-    });
-    const data = await res.json();
-    setRenewalDrafts(prev => ({ ...prev, [renewalWizard.id]: data.result }));
+    const result = await callClaude('Draft a professional lease renewal offer letter with today\'s date at the top.\n\nDate: ' + today + '\n\nTo: ' + renewalWizard.tenant_name + '\nProperty: ' + renewalWizard.property + '\n\nFrom:\n' + signature + '\n\nLease details:\n- Current rent: $' + currentRent + '/mo\n- Lease expires: ' + renewalWizard.end_date + '\n- Proposed new term: ' + termDescription + '\n- Rent change: ' + rentDescription + '\n' + (renewalOptions.notes ? '- Additional notes: ' + renewalOptions.notes : '') + '\n\n' + (renewalOptions.increaseType === 'market' ? 'Research typical rents for similar units in this area and justify the proposed rent increase with market data. ' : '') + 'Write a warm professional letter. Include the date at the top. Request a response within 30 days. End with a proper signature block.');
+    setRenewalDrafts(prev => ({ ...prev, [renewalWizard.id]: result }));
     setDraftingId(null);
   };
 
   const generateLease = async () => {
     setGenerating(true);
     setGeneratedLease('');
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Generate a complete professional residential lease agreement for ' + form.state + '. Tenant: ' + form.tenant + '. Property: ' + form.property + '. Monthly Rent: $' + form.rent + '. Security Deposit: $' + form.deposit + '. Lease Start: ' + form.start + '. Lease End: ' + form.end + '. Pets: ' + form.pets + '. Parking: ' + form.parking + '. Laundry: ' + form.laundry + '. Include all standard clauses: payment due 1st of month, 5% late fee after 3-day grace, utilities, maintenance responsibilities, 24-hour entry notice, no subletting, termination, and state-specific disclosures. Use numbered sections.',
-      }),
-    });
-    const data = await res.json();
-    setGeneratedLease(data.result);
+    const result = await callClaude('Generate a complete professional residential lease agreement for ' + form.state + '. Tenant: ' + form.tenant + '. Property: ' + form.property + '. Monthly Rent: $' + form.rent + '. Security Deposit: $' + form.deposit + '. Lease Start: ' + form.start + '. Lease End: ' + form.end + '. Pets: ' + form.pets + '. Parking: ' + form.parking + '. Laundry: ' + form.laundry + '. Include all standard clauses: payment due 1st of month, 5% late fee after 3-day grace, utilities, maintenance responsibilities, 24-hour entry notice, no subletting, termination, and state-specific disclosures. Use numbered sections.');
+    setGeneratedLease(result);
     setGenerating(false);
   };
 

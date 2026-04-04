@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import { getLimits } from '../lib/planLimits';
 
@@ -251,15 +252,8 @@ export default function Payments() {
       ? 'Per your lease, a ' + (lease.late_fee_type === 'fixed' ? '$' + lease.late_fee_percent : lease.late_fee_percent + '%') + ' late fee applies after ' + (lease.late_fee_days || 3) + ' days.'
       : 'A late fee may apply per your lease.';
 
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Draft a short, professional but friendly rent reminder text message to ' + payment.tenant_name + ' at ' + payment.property + '. Rent of $' + payment.amount + ' was due on ' + payment.due_date + ' and has not been paid. ' + lateFeeLine + ' Ask them to pay within 3 days. Keep it under 100 words and conversational.',
-      }),
-    });
-    const data = await res.json();
-    setAiReminder(data.result);
+    const result = await callClaude('Draft a short, professional but friendly rent reminder text message to ' + payment.tenant_name + ' at ' + payment.property + '. Rent of $' + payment.amount + ' was due on ' + payment.due_date + ' and has not been paid. ' + lateFeeLine + ' Ask them to pay within 3 days. Keep it under 100 words and conversational.');
+    setAiReminder(result);
     setLoadingReminder(false);
   };
 

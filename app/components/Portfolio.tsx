@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import { getLimits } from '../lib/planLimits';
 import AddressInput from './AddressInput';
@@ -153,6 +154,14 @@ export default function Portfolio() {
 
   const [buildingForm, setBuildingForm] = useState<any>(emptyBuilding);
   const [unitForm, setUnitForm] = useState<any>(emptyUnit);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -399,15 +408,8 @@ export default function Portfolio() {
     const monthlyFixed = (building.mortgage || 0) + (building.insurance || 0) + (building.hoa_fee || 0);
     const cashFlow = totalRent - monthlyFixed;
 
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Analyze this rental property:\n\nBuilding: ' + building.address + '\nType: ' + building.type + '\nUnits: ' + building.num_units + '\nTotal monthly rent: $' + totalRent + '\nMortgage: $' + (building.mortgage || 0) + '/mo\nInsurance: $' + (building.insurance || 0) + '/mo\nHOA: $' + (building.hoa_fee || 0) + '/mo\nNet cash flow: $' + cashFlow + '/mo\n\nProvide: 1) Cash flow assessment, 2) Is this performing well? 3) Key risks, 4) Top 2-3 ways to improve returns. Be specific and practical.',
-      }),
-    });
-    const data = await res.json();
-    setAnalyses(prev => ({ ...prev, [building.id]: data.result }));
+    const result = await callClaude('Analyze this rental property:\n\nBuilding: ' + building.address + '\nType: ' + building.type + '\nUnits: ' + building.num_units + '\nTotal monthly rent: $' + totalRent + '\nMortgage: $' + (building.mortgage || 0) + '/mo\nInsurance: $' + (building.insurance || 0) + '/mo\nHOA: $' + (building.hoa_fee || 0) + '/mo\nNet cash flow: $' + cashFlow + '/mo\n\nProvide: 1) Cash flow assessment, 2) Is this performing well? 3) Key risks, 4) Top 2-3 ways to improve returns. Be specific and practical.');
+    setAnalyses(prev => ({ ...prev, [building.id]: result }));
     setAnalyzing(null);
   };
 
@@ -492,12 +494,12 @@ export default function Portfolio() {
           <div key={building.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, marginBottom: 20, boxShadow: T.shadow, overflow: 'hidden' }}>
 
             {/* Building header */}
-            <div style={{ padding: '20px 24px', borderBottom: isExpanded ? `1px solid ${T.border}` : 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setExpandedBuilding(isExpanded ? null : building.id)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ padding: isMobile ? '16px' : '20px 24px', borderBottom: isExpanded ? `1px solid ${T.border}` : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0 }}>
+                <div style={{ flex: 1, cursor: 'pointer', width: '100%' }} onClick={() => setExpandedBuilding(isExpanded ? null : building.id)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 20 }}>🏘️</span>
-                    <div style={{ fontWeight: 700, fontSize: 17, color: T.navy }}>
+                    <div style={{ fontWeight: 700, fontSize: isMobile ? 15 : 17, color: T.navy }}>
                       {building.name || building.address}
                     </div>
                     {building.name && (
@@ -512,22 +514,22 @@ export default function Portfolio() {
                   </div>
 
                   {/* Financials */}
-                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, auto)', gap: isMobile ? 10 : 24, marginTop: 10 }}>
                     {[
                       { label: 'Rent Income', value: '$' + cf.totalRent.toLocaleString() + '/mo', color: T.greenDark },
-                      { label: 'Fixed Costs', value: '$' + cf.fixed.toLocaleString() + '/mo', color: T.coral },
+                      ...(!isMobile ? [{ label: 'Fixed Costs', value: '$' + cf.fixed.toLocaleString() + '/mo', color: T.coral }] : []),
                       { label: 'Net Cash Flow', value: (cf.net >= 0 ? '+' : '') + '$' + cf.net.toLocaleString() + '/mo', color: cf.net >= 0 ? T.greenDark : T.coral },
                     ].map(item => (
                       <div key={item.label}>
                         <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{item.label}</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: item.color, marginTop: 2 }}>{item.value}</div>
+                        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: item.color, marginTop: 2 }}>{item.value}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* Cost breakdown */}
                   {(building.mortgage > 0 || building.insurance > 0 || building.hoa_fee > 0) && (
-                    <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: isMobile ? 10 : 16, marginTop: 8, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
                       {building.mortgage > 0 && <span style={{ fontSize: 12, color: T.inkMuted }}>🏦 ${building.mortgage.toLocaleString()} mortgage</span>}
                       {building.insurance > 0 && <span style={{ fontSize: 12, color: T.inkMuted }}>🛡️ ${building.insurance.toLocaleString()} insurance</span>}
                       {building.hoa_fee > 0 && <span style={{ fontSize: 12, color: T.inkMuted }}>🏘️ ${building.hoa_fee.toLocaleString()} HOA</span>}
@@ -536,21 +538,21 @@ export default function Portfolio() {
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: 8, marginLeft: 16, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, marginLeft: isMobile ? 0 : 16, flexShrink: 0, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
                   <button onClick={() => analyzeBuilding(building)} disabled={analyzing === building.id}
-                    style={{ ...btn.teal, fontSize: 12, padding: '7px 14px' }}>
+                    style={{ ...btn.teal, fontSize: isMobile ? 11 : 12, padding: isMobile ? '6px 10px' : '7px 14px' }}>
                     {analyzing === building.id ? 'Analyzing…' : '✦ Analyze'}
                   </button>
                   <button onClick={() => openEditBuilding(building)}
-                    style={{ ...btn.ghost, fontSize: 12, padding: '7px 12px' }}>
+                    style={{ ...btn.ghost, fontSize: isMobile ? 11 : 12, padding: isMobile ? '6px 10px' : '7px 12px' }}>
                     ✏️ Edit
                   </button>
                   <button onClick={() => deleteBuilding(building.id)}
-                    style={{ ...btn.danger, fontSize: 12, padding: '7px 12px' }}>
+                    style={{ ...btn.danger, fontSize: isMobile ? 11 : 12, padding: isMobile ? '6px 10px' : '7px 12px' }}>
                     Remove
                   </button>
                   <span onClick={() => setExpandedBuilding(isExpanded ? null : building.id)}
-                    style={{ fontSize: 16, color: T.inkMuted, cursor: 'pointer', padding: '7px 4px' }}>
+                    style={{ fontSize: 16, color: T.inkMuted, cursor: 'pointer', padding: isMobile ? '6px 8px' : '7px 4px', minWidth: 44, minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                     {isExpanded ? '▲' : '▼'}
                   </span>
                 </div>
@@ -589,7 +591,7 @@ export default function Portfolio() {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: buildingUnits.length > 2 ? 'repeat(3, 1fr)' : buildingUnits.length === 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : buildingUnits.length > 2 ? 'repeat(3, 1fr)' : buildingUnits.length === 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
                   {buildingUnits.map(unit => {
                     const lease = getUnitLease(unit);
                     const daysLeft = lease?.end_date ? getDaysLeft(lease.end_date) : null;

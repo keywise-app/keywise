@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 
 type Expense = {
   id: string;
@@ -145,15 +146,8 @@ export default function Expenses() {
     const rows = expenses.map(e =>
       e.date + ' | ' + e.property + ' | ' + e.category + ' | ' + e.description + ' | $' + e.amount + ' | ' + (e.deductible ? 'deductible' : 'not deductible')
     ).join('\n');
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Analyze these rental property expenses for a small landlord:\n\n' + rows + '\n\nProvide: 1) Total deductible vs non-deductible breakdown with amounts, 2) Biggest cost categories, 3) Any unusual or high expenses to flag, 4) 2-3 practical tips to reduce costs or maximize deductions. Be concise and actionable.',
-      }),
-    });
-    const data = await res.json();
-    setAiSummary(data.result);
+    const result = await callClaude('Analyze these rental property expenses for a small landlord:\n\n' + rows + '\n\nProvide: 1) Total deductible vs non-deductible breakdown with amounts, 2) Biggest cost categories, 3) Any unusual or high expenses to flag, 4) 2-3 practical tips to reduce costs or maximize deductions. Be concise and actionable.');
+    setAiSummary(result);
     setAiLoading(false);
   };
 

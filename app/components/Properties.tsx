@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 
 type Property = {
   id: string;
@@ -181,15 +182,8 @@ export default function Properties() {
 
     const cashFlow = (property.current_rent || 0) - (property.mortgage || 0) - (property.hoa_fee || 0) - (property.insurance || 0);
 
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'You are a rental market expert. Analyze this property:\n\nAddress: ' + property.address + '\nDetails: ' + details + '\nCurrent rent: $' + (property.current_rent || 'not set') + '/mo\nTarget rent: $' + (property.target_rent || 'not set') + '/mo\nMonthly cash flow (before maintenance/taxes): $' + cashFlow + '\n\nProvide:\n1. Recommended monthly rent range based on these features and location\n2. Which features add the most value\n3. Which features are limiting rent potential\n4. Top 3 upgrades that would justify higher rent with estimated ROI\n5. Is current rent above/below/at market?\n6. Best time to list or renew based on seasonal trends\n\nBe specific with dollar amounts.',
-      }),
-    });
-    const data = await res.json();
-    setAnalyses(prev => ({ ...prev, [property.id]: data.result }));
+    const result = await callClaude('You are a rental market expert. Analyze this property:\n\nAddress: ' + property.address + '\nDetails: ' + details + '\nCurrent rent: $' + (property.current_rent || 'not set') + '/mo\nTarget rent: $' + (property.target_rent || 'not set') + '/mo\nMonthly cash flow (before maintenance/taxes): $' + cashFlow + '\n\nProvide:\n1. Recommended monthly rent range based on these features and location\n2. Which features add the most value\n3. Which features are limiting rent potential\n4. Top 3 upgrades that would justify higher rent with estimated ROI\n5. Is current rent above/below/at market?\n6. Best time to list or renew based on seasonal trends\n\nBe specific with dollar amounts.');
+    setAnalyses(prev => ({ ...prev, [property.id]: result }));
     setAnalyzing(null);
   };
 

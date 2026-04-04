@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 
 type FileStatus = {
@@ -113,19 +114,12 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     await new Promise(resolve => setTimeout(resolve, 20000));
 
     try {
-      const res = await fetch('/api/claude', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: 'Write a 1-sentence welcome message for a landlord who just set up Keywise. Be warm and brief.',
-        }),
-      });
-      const data = await res.json();
+      const result = await callClaude('Write a 1-sentence welcome message for a landlord who just set up Keywise. Be warm and brief.');
 
-      if (!data.result || data.result.includes('error') || data.result.includes('Error')) {
+      if (!result || result.includes('error') || result.includes('Error')) {
         setAiWelcome('Your portfolio is set up and ready. Head to your dashboard to get started.');
       } else {
-        setAiWelcome(data.result);
+        setAiWelcome(result);
       }
     } catch {
       setAiWelcome('Your portfolio is set up and ready. Head to your dashboard to get started.');

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 import { T, btn, card } from '../lib/theme';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -126,9 +127,8 @@ High-priority maintenance: ${highMaint.map(m => m.issue).join(', ') || 'none'}.
 Give me exactly 3 specific, actionable priorities for today. Number them 1, 2, 3. Be direct and brief — no preamble, no headers, no bullet points other than the numbers.`;
 
     try {
-      const res = await fetch('/api/claude', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-      const data = await res.json();
-      if (data.result) { setDigest(data.result); localStorage.setItem(cacheKey, data.result); }
+      const result = await callClaude(prompt);
+      if (result) { setDigest(result); localStorage.setItem(cacheKey, result); }
     } catch { /* silent fail */ }
     setLoading(false);
   };

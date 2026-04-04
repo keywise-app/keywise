@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { callClaude } from '../lib/claude';
 
 type Issue = {
   id: string;
@@ -86,16 +87,9 @@ export default function Maintenance() {
   const parseFreeText = async () => {
     if (!freeText.trim()) return;
     setParsing(true);
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Extract maintenance issue details from this text and return ONLY valid JSON with no markdown:\n\n"' + freeText + '"\n\nReturn: {"issue":"brief issue title","category":"one of Plumbing/HVAC/Electrical/Appliances/Structural/Pest/Landscaping/General","priority":"low/medium/high","notes":"any additional details","property":"property address if mentioned or empty string","vendor":"contractor name if mentioned or empty string","cost":"estimated cost as number if mentioned or 0"}',
-      }),
-    });
-    const data = await res.json();
+    const result = await callClaude('Extract maintenance issue details from this text and return ONLY valid JSON with no markdown:\n\n"' + freeText + '"\n\nReturn: {"issue":"brief issue title","category":"one of Plumbing/HVAC/Electrical/Appliances/Structural/Pest/Landscaping/General","priority":"low/medium/high","notes":"any additional details","property":"property address if mentioned or empty string","vendor":"contractor name if mentioned or empty string","cost":"estimated cost as number if mentioned or 0"}');
     try {
-      const cleaned = data.result.replace(/```json|```/g, '').trim();
+      const cleaned = result.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       setForm({
         ...emptyForm,
@@ -120,15 +114,8 @@ export default function Maintenance() {
     if (!form.issue) return;
     setAssessing(true);
     setAiAssessmentNew('');
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'You are a property maintenance expert. Assess this maintenance issue:\n\nIssue: ' + form.issue + '\nCategory: ' + form.category + '\nProperty: ' + (form.property || 'not specified') + '\nNotes: ' + (form.notes || 'none') + '\n\nProvide:\n1. Priority level (Low/Medium/High/Emergency) with reasoning\n2. Estimated cost range for this type of repair\n3. Repair vs Replace recommendation if applicable\n4. Recommended action steps\n5. How urgent is this — can it wait a week, or needs immediate attention?\n\nBe specific and practical.',
-      }),
-    });
-    const data = await res.json();
-    setAiAssessmentNew(data.result);
+    const result = await callClaude('You are a property maintenance expert. Assess this maintenance issue:\n\nIssue: ' + form.issue + '\nCategory: ' + form.category + '\nProperty: ' + (form.property || 'not specified') + '\nNotes: ' + (form.notes || 'none') + '\n\nProvide:\n1. Priority level (Low/Medium/High/Emergency) with reasoning\n2. Estimated cost range for this type of repair\n3. Repair vs Replace recommendation if applicable\n4. Recommended action steps\n5. How urgent is this — can it wait a week, or needs immediate attention?\n\nBe specific and practical.');
+    setAiAssessmentNew(result);
     setAssessing(false);
   };
 
@@ -203,29 +190,15 @@ export default function Maintenance() {
 
   const draftContractor = async (issue: Issue) => {
     setDraftingId(issue.id);
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Draft a professional contractor outreach message:\n\nProperty: ' + issue.property + '\nIssue: ' + issue.issue + '\nCategory: ' + issue.category + '\nPriority: ' + issue.priority + '\nNotes: ' + (issue.notes || 'none') + '\n\nAsk for availability, describe the issue clearly, mention urgency, and request an estimate. Under 150 words.',
-      }),
-    });
-    const data = await res.json();
-    setDrafts(prev => ({ ...prev, [issue.id]: data.result }));
+    const result = await callClaude('Draft a professional contractor outreach message:\n\nProperty: ' + issue.property + '\nIssue: ' + issue.issue + '\nCategory: ' + issue.category + '\nPriority: ' + issue.priority + '\nNotes: ' + (issue.notes || 'none') + '\n\nAsk for availability, describe the issue clearly, mention urgency, and request an estimate. Under 150 words.');
+    setDrafts(prev => ({ ...prev, [issue.id]: result }));
     setDraftingId(null);
   };
 
   const assessIssue = async (issue: Issue) => {
     setAssessingId(issue.id);
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'You are a property maintenance expert. Assess this issue:\n\nIssue: ' + issue.issue + '\nCategory: ' + issue.category + '\nPriority: ' + issue.priority + '\nProperty: ' + (issue.property || 'not specified') + '\nNotes: ' + (issue.notes || 'none') + '\nVendor: ' + (issue.vendor || 'not assigned') + '\nCost so far: $' + (issue.cost || 0) + '\n\nProvide:\n1. Assessment of urgency and risk if left unaddressed\n2. Estimated total cost range\n3. Repair vs Replace recommendation\n4. Recommended next steps\n5. Any related preventive maintenance to consider\n\nBe specific and practical.',
-      }),
-    });
-    const data = await res.json();
-    setAiAssessments(prev => ({ ...prev, [issue.id]: data.result }));
+    const result = await callClaude('You are a property maintenance expert. Assess this issue:\n\nIssue: ' + issue.issue + '\nCategory: ' + issue.category + '\nPriority: ' + issue.priority + '\nProperty: ' + (issue.property || 'not specified') + '\nNotes: ' + (issue.notes || 'none') + '\nVendor: ' + (issue.vendor || 'not assigned') + '\nCost so far: $' + (issue.cost || 0) + '\n\nProvide:\n1. Assessment of urgency and risk if left unaddressed\n2. Estimated total cost range\n3. Repair vs Replace recommendation\n4. Recommended next steps\n5. Any related preventive maintenance to consider\n\nBe specific and practical.');
+    setAiAssessments(prev => ({ ...prev, [issue.id]: result }));
     setAssessingId(null);
   };
 
