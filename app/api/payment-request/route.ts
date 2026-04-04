@@ -16,7 +16,10 @@ function paymentEmailHtml({
   tenant_name: string; property: string; amount: number; due_date: string;
   description: string; payment_type: string; payment_link: string; landlord_name: string;
 }) {
-  const propertyShort = property?.split(',')[0] || property;
+  // Keep street + unit, strip city/state/zip
+  const parts = property?.split(',') || [];
+  const unitPart = parts.find((p: string) => /unit|apt|suite|#/i.test(p.trim()));
+  const propertyShort = unitPart ? parts[0].trim() + ', ' + unitPart.trim() : parts[0]?.trim() || property;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
