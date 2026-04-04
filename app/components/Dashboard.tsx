@@ -246,10 +246,36 @@ function CashFlowChart({ payments, expenses }: { payments: any[]; expenses: any[
 }
 
 // ── LEASE TIMELINE ────────────────────────────────────────────────────────────
-function LeaseTimeline({ leases, onNavigate }: { leases: any[]; onNavigate: (p: string) => void }) {
+function LeaseTimeline({ leases, onNavigate, isMobile }: { leases: any[]; onNavigate: (p: string) => void; isMobile?: boolean }) {
   const now = new Date();
   const valid = leases.filter(l => l.start_date && l.end_date);
   if (valid.length === 0) return null;
+
+  if (isMobile) {
+    return (
+      <div style={{ ...card }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 12 }}>Lease Timeline</div>
+        {valid.map(l => {
+          const days = Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000);
+          return (
+            <div key={l.id} onClick={() => onNavigate('tenants')}
+              style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${T.border}`, cursor: 'pointer' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{l.tenant_name}</div>
+                <div style={{ fontSize: 11, color: T.inkMuted }}>{l.property?.split(',')[0]}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, color: T.navy, fontWeight: 600 }}>{l.end_date}</div>
+                <div style={{ fontSize: 11, color: days < 90 ? T.coral : T.inkMuted }}>
+                  {days < 0 ? Math.abs(days) + 'd ago' : days + 'd left'}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   const starts = valid.map(l => new Date(l.start_date).getTime());
   const ends = valid.map(l => new Date(l.end_date).getTime());
@@ -382,7 +408,7 @@ function NotificationsWidget({ overduePayments, expiringLeases, staleMaint, onNa
 }
 
 // ── ACTIVE LEASES TABLE ───────────────────────────────────────────────────────
-function ActiveLeasesTable({ leases, onNavigate }: { leases: any[]; onNavigate: (p: string) => void }) {
+function ActiveLeasesTable({ leases, onNavigate, isMobile }: { leases: any[]; onNavigate: (p: string) => void; isMobile?: boolean }) {
   if (leases.length === 0) return null;
   const now = new Date();
 
@@ -391,7 +417,6 @@ function ActiveLeasesTable({ leases, onNavigate }: { leases: any[]; onNavigate: 
       ? Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000)
       : null;
     const status = daysLeft === null ? 'active' : daysLeft < 0 ? 'expired' : daysLeft <= 60 ? 'expiring' : 'active';
-    // Parse unit from property string e.g. "30492 Alcazar Drive, Unit A, Dana Point…"
     const unitMatch = l.property?.match(/,\s*(Unit\s+[^,]+)/i);
     const shortAddress = l.property?.split(',')[0] || '—';
     const propertyDisplay = unitMatch ? `${shortAddress} · ${unitMatch[1].trim()}` : shortAddress;
@@ -407,39 +432,64 @@ function ActiveLeasesTable({ leases, onNavigate }: { leases: any[]; onNavigate: 
   return (
     <div style={{ ...card, height: '100%', boxSizing: 'border-box' }}>
       <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 16 }}>Active Leases</div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr>
-              {['Tenant', 'Property', 'Rent / mo', 'Status', 'Ends', 'Days Left'].map(h => (
-                <th key={h} style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', padding: '0 12px 10px 0', whiteSpace: 'nowrap', borderBottom: `1px solid ${T.border}` }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((l, i) => {
-              const ss = statusStyle(l.status);
-              return (
-                <tr key={l.id} onClick={() => onNavigate('tenants')}
-                  style={{ cursor: 'pointer', borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = T.bg}
-                  onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ''}>
-                  <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.ink, whiteSpace: 'nowrap' }}>{l.tenant_name || '—'}</td>
-                  <td style={{ padding: '11px 12px 11px 0', color: T.inkMid, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.propertyDisplay}</td>
-                  <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.navy, whiteSpace: 'nowrap' }}>${(l.rent || 0).toLocaleString()}</td>
-                  <td style={{ padding: '11px 12px 11px 0' }}>
-                    <span style={{ background: ss.bg, color: ss.color, fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, textTransform: 'capitalize' }}>{l.status}</span>
-                  </td>
-                  <td style={{ padding: '11px 12px 11px 0', color: T.inkMid, whiteSpace: 'nowrap' }}>{l.end_date || '—'}</td>
-                  <td style={{ padding: '11px 0 11px 0', whiteSpace: 'nowrap', color: l.daysLeft !== null && l.daysLeft < 0 ? T.coral : l.daysLeft !== null && l.daysLeft <= 60 ? T.amberDark : T.inkMid, fontWeight: l.daysLeft !== null && l.daysLeft <= 60 ? 700 : 400 }}>
-                    {l.daysLeft !== null ? (l.daysLeft < 0 ? `${Math.abs(l.daysLeft)}d ago` : `${l.daysLeft}d`) : '—'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {isMobile ? (
+        <div>
+          {rows.map((l, i) => {
+            const ss = statusStyle(l.status);
+            return (
+              <div key={l.id} onClick={() => onNavigate('tenants')}
+                style={{ padding: '12px 0', borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: T.ink }}>{l.tenant_name}</div>
+                  <span style={{ background: ss.bg, color: ss.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{l.status}</span>
+                </div>
+                <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>{l.propertyDisplay}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                  <span style={{ fontWeight: 700, color: T.navy, fontSize: 13 }}>${(l.rent || 0).toLocaleString()}/mo</span>
+                  <span style={{ fontSize: 11, color: l.daysLeft !== null && l.daysLeft < 0 ? T.coral : T.inkMuted }}>
+                    {l.end_date ? `Ends ${l.end_date}` : ''}
+                    {l.daysLeft !== null ? ` · ${l.daysLeft < 0 ? Math.abs(l.daysLeft) + 'd ago' : l.daysLeft + 'd'}` : ''}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                {['Tenant', 'Property', 'Rent / mo', 'Status', 'Ends', 'Days Left'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', padding: '0 12px 10px 0', whiteSpace: 'nowrap', borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((l, i) => {
+                const ss = statusStyle(l.status);
+                return (
+                  <tr key={l.id} onClick={() => onNavigate('tenants')}
+                    style={{ cursor: 'pointer', borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = T.bg}
+                    onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ''}>
+                    <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.ink, whiteSpace: 'nowrap' }}>{l.tenant_name || '—'}</td>
+                    <td style={{ padding: '11px 12px 11px 0', color: T.inkMid, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.propertyDisplay}</td>
+                    <td style={{ padding: '11px 12px 11px 0', fontWeight: 600, color: T.navy, whiteSpace: 'nowrap' }}>${(l.rent || 0).toLocaleString()}</td>
+                    <td style={{ padding: '11px 12px 11px 0' }}>
+                      <span style={{ background: ss.bg, color: ss.color, fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, textTransform: 'capitalize' }}>{l.status}</span>
+                    </td>
+                    <td style={{ padding: '11px 12px 11px 0', color: T.inkMid, whiteSpace: 'nowrap' }}>{l.end_date || '—'}</td>
+                    <td style={{ padding: '11px 0 11px 0', whiteSpace: 'nowrap', color: l.daysLeft !== null && l.daysLeft < 0 ? T.coral : l.daysLeft !== null && l.daysLeft <= 60 ? T.amberDark : T.inkMid, fontWeight: l.daysLeft !== null && l.daysLeft <= 60 ? 700 : 400 }}>
+                      {l.daysLeft !== null ? (l.daysLeft < 0 ? `${Math.abs(l.daysLeft)}d ago` : `${l.daysLeft}d`) : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -580,12 +630,12 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
 
       {/* ── ROW 3: LEASE TIMELINE (full width) ── */}
-      <LeaseTimeline leases={leases} onNavigate={onNavigate} />
+      <LeaseTimeline leases={leases} onNavigate={onNavigate} isMobile={isMobile} />
 
       {/* ── ROW 4: CASH FLOW + ACTIVE LEASES (50/50) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'stretch' }}>
         <CashFlowChart payments={payments} expenses={expenses} />
-        <ActiveLeasesTable leases={leases} onNavigate={onNavigate} />
+        <ActiveLeasesTable leases={leases} onNavigate={onNavigate} isMobile={isMobile} />
       </div>
 
       {/* ── EMPTY STATE ── */}
