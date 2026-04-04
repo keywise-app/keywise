@@ -403,7 +403,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
                     👁 Preview
                   </button>
-                  <button onClick={openEdit}
+                  <button onClick={() => { setTab('overview'); openEdit(); }}
                     style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
                     ✏️ Edit
                   </button>
@@ -602,7 +602,10 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             {tab === 'payments' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Payment History</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Payment History</div>
+                    <button onClick={fetchAll} style={{ ...btn.ghost, fontSize: 11, padding: '4px 10px' }}>↻ Refresh</button>
+                  </div>
                   <button
                     onClick={() => {
                       setShowPaymentRequest(true);
