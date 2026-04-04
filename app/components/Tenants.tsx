@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import AddTenantWizard from './AddTenantWizard';
+import Inspections from './Inspections';
 
 export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWizard?: boolean; onWizardOpen?: () => void } = {}) {
   const [showWizard, setShowWizard] = useState(false);
@@ -11,7 +12,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [tab, setTab] = useState<'overview' | 'payments' | 'communications' | 'transition'>('overview');
+  const [tab, setTab] = useState<'overview' | 'payments' | 'communications' | 'transition' | 'inspections'>('overview');
   const [profile, setProfile] = useState<{ full_name: string; email: string; phone: string; company: string } | null>(null);
   const [transitionMsgs, setTransitionMsgs] = useState<Record<string, { text: string; loading: boolean; copied: boolean; smsStatus: string; sending: boolean }>>({});
   const [drafting, setDrafting] = useState(false);
@@ -458,6 +459,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
               { id: 'overview', label: 'Overview' },
               { id: 'payments', label: 'Payments (' + tenantPayments.length + ')' },
               { id: 'communications', label: '✦ Message' },
+              { id: 'inspections', label: '🔍 Inspect' },
               { id: 'transition', label: '🏠 Transition' },
             ].map(t => (
               <button key={t.id} onClick={() => {
@@ -860,6 +862,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   </div>
                 )}
               </div>
+            )}
+
+            {/* INSPECTIONS */}
+            {tab === 'inspections' && selected && (
+              <Inspections lease={selected} />
             )}
 
             {/* TRANSITION */}
