@@ -122,9 +122,10 @@ export default function Documents() {
     const tenantName = signingForm.tenant_name || lease?.tenant_name || signingDoc.tenant_name || '';
     if (!tenantEmail) { alert('Please enter a tenant email address.'); return; }
     setSigningSending(true);
+    const { data: { session: signSession } } = await supabase.auth.getSession();
     const res = await fetch('/api/signing-link', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${signSession?.access_token}` },
       body: JSON.stringify({
         document_id: signingDoc.id,
         lease_id: signingForm.lease_id || signingDoc.lease_id || null,

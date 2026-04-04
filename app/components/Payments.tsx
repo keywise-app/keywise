@@ -222,9 +222,10 @@ export default function Payments() {
       if (lease?.email) {
         const { data: { user } } = await supabase.auth.getUser();
         const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
+        const { data: { session: rcptSession } } = await supabase.auth.getSession();
         fetch('/api/send-receipt', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${rcptSession?.access_token}` },
           body: JSON.stringify({
             payment_id: selectedPayment.id,
             tenant_name: selectedPayment.tenant_name,

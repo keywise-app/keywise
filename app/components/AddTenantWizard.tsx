@@ -306,9 +306,10 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     }
 
     if (inviteMethod !== 'skip' && form.email) {
+      const { data: { session: invSession } } = await supabase.auth.getSession();
       await fetch('/api/invite-tenant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
         body: JSON.stringify({ lease_id: lease.id, tenant_email: form.email, tenant_name: form.tenant_name }),
       });
     }
