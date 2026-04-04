@@ -627,20 +627,22 @@ export default function Portfolio() {
                                 Vacant
                               </span>
                             )}
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                              <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
-                                style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px' }}>
-                                + Tenant
-                              </button>
-                              <button onClick={() => openEditUnit(unit)}
-                                style={{ background: 'none', border: 'none', color: T.inkMuted, fontSize: 12, cursor: 'pointer', padding: '2px 4px' }}>
-                                ✏️
-                              </button>
-                              <button onClick={() => deleteUnit(unit.id)}
-                                style={{ background: 'none', border: 'none', color: T.coral, fontSize: 12, cursor: 'pointer', padding: '2px 4px' }}>
-                                ✕
-                              </button>
-                            </div>
+                            {!isMobile && (
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
+                                  style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px' }}>
+                                  + Tenant
+                                </button>
+                                <button onClick={() => openEditUnit(unit)}
+                                  style={{ background: 'none', border: 'none', color: T.inkMuted, fontSize: 12, cursor: 'pointer', padding: '2px 4px' }}>
+                                  ✏️
+                                </button>
+                                <button onClick={() => deleteUnit(unit.id)}
+                                  style={{ background: 'none', border: 'none', color: T.coral, fontSize: 12, cursor: 'pointer', padding: '2px 4px' }}>
+                                  ✕
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -664,6 +666,23 @@ export default function Portfolio() {
                             <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
                               style={{ ...btn.primary, fontSize: 12, padding: '6px 14px' }}>
                               + Add Tenant
+                            </button>
+                          </div>
+                        )}
+
+                        {isMobile && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
+                            <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
+                              style={{ ...btn.ghost, flex: 1, fontSize: 12, padding: '8px' }}>
+                              + Tenant
+                            </button>
+                            <button onClick={() => openEditUnit(unit)}
+                              style={{ ...btn.ghost, flex: 1, fontSize: 12, padding: '8px' }}>
+                              ✏️ Edit
+                            </button>
+                            <button onClick={() => deleteUnit(unit.id)}
+                              style={{ ...btn.danger, fontSize: 12, padding: '8px 12px' }}>
+                              ✕
                             </button>
                           </div>
                         )}
