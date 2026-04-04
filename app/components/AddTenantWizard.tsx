@@ -276,6 +276,35 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
     if (error) { alert('Error saving lease: ' + error.message); setCompleting(false); return; }
 
+    // Auto-generate payment schedule from today forward
+    if (lease.end_date && lease.rent) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const payDay = lease.payment_day || 1;
+      const endDate = new Date(lease.end_date);
+
+      let current = new Date(today.getFullYear(), today.getMonth(), payDay);
+      if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
+
+      const payments: any[] = [];
+      while (current <= endDate) {
+        payments.push({
+          user_id: user.id,
+          lease_id: lease.id,
+          tenant_name: lease.tenant_name,
+          property: lease.property,
+          amount: lease.rent,
+          due_date: current.toISOString().split('T')[0],
+          status: 'pending',
+        });
+        current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
+      }
+
+      if (payments.length > 0) {
+        await supabase.from('payments').insert(payments);
+      }
+    }
+
     if (inviteMethod !== 'skip' && form.email) {
       await fetch('/api/invite-tenant', {
         method: 'POST',

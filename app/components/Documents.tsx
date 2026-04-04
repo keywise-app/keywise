@@ -180,21 +180,22 @@ export default function Documents() {
 
     const { error } = await supabase.from('documents').insert({
       user_id: user.id,
-      name: form.name,
-      type: form.type,
-      ownership_level: form.ownership_level,
-      property: form.property,
-      tenant_name: form.tenant_name,
+      name: form.name || 'Untitled Document',
+      type: form.type || 'other',
+      ownership_level: form.ownership_level || 'portfolio',
+      property: form.property || '',
+      tenant_name: form.tenant_name || '',
       lease_id: form.lease_id || null,
       expiry_date: form.expiry_date || null,
-      notes: form.notes,
+      notes: form.notes || '',
       file_url: '',
       file_path,
       size,
     });
 
     if (error) {
-      alert('Error saving: ' + error.message);
+      console.error('Document insert error:', error);
+      alert('Error saving document: ' + error.message + (error.code ? ' | Code: ' + error.code : ''));
     } else {
       await fetchAll();
       setShowAdd(false);

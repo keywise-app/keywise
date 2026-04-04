@@ -67,6 +67,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   };
 
   const openEdit = () => {
+    if (!selected) { console.error('[Tenants] openEdit: no tenant selected'); return; }
     setEditForm({
       tenant_name: selected.tenant_name || '',
       property: selected.property || '',
