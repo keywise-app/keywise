@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         inspectionsRes, leasesRes, invitedRes,
         buildingsRes, unitsRes, activeLeasesRes,
         pendingPaymentsRes, overduePaymentsRes,
-        recentSignupsRes, feedbackRes,
+        recentSignupsRes, feedbackRes, broadcastsRes,
       ] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'overdue'),
         supabase.from('profiles').select('id, full_name, email, created_at, subscription_status').order('created_at', { ascending: false }).limit(20),
         supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+        supabase.from('broadcasts').select('*').order('created_at', { ascending: false }).limit(20),
       ]);
 
       const totalVolume = (paidVolumeRes.data || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
         },
         recentSignups: recentSignupsRes.data || [],
         feedback: feedbackRes.data || [],
+        broadcasts: broadcastsRes.data || [],
       });
     }
 

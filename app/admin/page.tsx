@@ -16,6 +16,7 @@ type Stats = {
   system: { buildings: number; units: number; activeLeases: number; pendingPayments: number; overduePayments: number };
   recentSignups: any[];
   feedback: any[];
+  broadcasts: any[];
 };
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
@@ -35,6 +36,14 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'feature' | 'general'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'reviewed' | 'planned' | 'done'>('all');
+  const [bcSubject, setBcSubject] = useState('');
+  const [bcMessage, setBcMessage] = useState('');
+  const [bcType, setBcType] = useState('announcement');
+  const [bcFilter, setBcFilter] = useState('all');
+  const [bcSpecific, setBcSpecific] = useState('');
+  const [bcSending, setBcSending] = useState(false);
+  const [bcResult, setBcResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
+  const [bcPreview, setBcPreview] = useState(false);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('kw_admin');
@@ -293,6 +302,125 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* BROADCAST EMAIL */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>📢 Broadcast Email</div>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 20 }}>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Subject</label>
+              <input value={bcSubject} onChange={e => setBcSubject(e.target.value)} placeholder="Email subject line"
+                style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Recipients</label>
+                <select value={bcFilter} onChange={e => setBcFilter(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, outline: 'none' }}>
+                  <option value="all">All users</option>
+                  <option value="pro">Pro subscribers only</option>
+                  <option value="trial">Trial/Free users</option>
+                  <option value="specific">Specific email</option>
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Type</label>
+                <select value={bcType} onChange={e => setBcType(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, outline: 'none' }}>
+                  <option value="announcement">📣 Announcement</option>
+                  <option value="feature">🚀 New Feature</option>
+                  <option value="bug">🐛 Bug Fix</option>
+                  <option value="newsletter">📰 Newsletter</option>
+                  <option value="notice">⚠️ Important Notice</option>
+                </select>
+              </div>
+            </div>
+
+            {bcFilter === 'specific' && (
+              <div style={{ marginBottom: 12 }}>
+                <input value={bcSpecific} onChange={e => setBcSpecific(e.target.value)} placeholder="recipient@example.com"
+                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Message</label>
+              <textarea value={bcMessage} onChange={e => setBcMessage(e.target.value)}
+                placeholder="Write your email message here... (line breaks will be converted to HTML)"
+                style={{ width: '100%', padding: '12px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, minHeight: 120, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
+            </div>
+
+            {bcResult && (
+              <div style={{ background: bcResult.failed > 0 ? T.amberLight : T.greenLight, border: `1px solid ${bcResult.failed > 0 ? T.amberDark : T.greenDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 13, fontWeight: 600, color: bcResult.failed > 0 ? T.amberDark : T.greenDark }}>
+                Sent {bcResult.sent} of {bcResult.total} emails{bcResult.failed > 0 ? ` (${bcResult.failed} failed)` : ''}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setBcPreview(!bcPreview)}
+                style={{ padding: '10px 16px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, color: T.navy, cursor: 'pointer' }}>
+                {bcPreview ? 'Hide Preview' : '👁 Preview'}
+              </button>
+              <button onClick={async () => {
+                if (!bcSubject || !bcMessage) { alert('Subject and message are required'); return; }
+                if (bcFilter === 'specific' && !bcSpecific) { alert('Enter recipient email'); return; }
+                if (!confirm(`Send broadcast "${bcSubject}" to ${bcFilter === 'specific' ? bcSpecific : bcFilter + ' users'}?`)) return;
+                setBcSending(true);
+                setBcResult(null);
+                const res = await fetch('/api/admin/broadcast', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ password, subject: bcSubject, message: bcMessage, type: bcType, recipient_filter: bcFilter, specific_email: bcSpecific }),
+                });
+                const data = await res.json();
+                setBcSending(false);
+                if (data.error) { alert('Error: ' + data.error); }
+                else { setBcResult(data); fetchStats(); }
+              }} disabled={bcSending || !bcSubject || !bcMessage}
+                style={{ padding: '10px 20px', background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: !bcSubject || !bcMessage ? 0.5 : 1 }}>
+                {bcSending ? 'Sending...' : 'Send Broadcast'}
+              </button>
+            </div>
+
+            {bcPreview && bcSubject && (
+              <div style={{ marginTop: 16, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, overflow: 'hidden' }}>
+                <div style={{ background: T.navy, padding: '16px 24px' }}>
+                  <div style={{ color: T.teal, fontSize: 16, fontWeight: 700 }}>Keywise</div>
+                </div>
+                <div style={{ padding: 24 }}>
+                  <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, marginBottom: 12,
+                    background: bcType === 'feature' ? T.tealLight : bcType === 'bug' ? T.coralLight : bcType === 'notice' ? T.amberLight : T.bg,
+                    color: bcType === 'feature' ? T.tealDark : bcType === 'bug' ? T.coral : bcType === 'notice' ? T.amberDark : T.navy }}>
+                    {bcType === 'announcement' ? '📣 Announcement' : bcType === 'feature' ? '🚀 New Feature' : bcType === 'bug' ? '🐛 Bug Fix' : bcType === 'newsletter' ? '📰 Newsletter' : '⚠️ Important Notice'}
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: T.navy, marginBottom: 12 }}>{bcSubject}</div>
+                  <div style={{ fontSize: 14, color: T.inkMid, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{bcMessage}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Broadcast history */}
+          {stats.broadcasts && stats.broadcasts.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.inkMuted, marginBottom: 8 }}>Sent History</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {stats.broadcasts.map((b: any) => (
+                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{b.subject}</div>
+                      <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{new Date(b.created_at).toLocaleDateString()} — {b.recipient_filter} — {b.type}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: T.greenDark, fontWeight: 600 }}>
+                      {b.sent_count}/{b.recipient_count} sent
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
