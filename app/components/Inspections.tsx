@@ -180,6 +180,21 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
     setGenerating(false);
   };
 
+  const deleteInspection = async (id: string) => {
+    if (!confirm('Delete this inspection? This cannot be undone.')) return;
+    const { data: photos } = await supabase.from('inspection_photos').select('photo_path').eq('inspection_id', id);
+    if (photos && photos.length > 0) {
+      const paths = photos.map(p => p.photo_path).filter(Boolean);
+      if (paths.length > 0) await supabase.storage.from('documents').remove(paths);
+    }
+    await supabase.from('signing_tokens').delete().eq('inspection_id', id);
+    await supabase.from('inspection_photos').delete().eq('inspection_id', id);
+    const { error } = await supabase.from('inspections').delete().eq('id', id);
+    if (error) { alert('Error deleting: ' + error.message); return; }
+    if (viewingInspection?.id === id) setViewingInspection(null);
+    fetchInspections();
+  };
+
   const saveReportAndSign = async () => {
     if (!inspectionId) return;
     setSaving(true);
@@ -344,8 +359,10 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
                     </span>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>
-                  {(ins.rooms || []).length} rooms inspected
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <span style={{ fontSize: 12, color: T.inkMuted }}>{(ins.rooms || []).length} rooms inspected</span>
+                  <button onClick={(e) => { e.stopPropagation(); deleteInspection(ins.id); }}
+                    style={{ ...btn.danger, fontSize: 11, padding: '4px 10px' }}>Remove</button>
                 </div>
               </div>
             ))}
