@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
@@ -12,7 +12,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [tab, setTab] = useState<'overview' | 'payments' | 'communications' | 'transition' | 'inspections'>('overview');
+  const [tab, setTab] = useState<'overview' | 'payments' | 'communications' | 'transition' | 'inspections' | 'documents'>('overview');
   const [profile, setProfile] = useState<{ full_name: string; email: string; phone: string; company: string } | null>(null);
   const [transitionMsgs, setTransitionMsgs] = useState<Record<string, { text: string; loading: boolean; copied: boolean; smsStatus: string; sending: boolean }>>({});
   const [drafting, setDrafting] = useState(false);
@@ -29,6 +29,12 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [inviteSmsSent, setInviteSmsSent] = useState<string | null>(null);
   const [showPaymentRequest, setShowPaymentRequest] = useState(false);
+  const [tenantDocs, setTenantDocs] = useState<any[]>([]);
+  const [showDocUpload, setShowDocUpload] = useState(false);
+  const [docForm, setDocForm] = useState({ name: '', type: 'other', expiry_date: '' });
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docSaving, setDocSaving] = useState(false);
+  const docFileRef = useRef<HTMLInputElement>(null);
   const [prForm, setPrForm] = useState({ type: 'Monthly Rent', amount: '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
   const [prSending, setPrSending] = useState(false);
   const [prSuccess, setPrSuccess] = useState('');
@@ -65,6 +71,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     }
     if (pRes.data) setPayments(pRes.data);
     if (profRes.data) setProfile(profRes.data);
+    // Fetch documents for all tenants
+    const { data: allDocs } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
+    if (allDocs) setTenantDocs(allDocs);
     setLoading(false);
   };
 
@@ -459,6 +468,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
               { id: 'overview', label: 'Overview' },
               { id: 'payments', label: 'Payments (' + tenantPayments.length + ')' },
               { id: 'communications', label: '✦ Message' },
+              { id: 'documents', label: '📁 Docs' },
               { id: 'inspections', label: '🔍 Inspect' },
               { id: 'transition', label: '🏠 Transition' },
             ].map(t => (
@@ -863,6 +873,135 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 )}
               </div>
             )}
+
+            {/* DOCUMENTS */}
+            {tab === 'documents' && selected && (() => {
+              const docs = tenantDocs.filter(d => d.tenant_name === selected.tenant_name || d.lease_id === selected.id);
+              const hasLease = docs.some((d: any) => d.type === 'lease');
+              const insurance = docs.find((d: any) => d.type === 'insurance_renters');
+              const insuranceExpired = insurance?.expiry_date && new Date(insurance.expiry_date) < new Date();
+              const DOC_ICONS: Record<string, string> = { lease: '📄', insurance_renters: '🛡️', insurance_property: '🏠', inspection: '🔍', move_in: '📋', move_out: '📦', repair_receipt: '🔧', other: '📎' };
+
+              const saveDoc = async () => {
+                if (!docFile) return;
+                setDocSaving(true);
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) { setDocSaving(false); return; }
+                const ext = docFile.name.split('.').pop();
+                const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                await supabase.storage.from('documents').upload(path, docFile);
+                await supabase.from('documents').insert({
+                  user_id: user.id, name: docForm.name || docFile.name.replace(/\.[^/.]+$/, ''),
+                  type: docForm.type, ownership_level: 'tenant',
+                  property: selected.property || '', tenant_name: selected.tenant_name || '',
+                  lease_id: selected.id, expiry_date: docForm.expiry_date || null,
+                  notes: '', file_url: '', file_path: path,
+                  size: (docFile.size / 1024).toFixed(0) + ' KB',
+                });
+                setDocSaving(false); setShowDocUpload(false); setDocFile(null);
+                setDocForm({ name: '', type: 'other', expiry_date: '' });
+                fetchAll();
+              };
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Documents ({docs.length})</div>
+                    <button onClick={() => setShowDocUpload(true)} style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>+ Upload</button>
+                  </div>
+
+                  {/* Warnings */}
+                  {!hasLease && (
+                    <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.amberDark, fontWeight: 600 }}>
+                      ⚠ No signed lease on file
+                    </div>
+                  )}
+                  {!insurance && (
+                    <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.amberDark, fontWeight: 600 }}>
+                      ⚠ No renter's insurance on file
+                    </div>
+                  )}
+                  {insuranceExpired && (
+                    <div style={{ background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.coral, fontWeight: 600 }}>
+                      ⚠ Renter's insurance expired {insurance.expiry_date}
+                    </div>
+                  )}
+
+                  {docs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 32, color: T.inkMuted, fontSize: 13 }}>No documents yet. Upload a lease, insurance cert, or other document.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {docs.map((d: any) => {
+                        const isExpired = d.expiry_date && new Date(d.expiry_date) < new Date();
+                        const isExpiring = d.expiry_date && !isExpired && Math.ceil((new Date(d.expiry_date).getTime() - Date.now()) / 86400000) <= 60;
+                        return (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 14px' }}>
+                            <span style={{ fontSize: 20, flexShrink: 0 }}>{DOC_ICONS[d.type] || '📎'}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: T.inkMuted, background: T.surface, border: `1px solid ${T.border}`, padding: '1px 6px', borderRadius: 10, textTransform: 'capitalize' }}>{(d.type || 'other').replace(/_/g, ' ')}</span>
+                                {d.signed_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed</span>}
+                                {isExpired && <span style={{ fontSize: 10, fontWeight: 700, color: T.coral, background: T.coralLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRED</span>}
+                                {isExpiring && <span style={{ fontSize: 10, fontWeight: 700, color: T.amberDark, background: T.amberLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRING</span>}
+                                {d.expiry_date && !isExpired && !isExpiring && <span style={{ fontSize: 10, color: T.inkMuted }}>Exp: {d.expiry_date}</span>}
+                              </div>
+                            </div>
+                            <button onClick={async () => {
+                              if (!d.file_path) return;
+                              const { data } = await supabase.storage.from('documents').createSignedUrl(d.file_path, 300);
+                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                            }} style={{ ...btn.ghost, fontSize: 11, padding: '5px 10px', flexShrink: 0 }}>View</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Upload modal */}
+                  {showDocUpload && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+                      onClick={() => setShowDocUpload(false)}>
+                      <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 20 : 32, width: isMobile ? '95%' : 440, maxWidth: 440, maxHeight: '85vh', overflowY: 'auto' }}
+                        onClick={e => e.stopPropagation()}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Upload Document for {selected.tenant_name}</div>
+                        <div onClick={() => docFileRef.current?.click()}
+                          style={{ border: `2px dashed ${T.border}`, borderRadius: T.radiusSm, padding: 20, textAlign: 'center', cursor: 'pointer', marginBottom: 16, background: docFile ? '#E8F8F0' : T.surface }}>
+                          <input ref={docFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) { setDocFile(f); if (!docForm.name) setDocForm(prev => ({ ...prev, name: f.name.replace(/\.[^/.]+$/, '') })); } }} />
+                          {docFile ? <div style={{ color: T.greenDark, fontWeight: 600, fontSize: 13 }}>✓ {docFile.name}</div>
+                            : <div style={{ color: T.inkMuted, fontSize: 13 }}>Drop file or click to browse</div>}
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Document Name</label>
+                          <input style={input} value={docForm.name} onChange={e => setDocForm({ ...docForm, name: e.target.value })} placeholder="e.g. Renter's Insurance 2026" />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Type</label>
+                          <select style={input} value={docForm.type} onChange={e => setDocForm({ ...docForm, type: e.target.value })}>
+                            <option value="lease">Lease</option>
+                            <option value="insurance_renters">Renter's Insurance</option>
+                            <option value="move_in">Move-In Checklist</option>
+                            <option value="move_out">Move-Out Checklist</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Expiry Date (optional)</label>
+                          <input style={input} type="date" value={docForm.expiry_date} onChange={e => setDocForm({ ...docForm, expiry_date: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={saveDoc} disabled={docSaving || !docFile} style={{ ...btn.primary, flex: 1, opacity: !docFile ? 0.5 : 1 }}>
+                            {docSaving ? 'Saving...' : 'Save Document'}
+                          </button>
+                          <button onClick={() => { setShowDocUpload(false); setDocFile(null); }} style={{ ...btn.ghost }}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* INSPECTIONS */}
             {tab === 'inspections' && selected && (

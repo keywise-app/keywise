@@ -133,6 +133,7 @@ export default function Portfolio() {
   const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [saving, setSaving] = useState(false);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analyses, setAnalyses] = useState<{ [key: string]: string }>({});
   const [lookingUp, setLookingUp] = useState(false);
@@ -170,17 +171,19 @@ export default function Portfolio() {
     try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-    const [bRes, uRes, lRes, eRes, profileRes] = await Promise.all([
+    const [bRes, uRes, lRes, eRes, profileRes, dRes] = await Promise.all([
       supabase.from('buildings').select('*').eq('user_id', user.id).order('address'),
       supabase.from('properties').select('*').eq('user_id', user.id).eq('is_unit', true).order('unit_number'),
       supabase.from('leases').select('*').eq('user_id', user.id).order('tenant_name'),
       supabase.from('expenses').select('*').eq('user_id', user.id).order('date', { ascending: false }),
       supabase.from('profiles').select('subscription_status').eq('id', user.id).single(),
+      supabase.from('documents').select('*').eq('user_id', user.id),
     ]);
     setBuildings(bRes.data || []);
     setUnits(uRes.data || []);
     setLeases(lRes.data || []);
     setExpenses(eRes.data || []);
+    setDocuments(dRes.data || []);
 
     // Derive plan limits client-side — no API round-trip needed
     const status = (profileRes as any).data?.subscription_status ?? 'free';
@@ -657,6 +660,22 @@ export default function Portfolio() {
                             </div>
                             {lease.email && <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>📧 {lease.email}</div>}
                             {lease.phone && <div style={{ fontSize: 11, color: T.inkMuted }}>📞 {lease.phone}</div>}
+                            {(() => {
+                              const unitDocs = documents.filter(d => d.property?.includes(unit.address || '') || d.tenant_name === lease.tenant_name);
+                              const expiredDocs = unitDocs.filter(d => d.expiry_date && new Date(d.expiry_date) < new Date());
+                              const expiringSoon = unitDocs.filter(d => { if (!d.expiry_date) return false; const days = Math.ceil((new Date(d.expiry_date).getTime() - Date.now()) / 86400000); return days > 0 && days <= 60; });
+                              const hasLease = unitDocs.some((d: any) => d.type === 'lease');
+                              const hasInsurance = unitDocs.some((d: any) => d.type === 'insurance_renters' && (!d.expiry_date || new Date(d.expiry_date) > new Date()));
+                              return (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 11, color: unitDocs.length > 0 ? T.tealDark : T.inkMuted, fontWeight: 600 }}>📁 {unitDocs.length} doc{unitDocs.length !== 1 ? 's' : ''}</span>
+                                  {expiredDocs.length > 0 && <span style={{ background: T.coralLight, color: T.coral, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{expiredDocs.length} EXPIRED</span>}
+                                  {expiringSoon.length > 0 && expiredDocs.length === 0 && <span style={{ background: T.amberLight, color: T.amberDark, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{expiringSoon.length} EXPIRING</span>}
+                                  {!hasLease && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>⚠ No lease</span>}
+                                  {!hasInsurance && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>⚠ No insurance</span>}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
