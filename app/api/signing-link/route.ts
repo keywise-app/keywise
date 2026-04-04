@@ -11,10 +11,41 @@ export async function POST(req: Request) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const resend = new Resend(process.env.RESEND_API_KEY);
   try {
-    const { document_id, lease_id, tenant_email, tenant_name, document_name, landlord_name, landlord_email } = await req.json();
+    const { document_id, inspection_id, lease_id, tenant_email, tenant_name, document_name, landlord_name, landlord_email } = await req.json();
 
-    if (!document_id || !tenant_email) {
-      return NextResponse.json({ error: 'Missing document_id or tenant_email' }, { status: 400 });
+    if (!tenant_email) {
+      return NextResponse.json({ error: 'Missing tenant_email' }, { status: 400 });
+    }
+
+    let finalDocId = document_id;
+
+    // If this is an inspection signing, create a document record first
+    if (inspection_id && !document_id) {
+      const { data: inspection } = await supabase.from('inspections').select('*').eq('id', inspection_id).single();
+      if (!inspection) {
+        return NextResponse.json({ error: 'Inspection not found' }, { status: 404 });
+      }
+      const { data: doc, error: docErr } = await supabase.from('documents').insert({
+        user_id: inspection.user_id,
+        name: document_name || `${inspection.type === 'move_in' ? 'Move-In' : 'Move-Out'} Inspection Report — ${inspection.tenant_name}`,
+        type: inspection.type === 'move_in' ? 'move_in' : 'move_out',
+        ownership_level: 'tenant',
+        property: inspection.property || '',
+        tenant_name: inspection.tenant_name || '',
+        lease_id: inspection.lease_id || null,
+        summary: (inspection.report_text || '').slice(0, 200),
+        requires_signature: true,
+        file_url: '', file_path: '', size: '',
+      }).select('id').single();
+      if (docErr || !doc) {
+        console.error('[signing-link] Doc create error:', docErr);
+        return NextResponse.json({ error: 'Failed to create document for inspection' }, { status: 500 });
+      }
+      finalDocId = doc.id;
+    }
+
+    if (!finalDocId) {
+      return NextResponse.json({ error: 'Missing document_id' }, { status: 400 });
     }
 
     // Generate a unique token
@@ -22,14 +53,17 @@ export async function POST(req: Request) {
 
     // Store in signing_tokens (expires in 7 days)
     const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { error: tokenError } = await supabase.from('signing_tokens').insert({
+    const tokenPayload: any = {
       token,
-      document_id,
+      document_id: finalDocId,
       lease_id: lease_id || null,
       tenant_email,
       tenant_name: tenant_name || '',
       expires_at,
-    });
+    };
+    if (inspection_id) tokenPayload.inspection_id = inspection_id;
+
+    const { error: tokenError } = await supabase.from('signing_tokens').insert(tokenPayload);
 
     if (tokenError) {
       console.error('[signing-link] Token insert error:', tokenError);
@@ -37,7 +71,7 @@ export async function POST(req: Request) {
     }
 
     // Mark document as requires_signature
-    await supabase.from('documents').update({ requires_signature: true }).eq('id', document_id);
+    await supabase.from('documents').update({ requires_signature: true }).eq('id', finalDocId);
 
     const signingUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app'}/sign/${token}`;
     const docName = document_name || 'Document';
