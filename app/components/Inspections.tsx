@@ -243,11 +243,11 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
     setSendingToTenant(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('[inspection-sign] Sending signing request for inspection:', inspectionId);
       const res = await fetch('/api/signing-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          document_id: inspectionId,
           inspection_id: inspectionId,
           lease_id: lease.id,
           tenant_email: lease.email,
@@ -257,12 +257,16 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         }),
       });
       const data = await res.json();
+      console.log('[inspection-sign] Response:', res.status, JSON.stringify(data));
       if (data.success) {
         setSentToTenant(true);
       } else {
         alert('Failed to send: ' + (data.error || 'Unknown error'));
       }
-    } catch { alert('Error sending to tenant'); }
+    } catch (err: any) {
+      console.error('[inspection-sign] Error:', err);
+      alert('Error sending to tenant: ' + (err.message || 'Network error'));
+    }
     setSendingToTenant(false);
   };
 
