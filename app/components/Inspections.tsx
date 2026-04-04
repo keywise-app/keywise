@@ -278,6 +278,21 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
     setSendingToTenant(false);
   };
 
+  const getInspectionStatus = (ins: Inspection) => {
+    if (ins.tenant_signed_at && ins.landlord_signed_at) return 'fully_signed';
+    if (ins.landlord_signed_at) return 'awaiting_tenant';
+    if (ins.status === 'completed' || ins.status === 'awaiting_signatures' || ins.status === 'landlord_signed') return 'awaiting_landlord';
+    return 'in_progress';
+  };
+
+  const statusBadge = (ins: Inspection) => {
+    const s = getInspectionStatus(ins);
+    if (s === 'fully_signed') return { label: '✓ Fully Signed', color: T.greenDark };
+    if (s === 'awaiting_tenant') return { label: '⏳ Awaiting Tenant', color: '#9A6500' };
+    if (s === 'awaiting_landlord') return { label: '⏳ Awaiting Signature', color: '#9A6500' };
+    return { label: 'In Progress', color: T.inkMuted };
+  };
+
   const conditionBadge = (c: string) => {
     const cfg = CONDITIONS.find(x => x.value === c) || { color: T.inkMuted, bg: T.bg };
     return { background: cfg.bg, color: cfg.color, fontSize: 11, fontWeight: 700 as const, padding: '2px 8px', borderRadius: 20 };
@@ -393,10 +408,9 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {ins.overall_condition && <span style={conditionBadge(ins.overall_condition)}>{ins.overall_condition}</span>}
-                    <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
-                      color: ins.tenant_signed_at ? T.greenDark : ins.landlord_signed_at ? '#9A6500' : ins.status === 'completed' || ins.status === 'awaiting_signatures' || ins.status === 'landlord_signed' ? '#9A6500' : T.inkMuted }}>
-                      {ins.tenant_signed_at ? '✓ Fully Signed' : ins.landlord_signed_at ? '⏳ Awaiting Tenant' : ins.status === 'in_progress' ? 'In Progress' : '✓ Complete'}
-                    </span>
+                    {(() => { const sb = statusBadge(ins); return (
+                      <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: sb.color }}>{sb.label}</span>
+                    ); })()}
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -649,6 +663,8 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
 
   // ── SIGN ──
   if (step === 'sign') {
+    // Re-fetch to get latest signature status
+    if (inspections.length === 0) fetchInspections();
     const currentInspection = inspections.find(i => i.id === inspectionId);
     const landlordSigned = !!currentInspection?.landlord_signed_at;
     const tenantSigned = !!currentInspection?.tenant_signed_at;
@@ -734,6 +750,13 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
               </div>
             )}
           </div>
+        )}
+
+        {/* Refresh status */}
+        {landlordSigned && !tenantSigned && sentToTenant && (
+          <button onClick={fetchInspections} style={{ ...btn.ghost, width: '100%', padding: '10px', marginBottom: 12, fontSize: 13 }}>
+            ↻ Check if tenant has signed
+          </button>
         )}
 
         {/* Both signed */}

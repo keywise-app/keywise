@@ -51,6 +51,17 @@ export async function POST(req: Request) {
     // Mark token as used
     await supabase.from('signing_tokens').update({ used_at: signed_at }).eq('token', token);
 
+    // If this is an inspection signing, update the inspection record
+    if (tokenRow.inspection_id) {
+      const { error: inspErr } = await supabase.from('inspections').update({
+        tenant_signature: finalSignerName,
+        tenant_signed_at: signed_at,
+        status: 'fully_signed',
+      }).eq('id', tokenRow.inspection_id);
+      if (inspErr) console.error('[sign-document] Inspection update error:', inspErr);
+      else console.log('[sign-document] Inspection marked as fully signed:', tokenRow.inspection_id);
+    }
+
     // Fetch document name
     const { data: docRow } = await supabase.from('documents').select('name').eq('id', tokenRow.document_id).single();
     const docName = docRow?.name || 'Document';
