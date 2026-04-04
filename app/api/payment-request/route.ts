@@ -180,9 +180,9 @@ export async function POST(req: Request) {
       transfer_data: { destination: landlordProfile.stripe_account_id },
       metadata: { lease_id, tenant_name: resolvedTenantName, due_date, landlord_user_id: lease.user_id },
       after_completion: {
-        type: 'hosted_confirmation',
-        hosted_confirmation: {
-          custom_message: `Thank you! Your payment of $${amountNum.toLocaleString()} has been received.`,
+        type: 'redirect',
+        redirect: {
+          url: `https://keywise.app/?payment_success=true&lease_id=${lease_id}&due_date=${due_date}`,
         },
       },
     });

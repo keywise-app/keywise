@@ -58,6 +58,7 @@ export default function Home() {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [showUpgradedBanner, setShowUpgradedBanner] = useState(false);
+  const [showPaymentBanner, setShowPaymentBanner] = useState(false);
 
   // ── Notifications bell ──
   const [notifOpen, setNotifOpen] = useState(false);
@@ -194,7 +195,27 @@ export default function Home() {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
     }
-    if (params.has('page') || params.has('stripe') || params.has('tenant_preview') || params.has('upgraded')) {
+    if (params.get('payment_success') === 'true') {
+      const leaseId = params.get('lease_id');
+      const dueDate = params.get('due_date');
+      if (leaseId) {
+        // Mark the matching pending payment as paid
+        const query = supabase
+          .from('payments')
+          .update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0], method: 'Online (Stripe)' })
+          .eq('lease_id', leaseId)
+          .eq('status', 'pending');
+        if (dueDate) query.eq('due_date', dueDate);
+        query.then(({ error }) => {
+          if (error) console.error('[payment_success] update error:', error);
+          else console.log('[payment_success] Marked payment as paid');
+        });
+      }
+      setShowPaymentBanner(true);
+      setPage('tenants');
+      setTimeout(() => setShowPaymentBanner(false), 5000);
+    }
+    if (params.has('page') || params.has('stripe') || params.has('tenant_preview') || params.has('upgraded') || params.has('payment_success')) {
       window.history.replaceState({}, '', '/');
     }
   }, []);
@@ -535,6 +556,13 @@ export default function Home() {
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: T.teal, borderRadius: T.radiusSm, padding: '13px 24px', fontSize: 14, fontWeight: 600, color: '#fff', boxShadow: T.shadowMd, display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
           🎉 Welcome to Keywise Pro! You now have unlimited units and online rent collection.
           <span onClick={() => setShowUpgradedBanner(false)} style={{ marginLeft: 8, cursor: 'pointer', opacity: 0.7, fontSize: 18, lineHeight: 1 }}>×</span>
+        </div>
+      )}
+
+      {showPaymentBanner && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: T.greenLight, border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: '13px 24px', fontSize: 14, fontWeight: 600, color: T.greenDark, boxShadow: T.shadowMd, display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+          Payment received successfully!
+          <span onClick={() => setShowPaymentBanner(false)} style={{ marginLeft: 8, cursor: 'pointer', opacity: 0.7, fontSize: 18, lineHeight: 1 }}>×</span>
         </div>
       )}
 
