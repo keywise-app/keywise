@@ -101,16 +101,11 @@ function paymentEmailHtml({
 }
 
 export async function POST(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const {
       lease_id, type, amount, description, due_date, recurring,
       tenant_email, tenant_phone, tenant_name, property,
-      notify_email, notify_sms,
+      notify_email, notify_sms, landlord_id,
     } = await req.json();
 
     if (!lease_id || !amount || !due_date) {

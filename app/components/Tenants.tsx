@@ -815,7 +815,9 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                           onClick={async () => {
                             if (!prForm.amount || !prForm.due_date) return;
                             setPrSending(true);
+                            const { data: { user: prUser } } = await supabase.auth.getUser();
                             const payload = {
+                              landlord_id: prUser?.id,
                               lease_id: selected.id,
                               type: prForm.type,
                               amount: parseFloat(prForm.amount),
@@ -830,13 +832,9 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                               notify_sms: prForm.notify_sms,
                             };
                             console.log('[payment-request] Sending payload:', JSON.stringify(payload));
-                            const { data: { session } } = await supabase.auth.getSession();
                             const res = await fetch('/api/payment-request', {
                               method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${session?.access_token}`,
-                              },
+                              headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify(payload),
                             });
                             const data = await res.json();
