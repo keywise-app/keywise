@@ -59,6 +59,11 @@ export default function Home() {
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [showUpgradedBanner, setShowUpgradedBanner] = useState(false);
   const [showPaymentBanner, setShowPaymentBanner] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'general'>('general');
+  const [feedbackMsg, setFeedbackMsg] = useState('');
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   // ── Notifications bell ──
   const [notifOpen, setNotifOpen] = useState(false);
@@ -423,7 +428,11 @@ export default function Home() {
               );
             })}
           </div>
-          <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, position: 'relative' }}>
+          <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setShowFeedback(true)}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
+              💡 Feedback
+            </button>
             <button onClick={() => supabase.auth.signOut()}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
               Sign out
@@ -609,6 +618,50 @@ export default function Home() {
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: T.greenLight, border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: '13px 24px', fontSize: 14, fontWeight: 600, color: T.greenDark, boxShadow: T.shadowMd, display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
           Payment received successfully!
           <span onClick={() => setShowPaymentBanner(false)} style={{ marginLeft: 8, cursor: 'pointer', opacity: 0.7, fontSize: 18, lineHeight: 1 }}>×</span>
+        </div>
+      )}
+
+      {/* Feedback modal */}
+      {showFeedback && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
+          onClick={() => { setShowFeedback(false); setFeedbackSent(false); }}>
+          <div style={{ background: T.surface, borderRadius: 16, padding: 28, width: isMobile ? '90%' : 420, maxWidth: 420 }}
+            onClick={e => e.stopPropagation()}>
+            {feedbackSent ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Thanks for your feedback!</div>
+                <div style={{ fontSize: 13, color: T.inkMuted }}>We read every message and use it to improve Keywise.</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Share Feedback</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  {([['bug', '🐛 Bug'], ['feature', '💡 Feature'], ['general', '💬 General']] as const).map(([val, lbl]) => (
+                    <button key={val} onClick={() => setFeedbackType(val)}
+                      style={{ flex: 1, padding: '8px', borderRadius: T.radiusSm, border: `1.5px solid ${feedbackType === val ? T.navy : T.border}`, background: feedbackType === val ? T.bg : T.surface, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: feedbackType === val ? T.navy : T.inkMuted, fontFamily: 'inherit' }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <textarea value={feedbackMsg} onChange={e => setFeedbackMsg(e.target.value)}
+                  placeholder="What's on your mind?"
+                  style={{ width: '100%', padding: '12px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, minHeight: 100, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
+                <button onClick={async () => {
+                  if (!feedbackMsg.trim()) return;
+                  setFeedbackSending(true);
+                  const { data: { user } } = await supabase.auth.getUser();
+                  await supabase.from('feedback').insert({ user_id: user?.id, user_email: user?.email, type: feedbackType, message: feedbackMsg.trim() });
+                  setFeedbackSending(false);
+                  setFeedbackMsg('');
+                  setFeedbackSent(true);
+                }} disabled={feedbackSending || !feedbackMsg.trim()}
+                  style={{ width: '100%', padding: '12px', background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 12, opacity: !feedbackMsg.trim() ? 0.5 : 1 }}>
+                  {feedbackSending ? 'Sending...' : 'Submit Feedback'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
