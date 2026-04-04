@@ -13,6 +13,7 @@ type FileStatus = {
 
 const DOC_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   lease: { label: 'Lease Agreement', icon: '📄' },
+  addendum: { label: 'Lease Addendum', icon: '📎' },
   insurance_renters: { label: "Renter's Insurance", icon: '🛡️' },
   insurance_property: { label: 'Property Insurance', icon: '🏠' },
   inspection: { label: 'Inspection Report', icon: '🔍' },

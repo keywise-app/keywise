@@ -31,7 +31,7 @@ Identify the document type and extract all relevant data.
 
 Return this exact structure:
 {
-  "document_type": "one of: lease, insurance_renters, insurance_property, inspection, move_in, move_out, repair_receipt, improvement, tax, mortgage, other",
+  "document_type": "one of: lease, addendum, insurance_renters, insurance_property, inspection, move_in, move_out, repair_receipt, improvement, tax, mortgage, other",
   "confidence": "high/medium/low",
   "summary": "2-3 sentence summary of the document",
   "tenant_name": "full name if found, empty string if not",
