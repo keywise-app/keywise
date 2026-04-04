@@ -954,7 +954,13 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                                 if (!d.file_path) return;
                                 const { data } = await supabase.storage.from('documents').createSignedUrl(d.file_path, 300);
                                 if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                              }} style={{ ...btn.ghost, fontSize: 11, padding: '6px 12px', minHeight: 36 }}>View</button>
+                              }} style={{ ...btn.ghost, fontSize: 11, padding: '6px 12px', minHeight: 36 }}>👁 View</button>
+                              <button onClick={async () => {
+                                if (!confirm('Delete "' + d.name + '"? This cannot be undone.')) return;
+                                if (d.file_path) await supabase.storage.from('documents').remove([d.file_path]);
+                                await supabase.from('documents').delete().eq('id', d.id);
+                                fetchAll();
+                              }} style={{ ...btn.danger, fontSize: 11, padding: '6px 10px', minHeight: 36 }}>✕</button>
                             </div>
                           </div>
                         );

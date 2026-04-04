@@ -134,6 +134,7 @@ export default function Portfolio() {
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [saving, setSaving] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [expandedDocs, setExpandedDocs] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analyses, setAnalyses] = useState<{ [key: string]: string }>({});
   const [lookingUp, setLookingUp] = useState(false);
@@ -666,13 +667,33 @@ export default function Portfolio() {
                               const expiringSoon = unitDocs.filter(d => { if (!d.expiry_date) return false; const days = Math.ceil((new Date(d.expiry_date).getTime() - Date.now()) / 86400000); return days > 0 && days <= 60; });
                               const hasLease = unitDocs.some((d: any) => d.type === 'lease');
                               const hasInsurance = unitDocs.some((d: any) => d.type === 'insurance_renters' && (!d.expiry_date || new Date(d.expiry_date) > new Date()));
+                              const isExpanded = expandedDocs === unit.id;
                               return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: 11, color: unitDocs.length > 0 ? T.tealDark : T.inkMuted, fontWeight: 600 }}>📁 {unitDocs.length} doc{unitDocs.length !== 1 ? 's' : ''}</span>
-                                  {expiredDocs.length > 0 && <span style={{ background: T.coralLight, color: T.coral, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{expiredDocs.length} EXPIRED</span>}
-                                  {expiringSoon.length > 0 && expiredDocs.length === 0 && <span style={{ background: T.amberLight, color: T.amberDark, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{expiringSoon.length} EXPIRING</span>}
-                                  {!hasLease && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>⚠ No lease</span>}
-                                  {!hasInsurance && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>⚠ No insurance</span>}
+                                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                                  <div onClick={() => setExpandedDocs(isExpanded ? null : unit.id)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 11, color: unitDocs.length > 0 ? T.tealDark : T.inkMuted, fontWeight: 600 }}>📁 {unitDocs.length}</span>
+                                    {expiredDocs.length > 0 && <span style={{ background: T.coralLight, color: T.coral, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{isMobile ? '!' : expiredDocs.length + ' EXPIRED'}</span>}
+                                    {expiringSoon.length > 0 && expiredDocs.length === 0 && <span style={{ background: T.amberLight, color: T.amberDark, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{isMobile ? '⏳' : expiringSoon.length + ' EXPIRING'}</span>}
+                                    {!hasLease && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>{isMobile ? '⚠' : '⚠ No lease'}</span>}
+                                    {!hasInsurance && <span style={{ fontSize: 10, color: T.amberDark, fontWeight: 600 }}>{isMobile ? '🛡' : '⚠ No insurance'}</span>}
+                                    <span style={{ fontSize: 10, color: T.inkMuted, marginLeft: 'auto' }}>{isExpanded ? '▲' : '▼'}</span>
+                                  </div>
+                                  {isExpanded && (
+                                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      {unitDocs.map((d: any) => (
+                                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, padding: '6px 8px', background: T.surface, borderRadius: 6, border: `1px solid ${T.border}` }}>
+                                          <span style={{ flex: 1, color: T.ink, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                                          <span style={{ fontSize: 9, color: T.inkMuted, textTransform: 'capitalize', flexShrink: 0 }}>{(d.type || '').replace(/_/g, ' ')}</span>
+                                          <button onClick={async (e) => { e.stopPropagation(); if (!d.file_path) return; const { data } = await supabase.storage.from('documents').createSignedUrl(d.file_path, 300); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); }}
+                                            style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, cursor: 'pointer', padding: '2px 4px', fontWeight: 600, flexShrink: 0 }}>View</button>
+                                          <button onClick={async (e) => { e.stopPropagation(); if (!confirm('Delete "' + d.name + '"?')) return; if (d.file_path) await supabase.storage.from('documents').remove([d.file_path]); await supabase.from('documents').delete().eq('id', d.id); setDocuments(prev => prev.filter(x => x.id !== d.id)); }}
+                                            style={{ background: 'none', border: 'none', color: T.coral, fontSize: 11, cursor: 'pointer', padding: '2px 4px', fontWeight: 600, flexShrink: 0 }}>✕</button>
+                                        </div>
+                                      ))}
+                                      {unitDocs.length === 0 && <div style={{ fontSize: 11, color: T.inkMuted, padding: '4px 0' }}>No documents</div>}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
