@@ -20,8 +20,13 @@ type Inspection = {
   notes: string;
   completed_at: string | null;
   report_url: string | null;
+  report_text: string | null;
   tenant_name: string;
   property: string;
+  landlord_signature: string | null;
+  landlord_signed_at: string | null;
+  tenant_signature: string | null;
+  tenant_signed_at: string | null;
 };
 
 const DEFAULT_ROOMS = [
@@ -39,7 +44,7 @@ const CONDITIONS = [
 export default function Inspections({ lease, onClose }: { lease: any; onClose?: () => void }) {
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'list' | 'setup' | 'rooms' | 'summary' | 'report'>('list');
+  const [step, setStep] = useState<'list' | 'setup' | 'rooms' | 'summary' | 'report' | 'sign'>('list');
   const [inspectionType, setInspectionType] = useState<'move_in' | 'move_out'>('move_in');
   const [selectedRooms, setSelectedRooms] = useState<string[]>(['Living Room', 'Kitchen', 'Master Bedroom', 'Bathroom 1']);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -54,6 +59,10 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [landlordSigName, setLandlordSigName] = useState('');
+  const [signing, setSigning] = useState(false);
+  const [sendingToTenant, setSendingToTenant] = useState(false);
+  const [sentToTenant, setSentToTenant] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -171,17 +180,30 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
     setGenerating(false);
   };
 
-  const completeInspection = async () => {
+  const saveReportAndSign = async () => {
     if (!inspectionId) return;
     setSaving(true);
     await supabase.from('inspections').update({
       rooms,
       overall_condition: overallCondition,
       notes: generalNotes,
-      status: 'completed',
+      report_text: report,
+      status: 'awaiting_signatures',
       completed_at: new Date().toISOString(),
     }).eq('id', inspectionId);
-    // Save report as document
+    setSaving(false);
+    setStep('sign');
+  };
+
+  const signAsLandlord = async () => {
+    if (!inspectionId || !landlordSigName.trim()) return;
+    setSigning(true);
+    await supabase.from('inspections').update({
+      landlord_signature: landlordSigName.trim(),
+      landlord_signed_at: new Date().toISOString(),
+      status: 'landlord_signed',
+    }).eq('id', inspectionId);
+    // Save as document
     const { data: { user } } = await supabase.auth.getUser();
     if (user && report) {
       await supabase.from('documents').insert({
@@ -197,11 +219,36 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         size: '',
       });
     }
-    setSaving(false);
+    setSigning(false);
     await fetchInspections();
-    setStep('list');
-    setReport('');
-    setInspectionId(null);
+  };
+
+  const sendToTenantForSignature = async () => {
+    if (!inspectionId || !lease.email) return;
+    setSendingToTenant(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/signing-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          document_id: inspectionId,
+          inspection_id: inspectionId,
+          lease_id: lease.id,
+          tenant_email: lease.email,
+          tenant_name: lease.tenant_name,
+          document_name: `${inspectionType === 'move_in' ? 'Move-In' : 'Move-Out'} Inspection Report`,
+          landlord_name: '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSentToTenant(true);
+      } else {
+        alert('Failed to send: ' + (data.error || 'Unknown error'));
+      }
+    } catch { alert('Error sending to tenant'); }
+    setSendingToTenant(false);
   };
 
   const conditionBadge = (c: string) => {
@@ -291,8 +338,9 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {ins.overall_condition && <span style={conditionBadge(ins.overall_condition)}>{ins.overall_condition}</span>}
-                    <span style={{ fontSize: 10, fontWeight: 600, color: ins.status === 'completed' ? T.greenDark : T.amberDark, textTransform: 'uppercase' }}>
-                      {ins.status === 'completed' ? '✓ Complete' : 'In Progress'}
+                    <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+                      color: ins.tenant_signed_at ? T.greenDark : ins.landlord_signed_at ? '#9A6500' : ins.status === 'completed' || ins.status === 'awaiting_signatures' || ins.status === 'landlord_signed' ? '#9A6500' : T.inkMuted }}>
+                      {ins.tenant_signed_at ? '✓ Fully Signed' : ins.landlord_signed_at ? '⏳ Awaiting Tenant' : ins.status === 'in_progress' ? 'In Progress' : '✓ Complete'}
                     </span>
                   </div>
                 </div>
@@ -371,22 +419,22 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         {/* Condition selector */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>Condition</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
             {CONDITIONS.map(c => {
               const active = room.condition === c.value;
               return (
                 <button key={c.value} onClick={() => updateRoom('condition', c.value)}
                   style={{
-                    padding: '14px 8px', minHeight: 60, borderRadius: T.radiusSm, cursor: 'pointer', fontFamily: 'inherit',
+                    padding: isMobile ? '16px 8px' : '14px 8px', minHeight: isMobile ? 64 : 60, borderRadius: T.radiusSm, cursor: 'pointer', fontFamily: 'inherit',
                     border: `2px solid ${active ? c.color : T.border}`,
                     background: active ? c.bg : T.surface,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                     transition: 'all 0.15s',
                   }}>
-                  <span style={{ fontSize: 18 }}>
+                  <span style={{ fontSize: isMobile ? 22 : 18 }}>
                     {c.value === 'Excellent' ? '🌟' : c.value === 'Good' ? '👍' : c.value === 'Fair' ? '⚠️' : '🔴'}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: active ? c.color : T.inkMid }}>{c.value}</span>
+                  <span style={{ fontSize: isMobile ? 13 : 12, fontWeight: 700, color: active ? c.color : T.inkMid }}>{c.value}</span>
                 </button>
               );
             })}
@@ -482,13 +530,13 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         {/* Overall condition */}
         <div style={{ marginBottom: 16 }}>
           <label style={label}>Overall Condition</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
             {CONDITIONS.map(c => {
               const active = overallCondition === c.value;
               return (
                 <button key={c.value} onClick={() => setOverallCondition(c.value)}
                   style={{
-                    padding: '10px 8px', borderRadius: T.radiusSm, cursor: 'pointer', fontFamily: 'inherit',
+                    padding: '10px 8px', minHeight: 44, borderRadius: T.radiusSm, cursor: 'pointer', fontFamily: 'inherit',
                     border: `2px solid ${active ? c.color : T.border}`,
                     background: active ? c.bg : T.surface,
                     fontSize: 12, fontWeight: 700, color: active ? c.color : T.inkMid,
@@ -529,15 +577,122 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button onClick={completeInspection} disabled={saving}
+          <button onClick={saveReportAndSign} disabled={saving}
             style={{ ...btn.primary, flex: 1, padding: '12px' }}>
-            {saving ? 'Saving...' : '✓ Save & Complete'}
+            {saving ? 'Saving...' : 'Continue to Signatures →'}
           </button>
           <button onClick={() => { navigator.clipboard.writeText(report); }}
             style={{ ...btn.ghost, padding: '12px 16px' }}>
             📋 Copy
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // ── SIGN ──
+  if (step === 'sign') {
+    const currentInspection = inspections.find(i => i.id === inspectionId);
+    const landlordSigned = !!currentInspection?.landlord_signed_at;
+    const tenantSigned = !!currentInspection?.tenant_signed_at;
+
+    return (
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 16 }}>
+          Sign Inspection Report
+        </div>
+
+        {/* Status */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          <div style={{ flex: 1, background: landlordSigned ? '#E8F8F0' : T.amberLight, border: `1px solid ${landlordSigned ? T.greenDark : T.amberDark}33`, borderRadius: T.radiusSm, padding: '12px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{landlordSigned ? '✓' : '✍️'}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: landlordSigned ? T.greenDark : T.amberDark }}>
+              {landlordSigned ? 'Landlord Signed' : 'Awaiting Landlord'}
+            </div>
+          </div>
+          <div style={{ flex: 1, background: tenantSigned ? '#E8F8F0' : T.bg, border: `1px solid ${tenantSigned ? T.greenDark : T.border}33`, borderRadius: T.radiusSm, padding: '12px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{tenantSigned ? '✓' : '⏳'}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: tenantSigned ? T.greenDark : T.inkMuted }}>
+              {tenantSigned ? 'Tenant Signed' : 'Awaiting Tenant'}
+            </div>
+          </div>
+        </div>
+
+        {/* Landlord signature */}
+        {!landlordSigned ? (
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 20, marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 4 }}>Landlord Signature</div>
+            <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 16 }}>I confirm this inspection report is accurate and complete.</div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={label}>Type your full name to sign</label>
+              <input style={input} value={landlordSigName} onChange={e => setLandlordSigName(e.target.value)}
+                placeholder="Your full name" />
+            </div>
+
+            <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 12 }}>
+              Date: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </div>
+
+            {landlordSigName.trim() && (
+              <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 16px', marginBottom: 16, fontFamily: "'Georgia', serif", fontSize: 20, color: T.navy, fontStyle: 'italic' }}>
+                {landlordSigName}
+              </div>
+            )}
+
+            <button onClick={signAsLandlord} disabled={signing || !landlordSigName.trim()}
+              style={{ ...btn.primary, width: '100%', padding: '14px', fontSize: 14, opacity: !landlordSigName.trim() ? 0.5 : 1 }}>
+              {signing ? 'Signing...' : 'Sign as Landlord →'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: '#E8F8F0', border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.greenDark }}>✓ Signed by {currentInspection.landlord_signature}</div>
+            <div style={{ fontSize: 11, color: T.greenDark, marginTop: 2 }}>{new Date(currentInspection.landlord_signed_at!).toLocaleDateString()}</div>
+          </div>
+        )}
+
+        {/* Send to tenant */}
+        {landlordSigned && !tenantSigned && (
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 20, marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 4 }}>Tenant Signature</div>
+            <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 16 }}>
+              Send the inspection report to {lease.tenant_name} for review and signature.
+            </div>
+
+            {lease.email ? (
+              sentToTenant ? (
+                <div style={{ background: '#E8F8F0', border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: '12px 16px', fontSize: 13, color: T.greenDark, fontWeight: 600 }}>
+                  ✓ Signing link sent to {lease.email}
+                </div>
+              ) : (
+                <button onClick={sendToTenantForSignature} disabled={sendingToTenant}
+                  style={{ ...btn.primary, width: '100%', padding: '14px', fontSize: 14 }}>
+                  {sendingToTenant ? 'Sending...' : `Send to ${lease.tenant_name} for Signature →`}
+                </button>
+              )
+            ) : (
+              <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '12px 16px', fontSize: 12, color: T.amberDark }}>
+                No email on file for this tenant. Add their email to send for signature.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Both signed */}
+        {landlordSigned && tenantSigned && (
+          <div style={{ background: '#E8F8F0', border: `1px solid ${T.greenDark}33`, borderRadius: T.radiusSm, padding: 20, textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: T.greenDark }}>Fully Signed</div>
+            <div style={{ fontSize: 13, color: T.greenDark, marginTop: 4 }}>Both parties have signed this inspection report.</div>
+          </div>
+        )}
+
+        {/* Done button */}
+        <button onClick={() => { setStep('list'); setInspectionId(null); setReport(''); setSentToTenant(false); setLandlordSigName(''); }}
+          style={{ ...btn.ghost, width: '100%', padding: '12px', marginTop: 16 }}>
+          ← Back to Inspections
+        </button>
       </div>
     );
   }
