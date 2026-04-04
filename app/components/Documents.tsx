@@ -527,7 +527,7 @@ export default function Documents() {
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={() => { setShowAdd(false); setForm(emptyForm); setSelectedFile(null); }}>
-          <div style={{ background: 'white', borderRadius: 16, padding: 32, width: 560, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
+          <div style={{ background: 'white', borderRadius: 16, padding: isMobile ? 20 : 32, width: isMobile ? '95%' : 560, maxWidth: 560, maxHeight: isMobile ? '85vh' : '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Upload Document</div>
             <div style={{ fontSize: 13, color: '#8C8070', marginBottom: 24 }}>Upload and organize your property documents.</div>
@@ -625,7 +625,7 @@ export default function Documents() {
                 style={{ ...inputStyle, minHeight: 60, resize: 'vertical', fontFamily: 'sans-serif' }} />
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ position: 'sticky', bottom: 0, background: 'white', padding: '16px 0 0', borderTop: '1px solid #E8E3D8', marginTop: 16, display: 'flex', gap: 10 }}>
               <button onClick={saveDocument} disabled={saving || uploading}
                 style={{ background: '#1A472A', color: 'white', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {uploading ? 'Uploading…' : saving ? 'Saving…' : 'Save Document'}
