@@ -392,7 +392,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
               <div key={p.id} style={{
                 background: p.status === 'overdue' ? T.coralLight : T.bg,
                 border: `1px solid ${p.status === 'overdue' ? T.coral + '44' : T.border}`,
-                borderRadius: T.radiusSm, padding: '14px 16px',
+                borderRadius: 10, padding: 16, maxWidth: '100%', overflow: 'hidden',
               }}>
                 {autopayEnabled && isRent && (
                   <div style={{ background: T.tealLight, color: T.tealDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>✓ Auto-Pay Scheduled</div>
@@ -400,31 +400,26 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                 {!isRent && (
                   <div style={{ background: T.amberLight, color: T.amberDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>Manual Payment Required</div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
-                    <span style={{ ...statusStyle(p.status), fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>
-                      {p.status}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, color: T.inkMuted }}>
-                    Due {p.due_date}
-                    {p.description ? ` · ${p.description}` : ''}
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
+                  <span style={{ ...statusStyle(p.status), fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>
+                    {p.status}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexDirection: isMobile ? 'column' : 'row' }}>
+                <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 10 }}>
+                  Due {p.due_date}{p.description ? ` · ${p.description}` : ''}
+                </div>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, width: '100%' }}>
                   {paymentMethodSaved && (
                     <button onClick={() => payWithSavedCard(p)} disabled={chargingPayment === p.id}
-                      style={{ background: chargingPayment === p.id ? '#e0e4ff' : T.teal, color: T.navy, border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 12, fontWeight: 700, cursor: chargingPayment === p.id ? 'default' : 'pointer', opacity: chargingPayment === p.id ? 0.7 : 1 }}>
-                      {chargingPayment === p.id ? 'Paying...' : '⚡ Pay with Saved Card'}
+                      style={{ background: chargingPayment === p.id ? '#e0e4ff' : T.teal, color: T.navy, border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: chargingPayment === p.id ? 'default' : 'pointer', opacity: chargingPayment === p.id ? 0.7 : 1, flex: 1, width: isMobile ? '100%' : 'auto' }}>
+                      {chargingPayment === p.id ? 'Paying...' : '💳 Pay with Saved Card'}
                     </button>
                   )}
                   <button onClick={() => openPayNow(p)} disabled={payNowLoading[p.id]}
-                    style={{ background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 12, fontWeight: 600, cursor: payNowLoading[p.id] ? 'default' : 'pointer', opacity: payNowLoading[p.id] ? 0.7 : 1 }}>
-                    {payNowLoading[p.id] ? 'Loading...' : paymentMethodSaved ? 'Pay Other Way' : '⚡ Pay Now'}
+                    style={{ background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: payNowLoading[p.id] ? 'default' : 'pointer', opacity: payNowLoading[p.id] ? 0.7 : 1, flex: 1, width: isMobile ? '100%' : 'auto' }}>
+                    {payNowLoading[p.id] ? 'Loading...' : paymentMethodSaved ? 'Pay Online' : '⚡ Pay Now'}
                   </button>
-                </div>
                 </div>
               </div>
               );
