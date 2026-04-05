@@ -53,27 +53,18 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!leaseData) { setLoading(false); return; }
     setLease(leaseData);
 
+    // Use server-side APIs to bypass RLS
     const [payRes, landlordRes, docRes] = await Promise.all([
-      supabase
-        .from('payments')
-        .select('*')
-        .eq('lease_id', leaseData.id)
-        .order('due_date', { ascending: false }),
-      supabase
-        .from('profiles')
-        .select('full_name, email, phone, company')
-        .eq('id', leaseData.user_id)
-        .single(),
-      supabase
-        .from('documents')
-        .select('*')
-        .eq('lease_id', leaseData.id)
-        .order('created_at', { ascending: false }),
+      fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`).then(() =>
+        supabase.from('payments').select('*').eq('lease_id', leaseData.id).order('due_date', { ascending: false })
+      ),
+      fetch(`/api/tenant/landlord-info?lease_id=${leaseData.id}`).then(r => r.json()),
+      fetch(`/api/tenant/documents?lease_id=${leaseData.id}`).then(r => r.json()),
     ]);
 
     if (payRes.data) setPayments(payRes.data);
-    if (landlordRes.data) setLandlord(landlordRes.data);
-    if (docRes.data) setDocuments(docRes.data);
+    if (landlordRes.landlord) setLandlord(landlordRes.landlord);
+    if (docRes.documents) setDocuments(docRes.documents);
 
     // Load tenant payment method info
     const { data: tenantProfile } = await supabase.from('profiles').select('stripe_customer_id, stripe_payment_method_id, autopay_enabled').eq('id', user.id).single();
@@ -267,7 +258,21 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const progress = leaseProgress();
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 0 40px' }}>
+    <div style={{ maxWidth: isMobile ? '100%' : 800, margin: '0 auto', padding: isMobile ? '0 0 40px' : '0 24px 40px' }}>
+
+      {/* Tenant Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, padding: isMobile ? '16px 16px 0' : '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: T.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.teal, fontWeight: 700, fontSize: 14 }}>K</div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: T.navy }}>Keywise</span>
+        </div>
+        {!previewLeaseId && (
+          <button onClick={() => supabase.auth.signOut()}
+            style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer' }}>
+            Sign out
+          </button>
+        )}
+      </div>
 
       {/* Preview banner */}
       {previewLeaseId && (
@@ -276,9 +281,9 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 26, fontWeight: 700, color: T.navy, letterSpacing: '-0.5px' }}>
+      {/* Welcome */}
+      <div style={{ marginBottom: 24, padding: isMobile ? '0 16px' : '0' }}>
+        <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: T.navy, letterSpacing: '-0.5px' }}>
           {greeting()}, {lease.tenant_name?.split(' ')[0] || 'there'} 👋
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.tealLight, border: `1px solid ${T.teal}44`, borderRadius: 20, padding: '4px 12px', marginTop: 8 }}>
@@ -422,9 +427,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       )}
 
       {/* Documents */}
-      {documents.length > 0 && (
+      {documents.length >= 0 && lease && (
         <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Documents</div>
+          {documents.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 20, color: T.inkMuted, fontSize: 13 }}>No documents yet.</div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {documents.map(doc => (
               <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.bg, borderRadius: T.radiusSm, border: `1px solid ${T.border}` }}>
@@ -446,7 +454,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                   </div>
                 </div>
                 <button
-                  onClick={() => openDocument(doc)}
+                  onClick={() => doc.signed_url ? window.open(doc.signed_url, '_blank') : openDocument(doc)}
                   disabled={docLoading[doc.id]}
                   style={{ ...btn.ghost, fontSize: 11, padding: '5px 12px', flexShrink: 0, marginLeft: 10 }}>
                   {docLoading[doc.id] ? '…' : '↓ View'}
