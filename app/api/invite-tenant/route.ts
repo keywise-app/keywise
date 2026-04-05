@@ -23,6 +23,7 @@ export async function POST(req: Request) {
 
   try {
     const { lease_id, tenant_email, tenant_name, tenant_phone } = await req.json();
+    console.error('[invite-tenant] Step 1: parsed body', { lease_id, tenant_email, tenant_name, tenant_phone: tenant_phone || 'NONE' });
 
     if (!lease_id || !tenant_email) {
       return NextResponse.json({ error: 'lease_id and tenant_email are required' }, { status: 400 });
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
     const propertyAddress = lease?.property || '';
     const monthlyRent = lease?.rent ? '$' + Number(lease.rent).toLocaleString() + '/mo' : '';
 
+    console.error('[invite-tenant] Step 2: generating magic link for', tenant_email);
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: tenant_email,
@@ -62,6 +64,7 @@ export async function POST(req: Request) {
     }
 
     const magicLink = data.properties?.action_link;
+    console.error('[invite-tenant] Step 3: magic link generated, sending email...');
 
     // Send branded email via Resend
     let sentEmail = false;
@@ -145,6 +148,7 @@ export async function POST(req: Request) {
     let sentToPhone: string | null = null;
 
     const phoneToUse = lease?.phone || tenant_phone;
+    console.error('[invite-tenant] Step 4: SMS check — lease.phone:', lease?.phone, '| tenant_phone:', tenant_phone, '| using:', phoneToUse || 'NONE');
     if (phoneToUse && magicLink) {
       const digits = phoneToUse.replace(/\D/g, '');
       const formatted = phoneToUse.startsWith('+') ? phoneToUse : digits.length === 10 ? '+1' + digits : digits.length === 11 && digits.startsWith('1') ? '+' + digits : '+1' + digits;
@@ -190,6 +194,7 @@ export async function POST(req: Request) {
       console.error('[invite-tenant] lease update error:', updateError.message);
     }
 
+    console.error('[invite-tenant] Step 5: DONE — email:', sentEmail, '| sms:', sentSms, '| phone:', sentToPhone);
     return NextResponse.json({
       success: true,
       magic_link: magicLink,
