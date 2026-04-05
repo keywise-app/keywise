@@ -161,11 +161,11 @@ export default function Auth() {
                 </div>
 
                 {mode === 'login' && (
-                  <div style={{ textAlign: 'right', marginBottom: 18 }}>
-                    <span onClick={() => { setMode('forgot'); setError(''); }}
-                      style={{ fontSize: 12, color: T.teal, fontWeight: 600, cursor: 'pointer' }}>
+                  <div style={{ textAlign: 'right', marginTop: 6, marginBottom: 16 }}>
+                    <button type="button" onClick={() => { setMode('forgot'); setError(''); }}
+                      style={{ background: 'none', border: 'none', color: T.teal, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}>
                       Forgot password?
-                    </span>
+                    </button>
                   </div>
                 )}
 
