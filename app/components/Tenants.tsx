@@ -34,6 +34,10 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [docForm, setDocForm] = useState({ name: '', type: 'other', expiry_date: '' });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docSaving, setDocSaving] = useState(false);
+  const [showDocRequest, setShowDocRequest] = useState(false);
+  const [docReqType, setDocReqType] = useState('insurance_renters');
+  const [docReqMsg, setDocReqMsg] = useState('');
+  const [docReqSending, setDocReqSending] = useState(false);
   const docFileRef = useRef<HTMLInputElement>(null);
   const [prForm, setPrForm] = useState({ type: 'Monthly Rent', amount: '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
   const [prSending, setPrSending] = useState(false);
@@ -936,7 +940,10 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>Documents ({docs.length})</div>
-                    <button onClick={() => setShowDocUpload(true)} style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>+ Upload</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setShowDocRequest(true)} style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>📋 Request</button>
+                      <button onClick={() => setShowDocUpload(true)} style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>+ Upload</button>
+                    </div>
                   </div>
 
                   {/* Warnings */}
@@ -1034,6 +1041,63 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                             {docSaving ? 'Saving...' : 'Save Document'}
                           </button>
                           <button onClick={() => { setShowDocUpload(false); setDocFile(null); }} style={{ ...btn.ghost }}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Request Document Modal */}
+                  {showDocRequest && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+                      onClick={() => setShowDocRequest(false)}>
+                      <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 20 : 28, width: isMobile ? '90%' : 400, maxWidth: 400 }}
+                        onClick={e => e.stopPropagation()}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Request Document from {selected.tenant_name}</div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Document Type</label>
+                          <select style={input} value={docReqType} onChange={e => setDocReqType(e.target.value)}>
+                            <option value="insurance_renters">Renter's Insurance</option>
+                            <option value="government_id">Government ID</option>
+                            <option value="pet_certificate">Pet Certificate</option>
+                            <option value="income_verification">Income Verification</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Message (optional)</label>
+                          <textarea value={docReqMsg} onChange={e => setDocReqMsg(e.target.value)}
+                            placeholder="e.g. Please upload your updated insurance certificate"
+                            style={{ ...input, minHeight: 70, resize: 'vertical', fontFamily: 'inherit' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={async () => {
+                            setDocReqSending(true);
+                            const res = await fetch('/api/tenant/request-document', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                lease_id: selected.id,
+                                user_id: (await supabase.auth.getUser()).data.user?.id,
+                                tenant_email: selected.email,
+                                tenant_name: selected.tenant_name,
+                                document_type: docReqType,
+                                message: docReqMsg,
+                                landlord_name: profile?.full_name || '',
+                              }),
+                            });
+                            const data = await res.json();
+                            setDocReqSending(false);
+                            if (data.success) {
+                              setShowDocRequest(false);
+                              setDocReqMsg('');
+                              alert('Document request sent to ' + selected.tenant_name);
+                            } else {
+                              alert('Error: ' + (data.error || 'Failed to send'));
+                            }
+                          }} disabled={docReqSending}
+                            style={{ ...btn.primary, flex: 1, opacity: docReqSending ? 0.7 : 1 }}>
+                            {docReqSending ? 'Sending...' : 'Send Request'}
+                          </button>
+                          <button onClick={() => setShowDocRequest(false)} style={{ ...btn.ghost }}>Cancel</button>
                         </div>
                       </div>
                     </div>

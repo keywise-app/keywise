@@ -22,6 +22,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const [setupLoading, setSetupLoading] = useState(false);
   const [chargingPayment, setChargingPayment] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [docRequests, setDocRequests] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (payRes.data) setPayments(payRes.data);
     if (landlordRes.landlord) setLandlord(landlordRes.landlord);
     if (docRes.documents) setDocuments(docRes.documents);
+    if (docRes.requests) setDocRequests(docRes.requests);
 
     // Load tenant payment method info
     const { data: tenantProfile } = await supabase.from('profiles').select('stripe_customer_id, stripe_payment_method_id, autopay_enabled').eq('id', user.id).single();
@@ -464,7 +466,16 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                 }} />
             </label>
           </div>
-          {documents.length === 0 && (
+          {/* Pending document requests */}
+          {docRequests.map(r => (
+            <div key={r.id} style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.amberDark }}>
+                ⚠ Your landlord requested: {(r.document_type || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+              </div>
+              {r.message && <div style={{ fontSize: 12, color: T.amberDark, marginTop: 4, fontStyle: 'italic' }}>"{r.message}"</div>}
+            </div>
+          ))}
+          {documents.length === 0 && docRequests.length === 0 && (
             <div style={{ textAlign: 'center', padding: 20, color: T.inkMuted, fontSize: 13 }}>No documents yet. Upload your renter's insurance or other documents.</div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

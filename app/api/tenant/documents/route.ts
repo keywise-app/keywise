@@ -26,5 +26,13 @@ export async function GET(req: Request) {
     return { ...d, signed_url: '' };
   }));
 
-  return NextResponse.json({ documents: docsWithUrls });
+  // Also fetch pending document requests
+  const { data: requests } = await supabase
+    .from('document_requests')
+    .select('*')
+    .eq('lease_id', leaseId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  return NextResponse.json({ documents: docsWithUrls, requests: requests || [] });
 }
