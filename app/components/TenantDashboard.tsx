@@ -436,21 +436,35 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {outstanding.map(p => {
-              const isRent = !p.type || p.type === 'rent' || p.type === 'Monthly Rent';
+              const desc = (p.description || '').toLowerCase();
+              const pType = (p.type || '').toLowerCase();
+              const isManual = ['deposit', 'security_deposit', 'late_fee', 'other', 'repair', 'fee'].includes(pType) || desc.includes('deposit') || desc.includes('fee');
+              const isRent = !isManual && (pType === 'rent' || pType === 'monthly rent' || desc.includes('monthly rent') || (!p.type && !p.description));
+
+              // Type badge
+              const typeBadge = (() => {
+                if (isRent) return { label: 'Monthly Rent', bg: T.tealLight, color: T.tealDark };
+                if (pType.includes('deposit')) return { label: 'Deposit', bg: T.bg, color: T.navy };
+                if (pType.includes('late') || desc.includes('late')) return { label: 'Late Fee', bg: T.coralLight, color: T.coral };
+                if (p.description) return { label: p.description.slice(0, 30), bg: T.bg, color: T.inkMid };
+                return { label: p.type || 'Payment', bg: T.bg, color: T.inkMid };
+              })();
+
               return (
               <div key={p.id} style={{
                 background: p.status === 'overdue' ? T.coralLight : T.bg,
                 border: `1px solid ${p.status === 'overdue' ? T.coral + '44' : T.border}`,
                 borderRadius: 10, padding: 16, maxWidth: '100%', overflow: 'hidden',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: typeBadge.bg, color: typeBadge.color }}>{typeBadge.label}</span>
                   <span style={{ ...statusStyle(p.status), fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>
                     {p.status}
                   </span>
                 </div>
+                <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 4 }}>${(p.amount || 0).toLocaleString()}</div>
                 <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 10 }}>
-                  Due {p.due_date}{p.description ? ` · ${p.description}` : ''}
+                  Due {p.due_date}
                 </div>
 
                 {/* Payment action */}
