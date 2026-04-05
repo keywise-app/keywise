@@ -25,29 +25,25 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     let leaseData: any = null;
 
     if (previewLeaseId) {
-      const { data } = await supabase.from('leases').select('*').eq('id', previewLeaseId).single();
-      leaseData = data;
+      const { data } = await supabase.from('leases').select('*').eq('id', previewLeaseId);
+      leaseData = data?.[0] || null;
     } else {
-      const { data: byUserId } = await supabase
-        .from('leases')
-        .select('*')
-        .eq('tenant_user_id', user.id)
-        .single();
-
-      if (byUserId) {
-        leaseData = byUserId;
+      // Try by tenant_user_id first
+      const { data: byUserId } = await supabase.from('leases').select('*').eq('tenant_user_id', user.id);
+      if (byUserId && byUserId.length > 0) {
+        leaseData = byUserId[0];
       } else {
-        const { data: byEmail } = await supabase
-          .from('leases')
-          .select('*')
-          .eq('email', user.email)
-          .single();
-        if (byEmail) {
-          leaseData = byEmail;
-          await supabase
-            .from('leases')
-            .update({ tenant_user_id: user.id })
-            .eq('id', byEmail.id);
+        // Fallback: try by email (exact then case-insensitive)
+        const { data: byEmail } = await supabase.from('leases').select('*').eq('email', user.email);
+        if (byEmail && byEmail.length > 0) {
+          leaseData = byEmail[0];
+          await supabase.from('leases').update({ tenant_user_id: user.id }).eq('id', byEmail[0].id);
+        } else {
+          const { data: byEmailAlt } = await supabase.from('leases').select('*').ilike('email', user.email || '');
+          if (byEmailAlt && byEmailAlt.length > 0) {
+            leaseData = byEmailAlt[0];
+            await supabase.from('leases').update({ tenant_user_id: user.id }).eq('id', byEmailAlt[0].id);
+          }
         }
       }
     }
