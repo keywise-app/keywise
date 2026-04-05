@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request) {
-  // Password protect this endpoint
-  const { searchParams } = new URL(req.url);
-  if (searchParams.get('key') !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_PHONE_NUMBER;
