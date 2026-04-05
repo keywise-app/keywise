@@ -201,6 +201,20 @@ export default function Home() {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
     }
+    if (params.get('setup_success') === 'true') {
+      // Tenant completed Stripe setup — save payment method from Checkout Session
+      const leaseId = params.get('lease_id');
+      const paymentType = params.get('payment_type');
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (user) {
+          await supabase.from('profiles').update({
+            autopay_enabled: paymentType === 'autopay',
+          }).eq('id', user.id);
+        }
+      });
+      setShowPaymentBanner(true);
+      setTimeout(() => setShowPaymentBanner(false), 5000);
+    }
     if (params.get('payment_success') === 'true') {
       const leaseId = params.get('lease_id');
       const dueDate = params.get('due_date');
@@ -267,7 +281,7 @@ export default function Home() {
       setPage('tenants');
       setTimeout(() => setShowPaymentBanner(false), 5000);
     }
-    if (params.has('page') || params.has('stripe') || params.has('tenant_preview') || params.has('upgraded') || params.has('payment_success')) {
+    if (params.has('page') || params.has('stripe') || params.has('tenant_preview') || params.has('upgraded') || params.has('payment_success') || params.has('setup_success')) {
       window.history.replaceState({}, '', '/');
     }
   }, []);

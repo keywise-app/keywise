@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { tenant_email, tenant_name, lease_id, landlord_stripe_account_id, payment_type } = await req.json();
+    const { tenant_email, tenant_name, lease_id, payment_type } = await req.json();
 
     if (!tenant_email || !lease_id) {
       return NextResponse.json({ error: 'tenant_email and lease_id are required' }, { status: 400 });
@@ -37,18 +37,18 @@ export async function POST(req: Request) {
       }
     }
 
-    // Create SetupIntent for saving payment method
-    const setupIntent = await stripe.setupIntents.create({
+    // Use Stripe Checkout in setup mode — no client-side Stripe.js needed
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      currency: 'usd',
       customer: customerId,
       payment_method_types: ['card'],
-      usage: 'off_session',
+      success_url: `https://keywise.app/?setup_success=true&payment_type=${payment_type || 'manual'}&lease_id=${lease_id}`,
+      cancel_url: 'https://keywise.app/',
       metadata: { lease_id, tenant_email, payment_type: payment_type || 'manual' },
     });
 
-    return NextResponse.json({
-      clientSecret: setupIntent.client_secret,
-      customerId,
-    });
+    return NextResponse.json({ checkoutUrl: session.url });
   } catch (err: any) {
     console.error('[setup-payment] Error:', err.message);
     return NextResponse.json({ error: err.message || 'Failed to set up payment' }, { status: 500 });

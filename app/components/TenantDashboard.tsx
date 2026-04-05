@@ -153,21 +153,20 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           tenant_email: lease.email,
           tenant_name: lease.tenant_name,
           lease_id: lease.id,
-          landlord_stripe_account_id: landlord?.stripe_account_id || null,
           payment_type: type,
         }),
       });
       const data = await res.json();
-      if (data.clientSecret) {
-        // Redirect to Stripe-hosted setup page
-        window.location.href = `https://checkout.stripe.com/setup/${data.clientSecret}`;
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
       } else {
         alert('Setup failed: ' + (data.error || 'Unknown error'));
+        setSetupLoading(false);
       }
     } catch (err: any) {
       alert('Error: ' + (err.message || 'Could not set up payment'));
+      setSetupLoading(false);
     }
-    setSetupLoading(false);
   };
 
   const sendMessage = async () => {
