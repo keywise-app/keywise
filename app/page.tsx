@@ -200,6 +200,13 @@ export default function Home() {
     if (params.get('upgraded') === 'true') {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
+      // Update subscription status to active
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          supabase.from('profiles').update({ subscription_status: 'active' }).eq('id', user.id);
+          setSubscriptionStatus('active');
+        }
+      });
     }
     if (params.get('setup_success') === 'true') {
       const paymentType = params.get('payment_type');

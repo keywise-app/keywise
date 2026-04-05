@@ -27,6 +27,21 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
 
   useEffect(() => { fetchProfile(); }, []);
 
+  // Poll for subscription activation if incomplete
+  useEffect(() => {
+    if (subscriptionStatus !== 'incomplete') return;
+    const interval = setInterval(async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('profiles').select('subscription_status').eq('id', user.id).single();
+      if (data?.subscription_status === 'active') {
+        setSubscriptionStatus('active');
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [subscriptionStatus]);
+
   const fetchProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
@@ -248,22 +263,22 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           {subscriptionStatus && (
             <span style={{
               background: subscriptionStatus === 'active' ? T.greenLight
-                : subscriptionStatus === 'trialing' ? '#E0FAF5'
+                : subscriptionStatus === 'incomplete' ? T.amberLight
                 : subscriptionStatus === 'past_due' ? '#FFF4EE'
                 : '#F3F4F6',
               color: subscriptionStatus === 'active' ? T.greenDark
-                : subscriptionStatus === 'trialing' ? T.tealDark
+                : subscriptionStatus === 'incomplete' ? T.amberDark
                 : subscriptionStatus === 'past_due' ? '#C2410C'
                 : T.inkMuted,
               border: `1px solid ${subscriptionStatus === 'active' ? T.green + '33'
-                : subscriptionStatus === 'trialing' ? T.teal + '44'
+                : subscriptionStatus === 'incomplete' ? T.amber + '44'
                 : subscriptionStatus === 'past_due' ? '#FED7AA'
                 : T.border}`,
               borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 700,
               whiteSpace: 'nowrap' as const, flexShrink: 0,
             }}>
               {subscriptionStatus === 'active' ? '✓ Pro Active'
-                : subscriptionStatus === 'trialing' ? '⏱ Free Trial'
+                : subscriptionStatus === 'incomplete' ? '⏳ Processing...'
                 : subscriptionStatus === 'past_due' ? '⚠ Payment Failed'
                 : subscriptionStatus === 'cancelled' ? 'Cancelled'
                 : subscriptionStatus}

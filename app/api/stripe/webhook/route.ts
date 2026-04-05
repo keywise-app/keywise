@@ -91,9 +91,21 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── Checkout session completed (Payment Links use this) ───────────────
+    // ── Checkout session completed (Payment Links + Subscriptions) ──────
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // Handle subscription checkout
+      if (session.mode === 'subscription') {
+        const userId = session.metadata?.user_id;
+        if (userId) {
+          await supabase.from('profiles').update({
+            subscription_status: 'active',
+            stripe_customer_id: session.customer as string,
+          }).eq('id', userId);
+        }
+      }
+
       const { lease_id, tenant_name, due_date } = session.metadata || {};
       const today = new Date().toISOString().split('T')[0];
 
