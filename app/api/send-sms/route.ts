@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-
 export async function POST(req: Request) {
   try {
     const { to, message } = await req.json();
@@ -14,7 +9,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No phone number provided.' }, { status: 400 });
     }
 
-    // Format phone number — add +1 if not present
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+      return NextResponse.json({ error: 'SMS not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.' }, { status: 503 });
+    }
+
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     const formatted = to.startsWith('+') ? to : '+1' + to.replace(/\D/g, '');
 
     const result = await client.messages.create({
@@ -25,7 +24,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, sid: result.sid });
   } catch (err: any) {
-    console.error('Twilio error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to send SMS.' });
+    console.error('[send-sms] Twilio error:', err.message);
+    return NextResponse.json({ error: err.message || 'Failed to send SMS.' }, { status: 500 });
   }
 }
