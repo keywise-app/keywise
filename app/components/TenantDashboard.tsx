@@ -354,8 +354,14 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         <div style={{ background: T.tealLight, borderRadius: T.radius, padding: 16, marginBottom: 16, border: `1px solid ${T.teal}33` }}>
           <div style={{ fontWeight: 700, color: T.tealDark }}>✓ Auto-Pay Active</div>
           <div style={{ fontSize: 12, color: T.tealDark, marginTop: 4 }}>
-            Your rent will be charged automatically on the {lease?.payment_day || 1}st of each month.
+            Your rent of ${lease?.rent?.toLocaleString()}/mo will be charged on the {lease?.payment_day || 1}st of each month.
           </div>
+        </div>
+      )}
+      {paymentMethodSaved && !autopayEnabled && (
+        <div style={{ background: T.bg, borderRadius: T.radius, padding: 16, marginBottom: 16, border: `1px solid ${T.border}` }}>
+          <div style={{ fontWeight: 700, color: T.navy }}>💳 Card Saved</div>
+          <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Pay rent with one tap each month. You control when payments go out.</div>
         </div>
       )}
 

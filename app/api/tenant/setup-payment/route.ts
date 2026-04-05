@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       currency: 'usd',
       customer: customerId,
       payment_method_types: ['card'],
-      success_url: `https://keywise.app/?setup_success=true&payment_type=${payment_type || 'manual'}&lease_id=${lease_id}`,
+      success_url: `https://keywise.app/?setup_success=true&payment_type=${payment_type || 'manual'}&lease_id=${lease_id}&customer_id=${customerId}`,
       cancel_url: 'https://keywise.app/',
       metadata: { lease_id, tenant_email, payment_type: payment_type || 'manual' },
     });

@@ -202,14 +202,16 @@ export default function Home() {
       setTimeout(() => setShowUpgradedBanner(false), 5000);
     }
     if (params.get('setup_success') === 'true') {
-      // Tenant completed Stripe setup — save payment method from Checkout Session
-      const leaseId = params.get('lease_id');
       const paymentType = params.get('payment_type');
+      const customerId = params.get('customer_id');
+      // Save payment method via server-side API (gets PM from Stripe, saves to profile)
       supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user) {
-          await supabase.from('profiles').update({
-            autopay_enabled: paymentType === 'autopay',
-          }).eq('id', user.id);
+        if (user && customerId) {
+          await fetch('/api/tenant/save-payment-method', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id, customer_id: customerId, autopay_enabled: paymentType === 'autopay' }),
+          });
         }
       });
       setShowPaymentBanner(true);
