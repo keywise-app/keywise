@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { tenant_email, tenant_name, lease_id, payment_type } = await req.json();
+    const { tenant_email, tenant_name, lease_id, payment_type, mode } = await req.json();
 
     if (!tenant_email || !lease_id) {
       return NextResponse.json({ error: 'tenant_email and lease_id are required' }, { status: 400 });
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Use Stripe Checkout in setup mode — no client-side Stripe.js needed
+    // For card updates, use a new checkout session (Stripe billing portal requires subscription)
     const session = await stripe.checkout.sessions.create({
       mode: 'setup',
       currency: 'usd',

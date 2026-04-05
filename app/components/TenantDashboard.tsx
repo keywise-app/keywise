@@ -161,6 +161,34 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     }
   };
 
+  const handleCancelAutopay = async () => {
+    if (!confirm('Cancel auto-pay? Your card will remain saved but rent won\'t be charged automatically.')) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await supabase.from('profiles').update({ autopay_enabled: false }).eq('id', user.id);
+    setAutopayEnabled(false);
+  };
+
+  const handleUpdateCard = async () => {
+    if (!lease) return;
+    setSetupLoading(true);
+    try {
+      const res = await fetch('/api/tenant/setup-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_email: lease.email,
+          tenant_name: lease.tenant_name,
+          lease_id: lease.id,
+          payment_type: autopayEnabled ? 'autopay' : 'manual',
+          mode: 'update',
+        }),
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+      else { alert('Could not update card'); setSetupLoading(false); }
+    } catch { alert('Error updating card'); setSetupLoading(false); }
+  };
+
   const sendMessage = async () => {
     if (!msgText.trim()) return;
     setMsgSending(true);
@@ -354,17 +382,38 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       )}
 
       {paymentMethodSaved && autopayEnabled && (
-        <div style={{ background: T.tealLight, borderRadius: T.radius, padding: 16, marginBottom: 16, border: `1px solid ${T.teal}33` }}>
-          <div style={{ fontWeight: 700, color: T.tealDark }}>✓ Auto-Pay Active</div>
-          <div style={{ fontSize: 12, color: T.tealDark, marginTop: 4 }}>
-            Your rent of ${lease?.rent?.toLocaleString()}/mo will be charged on the {lease?.payment_day || 1}st of each month.
+        <div style={{ background: T.tealLight, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${T.teal}33` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: T.tealDark, fontSize: 14 }}>✓ Auto-Pay Active</div>
+              <div style={{ fontSize: 12, color: T.tealDark, marginTop: 2 }}>${lease?.rent?.toLocaleString()}/mo on the {lease?.payment_day || 1}st</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
+            <button onClick={handleUpdateCard} disabled={setupLoading}
+              style={{ ...btn.ghost, flex: 1, fontSize: 12, padding: '8px 14px' }}>
+              {setupLoading ? 'Loading...' : '💳 Update Card'}
+            </button>
+            <button onClick={handleCancelAutopay}
+              style={{ flex: 1, fontSize: 12, background: 'none', border: `1px solid ${T.coral}`, color: T.coral, borderRadius: T.radiusSm, padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>
+              Cancel Auto-Pay
+            </button>
           </div>
         </div>
       )}
       {paymentMethodSaved && !autopayEnabled && (
-        <div style={{ background: T.bg, borderRadius: T.radius, padding: 16, marginBottom: 16, border: `1px solid ${T.border}` }}>
-          <div style={{ fontWeight: 700, color: T.navy }}>💳 Card Saved</div>
-          <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Pay rent with one tap each month. You control when payments go out.</div>
+        <div style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${T.border}` }}>
+          <div style={{ fontWeight: 600, color: T.navy, fontSize: 13, marginBottom: 8 }}>💳 Card Saved</div>
+          <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
+            <button onClick={handleUpdateCard} disabled={setupLoading}
+              style={{ ...btn.ghost, flex: 1, fontSize: 12, padding: '8px 14px' }}>
+              {setupLoading ? 'Loading...' : '💳 Update Card'}
+            </button>
+            <button onClick={() => setupPayment('autopay')} disabled={setupLoading}
+              style={{ ...btn.primary, flex: 1, fontSize: 12, padding: '8px 14px' }}>
+              Enable Auto-Pay →
+            </button>
+          </div>
         </div>
       )}
 
