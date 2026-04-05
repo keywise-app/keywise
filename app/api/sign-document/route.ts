@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // If this is an inspection signing, update the inspection record
     if (tokenRow.inspection_id) {
       const { error: inspErr } = await supabase.from('inspections').update({
-        tenant_signature: finalSignerName,
+        tenant_signature: signature_data,
         tenant_signed_at: signed_at,
         status: 'fully_signed',
       }).eq('id', tokenRow.inspection_id);
@@ -158,11 +158,19 @@ export async function GET(req: Request) {
     file_url = urlData?.signedUrl || '';
   }
 
+  // If inspection signing, include inspection data
+  let inspection = null;
+  if (tokenRow.inspection_id) {
+    const { data: inspData } = await supabase.from('inspections').select('*').eq('id', tokenRow.inspection_id).single();
+    inspection = inspData;
+  }
+
   return NextResponse.json({
     tenant_name: tokenRow.tenant_name,
     tenant_email: tokenRow.tenant_email,
     document_name: tokenRow.documents?.name || 'Document',
     document_type: tokenRow.documents?.type || '',
     file_url,
+    inspection,
   });
 }

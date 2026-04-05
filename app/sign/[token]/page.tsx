@@ -25,6 +25,7 @@ export default function SignPage() {
     document_name: string;
     document_type: string;
     file_url: string;
+    inspection?: any;
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [signedAt, setSignedAt] = useState('');
@@ -106,14 +107,77 @@ export default function SignPage() {
         )}
 
         {state === 'ready' && docData && (
-          <DocumentSigning
-            token={token}
-            tenantName={docData.tenant_name}
-            documentName={docData.document_name}
-            documentType={docData.document_type}
-            fileUrl={docData.file_url}
-            onSigned={() => setState('signed')}
-          />
+          <>
+            {/* Inspection report display */}
+            {docData.inspection && (
+              <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 20, boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 4 }}>
+                  {docData.inspection.type === 'move_in' ? 'Move-In' : 'Move-Out'} Inspection Report
+                </div>
+                <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+                  {docData.inspection.property} — {new Date(docData.inspection.created_at).toLocaleDateString()}
+                </div>
+
+                {docData.inspection.overall_condition && (
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={{ fontSize: 12, color: T.inkMuted }}>Overall Condition: </span>
+                    <span style={{ fontWeight: 700, color: T.navy }}>{docData.inspection.overall_condition}</span>
+                  </div>
+                )}
+
+                {(docData.inspection.rooms || []).map((room: any, i: number) => (
+                  <div key={i} style={{ background: '#F0F4FF', borderRadius: 10, padding: 14, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>{room.name}</div>
+                      {room.condition && (
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                          background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
+                          color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
+                        }}>{room.condition}</span>
+                      )}
+                    </div>
+                    {room.notes && <div style={{ fontSize: 13, color: '#4A5068', lineHeight: 1.6 }}>{room.notes}</div>}
+                  </div>
+                ))}
+
+                {docData.inspection.notes && (
+                  <div style={{ background: T.tealLight, borderRadius: 10, padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.teal, textTransform: 'uppercase', marginBottom: 4 }}>General Notes</div>
+                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.6 }}>{docData.inspection.notes}</div>
+                  </div>
+                )}
+
+                {docData.inspection.report_text && (
+                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 6 }}>AI Report</div>
+                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
+                  </div>
+                )}
+
+                {docData.inspection.landlord_signature && (
+                  <div style={{ marginTop: 16, padding: 14, background: T.greenLight, borderRadius: 10, border: `1px solid ${T.greenDark}33` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Landlord Signature</div>
+                    <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{docData.inspection.landlord_signature}</div>
+                    <div style={{ fontSize: 11, color: T.greenDark, marginTop: 2 }}>{docData.inspection.landlord_signed_at ? new Date(docData.inspection.landlord_signed_at).toLocaleDateString() : ''}</div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 16, padding: 14, background: '#FFF8E0', borderRadius: 10, border: '1px solid #9A650033' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9A6500' }}>Please review the inspection report above, then sign below to confirm.</div>
+                </div>
+              </div>
+            )}
+
+            <DocumentSigning
+              token={token}
+              tenantName={docData.tenant_name}
+              documentName={docData.document_name}
+              documentType={docData.document_type}
+              fileUrl={docData.file_url}
+              onSigned={() => setState('signed')}
+            />
+          </>
         )}
       </div>
     </div>

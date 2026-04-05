@@ -73,6 +73,13 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
 
   useEffect(() => { fetchInspections(); }, []);
 
+  // Poll for signature updates every 30 seconds
+  useEffect(() => {
+    if (step !== 'sign') return;
+    const interval = setInterval(fetchInspections, 30000);
+    return () => clearInterval(interval);
+  }, [step]);
+
   const fetchInspections = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -182,14 +189,9 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
 
   const deleteInspection = async (id: string) => {
     if (!confirm('Delete this inspection? This cannot be undone.')) return;
-    const { data: photos } = await supabase.from('inspection_photos').select('photo_path').eq('inspection_id', id);
-    if (photos && photos.length > 0) {
-      const paths = photos.map(p => p.photo_path).filter(Boolean);
-      if (paths.length > 0) await supabase.storage.from('documents').remove(paths);
-    }
+    // 1. Delete signing tokens first (FK constraint)
     await supabase.from('signing_tokens').delete().eq('inspection_id', id);
-    await supabase.from('inspection_photos').delete().eq('inspection_id', id);
-    // Delete associated document records (inspection reports stored as documents)
+    // 2. Delete associated document records
     const inspection = inspections.find(i => i.id === id);
     if (inspection) {
       await supabase.from('documents').delete()
@@ -197,6 +199,13 @@ export default function Inspections({ lease, onClose }: { lease: any; onClose?: 
         .eq('tenant_name', inspection.tenant_name)
         .in('type', ['move_in', 'move_out', 'inspection']);
     }
+    // 3. Get photos to delete from storage
+    const { data: photos } = await supabase.from('inspection_photos').select('photo_path').eq('inspection_id', id);
+    if (photos && photos.length > 0) {
+      const paths = photos.map(p => p.photo_path).filter(Boolean);
+      if (paths.length > 0) await supabase.storage.from('documents').remove(paths);
+    }
+    // 4. Delete inspection (photos cascade automatically)
     const { error } = await supabase.from('inspections').delete().eq('id', id);
     if (error) { alert('Error deleting: ' + error.message); return; }
     if (viewingInspection?.id === id) setViewingInspection(null);
