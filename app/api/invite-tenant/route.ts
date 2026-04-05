@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { lease_id, tenant_email, tenant_name } = await req.json();
+    const { lease_id, tenant_email, tenant_name, tenant_phone } = await req.json();
 
     if (!lease_id || !tenant_email) {
       return NextResponse.json({ error: 'lease_id and tenant_email are required' }, { status: 400 });
@@ -144,8 +144,10 @@ export async function POST(req: Request) {
     let sentSms = false;
     let sentToPhone: string | null = null;
 
-    if (lease?.phone && magicLink) {
-      const formatted = lease.phone.startsWith('+') ? lease.phone : '+1' + lease.phone.replace(/\D/g, '');
+    const phoneToUse = lease?.phone || tenant_phone;
+    if (phoneToUse && magicLink) {
+      const digits = phoneToUse.replace(/\D/g, '');
+      const formatted = phoneToUse.startsWith('+') ? phoneToUse : digits.length === 10 ? '+1' + digits : digits.length === 11 && digits.startsWith('1') ? '+' + digits : '+1' + digits;
       const smsBody = `Hi ${tenant_name || 'there'}! ${landlordName} invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`;
 
       if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {

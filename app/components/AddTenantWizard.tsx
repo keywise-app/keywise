@@ -310,7 +310,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       await fetch('/api/invite-tenant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
-        body: JSON.stringify({ lease_id: lease.id, tenant_email: form.email, tenant_name: form.tenant_name }),
+        body: JSON.stringify({ lease_id: lease.id, tenant_email: form.email, tenant_name: form.tenant_name, tenant_phone: form.phone }),
       });
     }
 
