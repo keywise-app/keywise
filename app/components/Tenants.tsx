@@ -55,6 +55,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [markPaidDate, setMarkPaidDate] = useState(new Date().toISOString().split('T')[0]);
   const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
@@ -652,7 +653,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   </div>
                   <button
                     onClick={() => {
-                      if (!isPro) { alert('Online payments require Keywise Pro ($19/mo). Upgrade in Settings.'); return; }
+                      if (!isPro) { setShowUpgradeModal(true); return; }
                       setShowPaymentRequest(true);
                       setPrSuccess('');
                       setPrForm({ type: 'Monthly Rent', amount: selected.rent ? String(selected.rent) : '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
@@ -1257,6 +1258,36 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => setShowUpgradeModal(false)}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 32, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+            <h2 style={{ color: T.navy, fontSize: 20, fontWeight: 700, marginBottom: 8, margin: '0 0 8px' }}>Upgrade to Keywise Pro</h2>
+            <p style={{ color: T.inkMuted, fontSize: 14, lineHeight: 1.6, marginBottom: 24, margin: '0 0 24px' }}>
+              Online rent collection is a Pro feature. Upgrade to send payment requests, collect rent via Stripe, and set up auto-pay for tenants.
+            </p>
+            <div style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 24, textAlign: 'left' }}>
+              <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8, fontSize: 13 }}>Pro includes:</div>
+              {['Online rent collection', 'Payment requests & reminders', 'Tenant auto-pay', 'Unlimited units', 'Document signing', 'Move-in/out inspections'].map(f => (
+                <div key={f} style={{ fontSize: 13, color: T.inkMid, padding: '4px 0' }}>✓ {f}</div>
+              ))}
+            </div>
+            <button onClick={() => { setShowUpgradeModal(false); window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'settings' })); }}
+              style={{ ...btn.primary, width: '100%', padding: '14px', fontSize: 15, marginBottom: 10 }}>
+              Upgrade to Pro — $19/month →
+            </button>
+            <button onClick={() => setShowUpgradeModal(false)}
+              style={{ ...btn.ghost, width: '100%', fontSize: 13 }}>
+              Maybe later
+            </button>
+            <p style={{ color: T.inkMuted, fontSize: 11, marginTop: 12 }}>No commitment · Cancel anytime</p>
           </div>
         </div>
       )}
