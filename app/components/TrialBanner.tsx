@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function TrialBanner({
   subscriptionStatus,
@@ -15,7 +16,7 @@ export default function TrialBanner({
 
   // Show for free users (no subscription) or trialing users
   if (dismissed || subscriptionStatus === 'active') return null;
-  if (!subscriptionStatus && localStorage.getItem('kw_upgrade_dismissed')) return null;
+  if (!subscriptionStatus && typeof window !== 'undefined' && localStorage.getItem('kw_upgrade_dismissed')) return null;
 
   const isTrialing = subscriptionStatus === 'trialing';
   const daysLeft = isTrialing && trialEndsAt
@@ -25,14 +26,20 @@ export default function TrialBanner({
   const handleUpgrade = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data: profile } = await supabase.from('profiles').select('email, full_name').eq('id', user.id).single();
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, email: '', return_path: 'portfolio' }),
+        body: JSON.stringify({ user_id: user.id, email: profile?.email || user.email, name: profile?.full_name || '', return_path: 'portfolio' }),
       });
       const data = await res.json();
       if (data.checkoutUrl) window.location.href = data.checkoutUrl;
-    } catch { /* silent */ }
+      else if (data.error) alert('Error: ' + data.error);
+    } catch (err: any) {
+      alert('Error: ' + (err.message || 'Could not start checkout'));
+    }
     setLoading(false);
   };
 
