@@ -284,16 +284,23 @@ export default function Home() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        // If this is a password recovery flow, skip all tenant detection — just show landlord dashboard
+        const params = new URLSearchParams(window.location.search);
+        const isTenantFlow = params.get('tenant') === 'true';
+
+        console.log('[auth] email:', session.user.email);
+        console.log('[auth] url:', window.location.href);
+        console.log('[auth] hash:', hash);
+        console.log('[auth] isRecovery:', isRecovery);
+        console.log('[auth] isTenantFlow:', isTenantFlow);
+
+        // If this is a password recovery flow, skip all tenant detection
         if (isRecovery) {
+          console.log('[auth] Recovery flow — forcing landlord role');
           setUserRole('landlord');
           setLoading(false);
           return;
         }
 
-        // Only treat as tenant flow if explicitly ?tenant=true
-        const params = new URLSearchParams(window.location.search);
-        const isTenantFlow = params.get('tenant') === 'true';
         if (isTenantFlow) window.history.replaceState({}, '', '/');
 
         const linkLeaseByEmail = async () => {
@@ -308,23 +315,29 @@ export default function Home() {
         // Always fetch profile first — role is the source of truth
         const { data: profile } = await supabase
           .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
+
+        console.log('[auth] profile role:', profile?.role);
+        console.log('[auth] decision: isTenantFlow=' + isTenantFlow + ' role=' + profile?.role);
+
         if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
         if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
 
         if (isTenantFlow && profile?.role !== 'landlord') {
-          // First-time tenant login via magic link — only if not already a landlord
+          console.log('[auth] → tenant (first-time via magic link)');
           await supabase.from('profiles').upsert(
             { id: session.user.id, email: session.user.email, role: 'tenant' },
             { onConflict: 'id' }
           );
           await linkLeaseByEmail();
           setUserRole('tenant');
-        } else if (profile?.role === 'tenant' && !isRecovery) {
-          // Returning tenant — but not during password recovery
+        } else if (profile?.role === 'tenant' && isTenantFlow) {
+          // Only show tenant portal if BOTH role=tenant AND ?tenant=true in URL
+          console.log('[auth] → tenant (returning with tenant param)');
           await linkLeaseByEmail();
           setUserRole('tenant');
         } else {
-          // landlord, null, or isTenantFlow but user is already a landlord
+          // landlord, null, no tenant param, or recovery
+          console.log('[auth] → landlord');
           setUserRole('landlord');
           if (!profile?.full_name) setShowOnboarding(true);
         }
