@@ -25,27 +25,15 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     let leaseData: any = null;
 
     if (previewLeaseId) {
-      const { data } = await supabase.from('leases').select('*').eq('id', previewLeaseId);
-      leaseData = data?.[0] || null;
+      // Preview mode — fetch by ID using service role API
+      const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`);
+      const { lease } = await res.json();
+      leaseData = lease;
     } else {
-      // Try by tenant_user_id first
-      const { data: byUserId } = await supabase.from('leases').select('*').eq('tenant_user_id', user.id);
-      if (byUserId && byUserId.length > 0) {
-        leaseData = byUserId[0];
-      } else {
-        // Fallback: try by email (exact then case-insensitive)
-        const { data: byEmail } = await supabase.from('leases').select('*').eq('email', user.email);
-        if (byEmail && byEmail.length > 0) {
-          leaseData = byEmail[0];
-          await supabase.from('leases').update({ tenant_user_id: user.id }).eq('id', byEmail[0].id);
-        } else {
-          const { data: byEmailAlt } = await supabase.from('leases').select('*').ilike('email', user.email || '');
-          if (byEmailAlt && byEmailAlt.length > 0) {
-            leaseData = byEmailAlt[0];
-            await supabase.from('leases').update({ tenant_user_id: user.id }).eq('id', byEmailAlt[0].id);
-          }
-        }
-      }
+      // Use server-side API to bypass RLS (lease belongs to landlord)
+      const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`);
+      const { lease } = await res.json();
+      leaseData = lease;
     }
 
     if (!leaseData) { setLoading(false); return; }

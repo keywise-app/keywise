@@ -298,35 +298,10 @@ export default function Home() {
 
         if (isTenantFlow) window.history.replaceState({}, '', '/');
         const linkLeaseByEmail = async () => {
-          console.error('[tenant] Looking up lease for email:', session.user.email);
-          const { data: foundLeases, error: leaseErr } = await supabase
-            .from('leases')
-            .select('id, email, tenant_name')
-            .eq('email', session.user.email)
-            .neq('user_id', session.user.id)
-            .is('tenant_user_id', null);
-          console.error('[tenant] Lease query result:', foundLeases?.length, 'leases, error:', leaseErr?.message || 'none');
-
-          if (foundLeases && foundLeases.length > 0) {
-            const { error: updateErr } = await supabase
-              .from('leases')
-              .update({ tenant_user_id: session.user.id })
-              .eq('id', foundLeases[0].id);
-            console.error('[tenant] Linked lease', foundLeases[0].id, 'error:', updateErr?.message || 'none');
-          } else {
-            // Try case-insensitive fallback
-            const { data: altLeases } = await supabase
-              .from('leases')
-              .select('id, email, tenant_name')
-              .ilike('email', session.user.email || '')
-              .neq('user_id', session.user.id)
-              .is('tenant_user_id', null);
-            console.error('[tenant] Case-insensitive fallback:', altLeases?.length, 'leases');
-            if (altLeases && altLeases.length > 0) {
-              await supabase.from('leases').update({ tenant_user_id: session.user.id }).eq('id', altLeases[0].id);
-              console.error('[tenant] Linked via fallback:', altLeases[0].id);
-            }
-          }
+          // Use server-side API to bypass RLS (lease belongs to landlord, not tenant)
+          const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
+          const { lease } = await res.json();
+          console.error('[tenant] Lease from API:', lease?.id, lease?.tenant_name || 'NOT FOUND');
         };
 
         // Always fetch profile first — role is the source of truth
