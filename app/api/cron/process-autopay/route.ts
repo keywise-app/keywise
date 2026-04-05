@@ -20,11 +20,13 @@ export async function GET(req: Request) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
 
   // Find all pending/overdue payments due today or earlier
+  // Only auto-charge recurring rent payments, not one-off charges
   const { data: duePayments } = await supabase
     .from('payments')
     .select('*, leases(email, user_id, tenant_user_id)')
     .in('status', ['pending', 'overdue'])
-    .lte('due_date', today);
+    .lte('due_date', today)
+    .or('type.is.null,type.eq.rent,type.eq.Monthly Rent');
 
   let charged = 0;
   let failed = 0;

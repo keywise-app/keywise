@@ -320,19 +320,32 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       {/* Payment Setup */}
       {!paymentMethodSaved && lease && (
         <div style={{ background: '#fff', borderRadius: T.radius, padding: 24, marginBottom: 16, border: `2px solid ${T.teal}`, boxShadow: T.shadow }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 8 }}>Set Up Payments</div>
-          <p style={{ color: T.inkMuted, fontSize: 13, marginBottom: 16, margin: '0 0 16px' }}>
-            Save your payment method to pay rent quickly each month.
-          </p>
-          <div style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
-            <button onClick={() => setupPayment('manual')} disabled={setupLoading}
-              style={{ ...btn.ghost, flex: 1, padding: '12px', fontSize: 13, opacity: setupLoading ? 0.7 : 1 }}>
-              {setupLoading ? 'Setting up...' : '💳 Save Card for Easy Payments'}
-            </button>
-            <button onClick={() => setupPayment('autopay')} disabled={setupLoading}
-              style={{ ...btn.primary, flex: 1, padding: '12px', fontSize: 13, opacity: setupLoading ? 0.7 : 1 }}>
-              {setupLoading ? 'Setting up...' : '✓ Set Up Auto-Pay'}
-            </button>
+          <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 12 }}>💳 Payment Setup</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 4 }}>Save Card for Easy Payments</div>
+              <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 12 }}>Save your card once. Pay each month with one tap — you stay in control.</div>
+              <button onClick={() => setupPayment('manual')} disabled={setupLoading}
+                style={{ ...btn.ghost, width: '100%', opacity: setupLoading ? 0.7 : 1 }}>
+                {setupLoading ? 'Setting up...' : 'Save Card →'}
+              </button>
+            </div>
+            <div style={{ border: `2px solid ${T.teal}`, borderRadius: 10, padding: 16, background: T.tealLight }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Auto-Pay Monthly Rent</div>
+                <span style={{ background: T.teal, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>RECOMMENDED</span>
+              </div>
+              <div style={{ fontSize: 12, color: T.inkMid, marginBottom: 8 }}>
+                Your rent of <strong>${lease.rent?.toLocaleString()}/mo</strong> will be charged on the <strong>{lease.payment_day || 1}st</strong> of each month.
+              </div>
+              <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 12 }}>
+                Auto-pay only applies to monthly rent. One-time charges require manual payment.
+              </div>
+              <button onClick={() => setupPayment('autopay')} disabled={setupLoading}
+                style={{ ...btn.primary, width: '100%', opacity: setupLoading ? 0.7 : 1 }}>
+                {setupLoading ? 'Setting up...' : 'Set Up Auto-Pay for Rent →'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -364,13 +377,21 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {outstanding.map(p => (
+            {outstanding.map(p => {
+              const isRent = !p.type || p.type === 'rent' || p.type === 'Monthly Rent';
+              return (
               <div key={p.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 background: p.status === 'overdue' ? T.coralLight : T.bg,
                 border: `1px solid ${p.status === 'overdue' ? T.coral + '44' : T.border}`,
                 borderRadius: T.radiusSm, padding: '14px 16px',
               }}>
+                {autopayEnabled && isRent && (
+                  <div style={{ background: T.tealLight, color: T.tealDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>✓ Auto-Pay Scheduled</div>
+                )}
+                {!isRent && (
+                  <div style={{ background: T.amberLight, color: T.amberDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>Manual Payment Required</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                     <span style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
@@ -395,8 +416,10 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                     {payNowLoading[p.id] ? 'Loading...' : paymentMethodSaved ? 'Pay Other Way' : '⚡ Pay Now'}
                   </button>
                 </div>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
