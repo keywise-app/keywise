@@ -15,6 +15,20 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const [payNowLoading, setPayNowLoading] = useState<Record<string, boolean>>({});
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [docLoading, setDocLoading] = useState<Record<string, boolean>>({});
+  const [paymentMethodSaved, setPaymentMethodSaved] = useState(false);
+  const [autopayEnabled, setAutopayEnabled] = useState(false);
+  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
+  const [stripePaymentMethodId, setStripePaymentMethodId] = useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [chargingPayment, setChargingPayment] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -60,6 +74,16 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (payRes.data) setPayments(payRes.data);
     if (landlordRes.data) setLandlord(landlordRes.data);
     if (docRes.data) setDocuments(docRes.data);
+
+    // Load tenant payment method info
+    const { data: tenantProfile } = await supabase.from('profiles').select('stripe_customer_id, stripe_payment_method_id, autopay_enabled').eq('id', user.id).single();
+    if (tenantProfile?.stripe_payment_method_id) {
+      setPaymentMethodSaved(true);
+      setStripeCustomerId(tenantProfile.stripe_customer_id);
+      setStripePaymentMethodId(tenantProfile.stripe_payment_method_id);
+      setAutopayEnabled(tenantProfile.autopay_enabled || false);
+    }
+
     setLoading(false);
   };
 
@@ -89,6 +113,61 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       alert('Error: ' + (err.message || 'Could not create payment link.'));
     }
     setPayNowLoading(prev => ({ ...prev, [p.id]: false }));
+  };
+
+  const payWithSavedCard = async (p: any) => {
+    if (!stripeCustomerId || !stripePaymentMethodId) return;
+    setChargingPayment(p.id);
+    try {
+      const res = await fetch('/api/tenant/charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_id: p.id,
+          customer_id: stripeCustomerId,
+          payment_method_id: stripePaymentMethodId,
+          amount: p.amount,
+          landlord_stripe_account_id: landlord?.stripe_account_id || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPayments(prev => prev.map(x => x.id === p.id ? { ...x, status: 'paid', paid_date: new Date().toISOString().split('T')[0], method: 'Auto-Pay (Stripe)' } : x));
+      } else {
+        alert('Payment failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Payment error: ' + (err.message || 'Unknown error'));
+    }
+    setChargingPayment(null);
+  };
+
+  const setupPayment = async (type: 'manual' | 'autopay') => {
+    if (!lease) return;
+    setSetupLoading(true);
+    try {
+      const res = await fetch('/api/tenant/setup-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_email: lease.email,
+          tenant_name: lease.tenant_name,
+          lease_id: lease.id,
+          landlord_stripe_account_id: landlord?.stripe_account_id || null,
+          payment_type: type,
+        }),
+      });
+      const data = await res.json();
+      if (data.clientSecret) {
+        // Redirect to Stripe-hosted setup page
+        window.location.href = `https://checkout.stripe.com/setup/${data.clientSecret}`;
+      } else {
+        alert('Setup failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Error: ' + (err.message || 'Could not set up payment'));
+    }
+    setSetupLoading(false);
   };
 
   const sendMessage = async () => {
@@ -233,6 +312,35 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
+      {/* Payment Setup */}
+      {!paymentMethodSaved && lease && (
+        <div style={{ background: '#fff', borderRadius: T.radius, padding: 24, marginBottom: 16, border: `2px solid ${T.teal}`, boxShadow: T.shadow }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 8 }}>Set Up Payments</div>
+          <p style={{ color: T.inkMuted, fontSize: 13, marginBottom: 16, margin: '0 0 16px' }}>
+            Save your payment method to pay rent quickly each month.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
+            <button onClick={() => setupPayment('manual')} disabled={setupLoading}
+              style={{ ...btn.ghost, flex: 1, padding: '12px', fontSize: 13, opacity: setupLoading ? 0.7 : 1 }}>
+              {setupLoading ? 'Setting up...' : '💳 Save Card for Easy Payments'}
+            </button>
+            <button onClick={() => setupPayment('autopay')} disabled={setupLoading}
+              style={{ ...btn.primary, flex: 1, padding: '12px', fontSize: 13, opacity: setupLoading ? 0.7 : 1 }}>
+              {setupLoading ? 'Setting up...' : '✓ Set Up Auto-Pay'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {paymentMethodSaved && autopayEnabled && (
+        <div style={{ background: T.tealLight, borderRadius: T.radius, padding: 16, marginBottom: 16, border: `1px solid ${T.teal}33` }}>
+          <div style={{ fontWeight: 700, color: T.tealDark }}>✓ Auto-Pay Active</div>
+          <div style={{ fontSize: 12, color: T.tealDark, marginTop: 4 }}>
+            Your rent will be charged automatically on the {lease?.payment_day || 1}st of each month.
+          </div>
+        </div>
+      )}
+
       {/* Outstanding Payments */}
       <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Outstanding Payments</div>
@@ -264,19 +372,18 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                     {p.description ? ` · ${p.description}` : ''}
                   </div>
                 </div>
-                <button
-                  onClick={() => openPayNow(p)}
-                  disabled={payNowLoading[p.id]}
-                  style={{
-                    background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF',
-                    color: '#fff', border: 'none', borderRadius: T.radiusSm,
-                    padding: '10px 20px', fontSize: 13, fontWeight: 600,
-                    cursor: payNowLoading[p.id] ? 'default' : 'pointer',
-                    opacity: payNowLoading[p.id] ? 0.7 : 1,
-                    flexShrink: 0,
-                  }}>
-                  {payNowLoading[p.id] ? 'Loading…' : '⚡ Pay Now'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexDirection: isMobile ? 'column' : 'row' }}>
+                  {paymentMethodSaved && (
+                    <button onClick={() => payWithSavedCard(p)} disabled={chargingPayment === p.id}
+                      style={{ background: chargingPayment === p.id ? '#e0e4ff' : T.teal, color: T.navy, border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 12, fontWeight: 700, cursor: chargingPayment === p.id ? 'default' : 'pointer', opacity: chargingPayment === p.id ? 0.7 : 1 }}>
+                      {chargingPayment === p.id ? 'Paying...' : '⚡ Pay with Saved Card'}
+                    </button>
+                  )}
+                  <button onClick={() => openPayNow(p)} disabled={payNowLoading[p.id]}
+                    style={{ background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 12, fontWeight: 600, cursor: payNowLoading[p.id] ? 'default' : 'pointer', opacity: payNowLoading[p.id] ? 0.7 : 1 }}>
+                    {payNowLoading[p.id] ? 'Loading...' : paymentMethodSaved ? 'Pay Other Way' : '⚡ Pay Now'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
