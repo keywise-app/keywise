@@ -443,12 +443,6 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                 border: `1px solid ${p.status === 'overdue' ? T.coral + '44' : T.border}`,
                 borderRadius: 10, padding: 16, maxWidth: '100%', overflow: 'hidden',
               }}>
-                {autopayEnabled && isRent && (
-                  <div style={{ background: T.tealLight, color: T.tealDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>✓ Auto-Pay Scheduled</div>
-                )}
-                {!isRent && (
-                  <div style={{ background: T.amberLight, color: T.amberDark, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block', marginBottom: 8 }}>Manual Payment Required</div>
-                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>${(p.amount || 0).toLocaleString()}</span>
                   <span style={{ ...statusStyle(p.status), fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>
@@ -458,18 +452,29 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                 <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 10 }}>
                   Due {p.due_date}{p.description ? ` · ${p.description}` : ''}
                 </div>
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, width: '100%' }}>
-                  {paymentMethodSaved && (
+
+                {/* Payment action */}
+                {autopayEnabled && isRent ? (
+                  <div>
+                    <div style={{ background: T.tealLight, color: T.tealDark, fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, textAlign: 'center' as const, marginBottom: 8 }}>
+                      ✓ Auto-Pay Scheduled
+                    </div>
                     <button onClick={() => payWithSavedCard(p)} disabled={chargingPayment === p.id}
-                      style={{ background: chargingPayment === p.id ? '#e0e4ff' : T.teal, color: T.navy, border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: chargingPayment === p.id ? 'default' : 'pointer', opacity: chargingPayment === p.id ? 0.7 : 1, flex: 1, width: isMobile ? '100%' : 'auto' }}>
-                      {chargingPayment === p.id ? 'Paying...' : '💳 Pay with Saved Card'}
+                      style={{ width: '100%', background: 'none', border: `1px solid ${T.border}`, borderRadius: 8, padding: '8px', fontSize: 12, color: T.inkMuted, cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>
+                      {chargingPayment === p.id ? 'Paying...' : 'Pay Early →'}
                     </button>
-                  )}
-                  <button onClick={() => openPayNow(p)} disabled={payNowLoading[p.id]}
-                    style={{ background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF', color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: payNowLoading[p.id] ? 'default' : 'pointer', opacity: payNowLoading[p.id] ? 0.7 : 1, flex: 1, width: isMobile ? '100%' : 'auto' }}>
-                    {payNowLoading[p.id] ? 'Loading...' : paymentMethodSaved ? 'Pay Online' : '⚡ Pay Now'}
+                  </div>
+                ) : paymentMethodSaved ? (
+                  <button onClick={() => payWithSavedCard(p)} disabled={chargingPayment === p.id}
+                    style={{ width: '100%', background: chargingPayment === p.id ? '#e0e4ff' : T.teal, color: T.navy, border: 'none', borderRadius: 8, padding: '12px', fontSize: 13, fontWeight: 700, cursor: chargingPayment === p.id ? 'default' : 'pointer', opacity: chargingPayment === p.id ? 0.7 : 1, fontFamily: 'inherit' }}>
+                    {chargingPayment === p.id ? 'Paying...' : `💳 Pay $${(p.amount || 0).toLocaleString()} Now`}
                   </button>
-                </div>
+                ) : (
+                  <button onClick={() => openPayNow(p)} disabled={payNowLoading[p.id]}
+                    style={{ width: '100%', background: payNowLoading[p.id] ? '#e0e4ff' : '#635BFF', color: '#fff', border: 'none', borderRadius: 8, padding: '12px', fontSize: 13, fontWeight: 600, cursor: payNowLoading[p.id] ? 'default' : 'pointer', opacity: payNowLoading[p.id] ? 0.7 : 1, fontFamily: 'inherit' }}>
+                    {payNowLoading[p.id] ? 'Loading...' : `Pay $${(p.amount || 0).toLocaleString()} Online →`}
+                  </button>
+                )}
               </div>
               );
             })}
