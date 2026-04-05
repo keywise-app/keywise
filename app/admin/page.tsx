@@ -44,6 +44,15 @@ export default function AdminPage() {
   const [bcSending, setBcSending] = useState(false);
   const [bcResult, setBcResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
   const [bcPreview, setBcPreview] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeSection, setActiveSection] = useState('users');
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('kw_admin');
@@ -130,28 +139,40 @@ export default function AdminPage() {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
       {/* Header */}
-      <div style={{ background: T.navy, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: T.navy, padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 8 : 0, position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Keywise Admin</span>
-          <span style={{ fontSize: 12, color: T.teal, marginLeft: 12 }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+          <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#fff' }}>Keywise Admin</span>
+          {!isMobile && <span style={{ fontSize: 12, color: T.teal, marginLeft: 12 }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 14px', borderRadius: T.radiusSm, fontSize: 12, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: 'pointer', minHeight: 36 }}>
             ↻ Refresh
           </button>
           <button onClick={() => { sessionStorage.removeItem('kw_admin'); setAuthed(false); setStats(null); }}
-            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 14px', borderRadius: T.radiusSm, fontSize: 12, cursor: 'pointer' }}>
+            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: 'pointer', minHeight: 36 }}>
             Sign Out
           </button>
         </div>
       </div>
 
+      {/* Mobile section nav */}
+      {isMobile && (
+        <div style={{ display: 'flex', overflowX: 'auto', background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 12px', WebkitOverflowScrolling: 'touch' as any }}>
+          {[['users', 'Users'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast']].map(([id, label]) => (
+            <button key={id} onClick={() => { setActiveSection(id); document.getElementById('admin-' + id)?.scrollIntoView({ behavior: 'smooth' }); }}
+              style={{ padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === id ? 700 : 400, color: activeSection === id ? T.navy : T.inkMuted, borderBottom: activeSection === id ? `2px solid ${T.navy}` : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'inherit', minHeight: 44 }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
 
         {/* USER GROWTH */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>User Growth</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
+        <div id="admin-users" style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>User Growth</div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
             <StatCard label="Total Users" value={stats.users.total} />
             <StatCard label="New Today" value={stats.users.newToday} color={T.teal} />
             <StatCard label="This Week" value={stats.users.newWeek} color={T.teal} />
@@ -176,9 +197,9 @@ export default function AdminPage() {
         </div>
 
         {/* REVENUE */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Revenue</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+        <div id="admin-revenue" style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Revenue</div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
             <StatCard label="MRR" value={'$' + stats.revenue.mrr.toLocaleString()} color={T.greenDark} />
             <StatCard label="Total Volume" value={'$' + stats.revenue.totalVolume.toLocaleString()} />
             <StatCard label="This Month" value={'$' + stats.revenue.monthVolume.toLocaleString()} color={T.teal} />
@@ -189,9 +210,9 @@ export default function AdminPage() {
         </div>
 
         {/* AI USAGE + SYSTEM */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 32 }}>
+        <div id="admin-ai" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 32 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>AI & Documents</div>
+            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>AI & Documents</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <StatCard label="Documents" value={stats.ai.documents} />
               <StatCard label="AI Summaries" value={stats.ai.aiSummaries} color={T.teal} />
@@ -202,7 +223,7 @@ export default function AdminPage() {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>System Health</div>
+            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>System Health</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <StatCard label="Buildings" value={stats.system.buildings} />
               <StatCard label="Units" value={stats.system.units} />
@@ -214,20 +235,20 @@ export default function AdminPage() {
         </div>
 
         {/* FEEDBACK */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.navy }}>User Feedback ({stats.feedback.length})</div>
-            <div style={{ display: 'flex', gap: 6 }}>
+        <div id="admin-feedback" style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: isMobile ? 10 : 0 }}>User Feedback ({stats.feedback.length})</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               {(['all', 'bug', 'feature', 'general'] as const).map(f => (
                 <button key={f} onClick={() => setFeedbackFilter(f)}
-                  style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20, cursor: 'pointer', border: 'none',
+                  style={{ padding: isMobile ? '6px 12px' : '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20, cursor: 'pointer', border: 'none', minHeight: isMobile ? 36 : 'auto',
                     background: feedbackFilter === f ? T.navy : T.bg, color: feedbackFilter === f ? '#fff' : T.inkMuted }}>
                   {f === 'all' ? 'All' : f === 'bug' ? '🐛 Bug' : f === 'feature' ? '💡 Feature' : '💬 General'}
                 </button>
               ))}
               {(['all', 'new', 'reviewed', 'planned', 'done'] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
-                  style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20, cursor: 'pointer', border: 'none',
+                  style={{ padding: isMobile ? '6px 12px' : '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20, cursor: 'pointer', border: 'none', minHeight: isMobile ? 36 : 'auto',
                     background: statusFilter === s ? T.navy : T.bg, color: statusFilter === s ? '#fff' : T.inkMuted }}>
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
@@ -244,10 +265,10 @@ export default function AdminPage() {
                   <div key={f.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                           <span>{FEEDBACK_ICONS[f.type] || '💬'}</span>
-                          <span style={{ fontSize: 12, color: T.inkMuted }}>{f.user_email || 'Anonymous'}</span>
-                          <span style={{ fontSize: 10, color: T.inkMuted }}>{new Date(f.created_at).toLocaleDateString()}</span>
+                          {!isMobile && <span style={{ fontSize: 12, color: T.inkMuted }}>{f.user_email || 'Anonymous'}</span>}
+                          {!isMobile && <span style={{ fontSize: 10, color: T.inkMuted }}>{new Date(f.created_at).toLocaleDateString()}</span>}
                         </div>
                         <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{f.message}</div>
                       </div>
@@ -272,41 +293,59 @@ export default function AdminPage() {
         </div>
 
         {/* RECENT SIGNUPS */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Recent Signups</div>
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr>
-                  {['Name', 'Email', 'Signed Up', 'Plan'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: `1px solid ${T.border}` }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentSignups.map((u: any) => (
-                  <tr key={u.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 600, color: T.ink }}>{u.full_name || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: T.inkMid }}>{u.email || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: T.inkMuted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                        background: u.subscription_status === 'active' ? T.greenLight : u.subscription_status === 'cancelled' ? T.coralLight : T.bg,
-                        color: u.subscription_status === 'active' ? T.greenDark : u.subscription_status === 'cancelled' ? T.coral : T.inkMuted,
-                        textTransform: 'capitalize' }}>
-                        {u.subscription_status || 'free'}
-                      </span>
-                    </td>
+        <div id="admin-signups" style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Recent Signups</div>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {stats.recentSignups.map((u: any) => (
+                <div key={u.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: T.ink }}>{u.full_name || '—'}</div>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                      background: u.subscription_status === 'active' ? T.greenLight : u.subscription_status === 'cancelled' ? T.coralLight : T.bg,
+                      color: u.subscription_status === 'active' ? T.greenDark : u.subscription_status === 'cancelled' ? T.coral : T.inkMuted, textTransform: 'capitalize' }}>
+                      {u.subscription_status || 'free'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>{u.email || '—'}</div>
+                  <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {['Name', 'Email', 'Signed Up', 'Plan'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stats.recentSignups.map((u: any) => (
+                    <tr key={u.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, color: T.ink }}>{u.full_name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: T.inkMid }}>{u.email || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: T.inkMuted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                          background: u.subscription_status === 'active' ? T.greenLight : u.subscription_status === 'cancelled' ? T.coralLight : T.bg,
+                          color: u.subscription_status === 'active' ? T.greenDark : u.subscription_status === 'cancelled' ? T.coral : T.inkMuted, textTransform: 'capitalize' }}>
+                          {u.subscription_status || 'free'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* BROADCAST EMAIL */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>📢 Broadcast Email</div>
+        <div id="admin-broadcast" style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>📢 Broadcast Email</div>
           <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 20 }}>
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Subject</label>
