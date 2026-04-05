@@ -91,7 +91,7 @@ export async function POST(req: Request) {
           totalFees: (paidPaymentsRes.count || 0) * 2,
           monthVolume,
           monthFees: (monthPaidRes.data?.length || 0) * 2,
-          mrr: proUsers * 29,
+          mrr: proUsers * 19,
         },
         ai: {
           documents: docsRes.count || 0,

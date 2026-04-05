@@ -42,7 +42,6 @@ export async function POST(req: Request) {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
-      subscription_data: { trial_period_days: 14 },
       success_url: successUrl,
       cancel_url: cancelUrl,
       allow_promotion_codes: true,

@@ -437,7 +437,7 @@ export default function Landing() {
               </button>
             </div>
             <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
-              14-day free trial · Then $29/month · Cancel anytime
+              Free forever · Pro $19/month · Cancel anytime
             </div>
 
             {/* Early access capture */}
@@ -610,7 +610,7 @@ export default function Landing() {
                   <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$29</span>
+                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$19</span>
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>

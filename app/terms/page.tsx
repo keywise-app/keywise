@@ -60,7 +60,7 @@ export default function TermsPage() {
 
           <Section title="4. Payment Terms">
             <p><strong>Free Plan:</strong> Keywise offers a free tier for up to 2 units with core features including lease tracking, document storage, AI communications, and a tenant portal. No credit card is required.</p>
-            <p><strong>Pro Plan:</strong> $29/month, billed monthly. The Pro plan includes unlimited units, online rent collection, payment reminders, maintenance tracking, and priority support.</p>
+            <p><strong>Pro Plan:</strong> $19/month, billed monthly. The Pro plan includes unlimited units, online rent collection, payment reminders, maintenance tracking, and priority support.</p>
             <p><strong>Transaction Fee:</strong> A $2 fee applies to each online rent payment processed through Keywise. This fee is charged in addition to the monthly subscription.</p>
             <p><strong>Billing:</strong> Subscriptions renew automatically each month. You may cancel at any time from your account settings. Cancellations take effect at the end of the current billing period — no refunds are issued for partial months.</p>
             <p><strong>Payment Processing:</strong> All payments are processed by Stripe. By using online rent collection, you agree to <a href="https://stripe.com/legal" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>Stripe's Terms of Service</a>.</p>

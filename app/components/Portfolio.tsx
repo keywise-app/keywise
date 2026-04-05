@@ -111,7 +111,7 @@ function UpgradeModal({ reason, onClose }: {
         )}
         <button onClick={handleUpgrade} disabled={loading}
           style={{ ...btn.primary, width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, marginBottom: 12, opacity: loading ? 0.7 : 1 }}>
-          {loading ? 'Redirecting to checkout…' : 'Upgrade Now — $29/month →'}
+          {loading ? 'Redirecting to checkout…' : 'Upgrade Now — $19/month →'}
         </button>
         <span onClick={onClose} style={{ fontSize: 13, color: T.inkMuted, cursor: 'pointer' }}>Maybe later</span>
       </div>

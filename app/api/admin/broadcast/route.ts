@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     if (recipient_filter === 'pro') {
       query = query.eq('subscription_status', 'active');
     } else if (recipient_filter === 'trial') {
-      query = query.or('subscription_status.is.null,subscription_status.eq.trialing,subscription_status.eq.free');
+      query = query.or('subscription_status.is.null,subscription_status.eq.free');
     } else if (recipient_filter === 'specific' && specific_email) {
       return await sendSingle(resend, supabase, specific_email, subject, message, type);
     }

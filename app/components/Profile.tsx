@@ -250,7 +250,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 4 }}>Subscription</div>
-            <div style={{ fontSize: 13, color: T.inkMuted }}>Keywise Pro — $29/month</div>
+            <div style={{ fontSize: 13, color: T.inkMuted }}>Keywise Pro — $19/month</div>
           </div>
           {subscriptionStatus && (
             <span style={{
@@ -288,7 +288,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
               style={{ ...btn.primary, opacity: subscribing ? 0.7 : 1, marginBottom: 10 }}>
               {subscribing ? 'Setting up…' : 'Upgrade to Pro →'}
             </button>
-            <div style={{ fontSize: 12, color: T.inkMuted }}>14-day free trial · then $29/month · cancel anytime</div>
+            <div style={{ fontSize: 12, color: T.inkMuted }}>Free forever · Pro $19/month · Cancel anytime</div>
           </>
         )}
 
