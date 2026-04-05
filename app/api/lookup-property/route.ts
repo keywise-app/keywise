@@ -24,8 +24,6 @@ export async function POST(req: Request) {
     });
 
     const result = await response.json();
-    console.log('[lookup-property] Full Claude response:', JSON.stringify(result, null, 2));
-
     if (!response.ok) {
       console.error('[lookup-property] Anthropic error:', result);
       return NextResponse.json({ error: 'API error', details: result }, { status: 500 });

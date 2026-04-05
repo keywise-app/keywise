@@ -12,6 +12,7 @@ import Onboarding from './components/Onboarding';
 import TenantDashboard from './components/TenantDashboard';
 import Landing from './components/Landing';
 import TrialBanner from './components/TrialBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
@@ -419,6 +420,7 @@ export default function Home() {
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
 
   return (
+    <ErrorBoundary>
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: T.bg, color: T.ink, minHeight: '100vh', display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       <style>{`* { box-sizing: border-box; } body { margin: 0; } button, input, select, textarea { font-family: inherit; }`}</style>
@@ -757,5 +759,6 @@ export default function Home() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

@@ -3,7 +3,19 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const rateLimitMap = new Map<string, number[]>();
+function isRateLimited(ip: string, limit = 5, windowMs = 60000): boolean {
+  const now = Date.now();
+  const recent = (rateLimitMap.get(ip) || []).filter(t => now - t < windowMs);
+  if (recent.length >= limit) return true;
+  rateLimitMap.set(ip, [...recent, now]);
+  return false;
+}
+
 export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  if (isRateLimited(ip)) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
   try {
     const { name, email, message } = await req.json();
 

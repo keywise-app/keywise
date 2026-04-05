@@ -100,7 +100,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('[send-receipt] Sent receipt to:', tenant_email, '| id:', data?.id);
     return NextResponse.json({ success: true, id: data?.id });
   } catch (err: any) {
     console.error('[send-receipt] Unexpected error:', err);

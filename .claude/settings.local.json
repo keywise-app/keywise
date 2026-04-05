@@ -19,7 +19,10 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''Email sent!'''' if d.get\\(''''success''''\\) else f''''Failed: {d}''''\\)\")",
       "Bash(git -C /Users/chriscolwell/propos add -A)",
       "Bash(git -C /Users/chriscolwell/propos commit -m \"Remove /api/debug-env — exposes env var info publicly\")",
-      "Bash(git -C /Users/chriscolwell/propos push)"
+      "Bash(git -C /Users/chriscolwell/propos push)",
+      "mcp__claude_ai_Gmail__gmail_create_draft",
+      "Bash(git rm:*)",
+      "Bash(python3:*)"
     ]
   }
 }

@@ -210,12 +210,10 @@ export async function POST(req: Request) {
     const firstPaymentId = insertedPayments?.[0]?.id;
 
     // Send email notification
-    console.log('[payment-request] notify_email:', notify_email, '| tenant_email:', tenant_email);
     if (notify_email && tenant_email) {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
         const emailUrl = `${baseUrl}/api/send-email`;
-        console.log('[payment-request] Calling send-email at:', emailUrl);
         const emailRes = await fetch(emailUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -235,13 +233,10 @@ export async function POST(req: Request) {
             }),
           }),
         });
-        const emailData = await emailRes.json();
-        console.log('[payment-request] send-email response status:', emailRes.status, '| body:', JSON.stringify(emailData));
+        await emailRes.json();
       } catch (emailErr: any) {
         console.error('[payment-request] email send failed:', emailErr.message);
       }
-    } else {
-      console.log('[payment-request] Skipping email — notify_email:', notify_email, 'tenant_email:', tenant_email);
     }
 
     // Send SMS notification

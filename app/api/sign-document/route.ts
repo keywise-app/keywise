@@ -59,7 +59,6 @@ export async function POST(req: Request) {
         status: 'fully_signed',
       }).eq('id', tokenRow.inspection_id);
       if (inspErr) console.error('[sign-document] Inspection update error:', inspErr);
-      else console.log('[sign-document] Inspection marked as fully signed:', tokenRow.inspection_id);
     }
 
     // Fetch document name
@@ -126,7 +125,6 @@ export async function POST(req: Request) {
 
     await Promise.allSettled(emailPromises);
 
-    console.log('[sign-document] Signature recorded for:', finalSignerName, '| doc:', tokenRow.document_id);
     return NextResponse.json({ success: true, signed_at });
   } catch (err: any) {
     console.error('[sign-document] Unexpected error:', err);

@@ -10,11 +10,12 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
+  if (process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+    console.error('[stripe/subscribe] WARNING: Using Stripe TEST keys in production');
+  }
+
   try {
     const { user_id, email, name } = await req.json();
-
-    console.log('[subscribe] Price ID being used:', process.env.STRIPE_PRO_PRICE_ID);
-    console.log('[subscribe] Stripe key prefix:', process.env.STRIPE_SECRET_KEY?.slice(0, 12));
 
     if (!user_id || !email) {
       return NextResponse.json({ error: 'user_id and email are required' }, { status: 400 });
@@ -27,11 +28,9 @@ export async function POST(req: Request) {
 
     // Create Stripe customer
     const customer = await stripe.customers.create({ email, name: name || email });
-    console.log('[subscribe] Created Stripe customer:', customer.id, 'for', email);
 
     // Verify the price exists before creating subscription
     const price = await stripe.prices.retrieve(process.env.STRIPE_PRO_PRICE_ID!);
-    console.log('[subscribe] Price retrieved:', price.id, price.active);
 
     // Create subscription with 14-day trial
     const subscription = await stripe.subscriptions.create({

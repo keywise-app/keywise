@@ -48,8 +48,6 @@ export async function POST(req: Request) {
     const propertyAddress = lease?.property || '';
     const monthlyRent = lease?.rent ? '$' + Number(lease.rent).toLocaleString() + '/mo' : '';
 
-    console.log('[invite-tenant] Generating magic link for', tenant_email);
-
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: tenant_email,
@@ -64,7 +62,6 @@ export async function POST(req: Request) {
     }
 
     const magicLink = data.properties?.action_link;
-    console.log('[invite-tenant] Magic link generated for', tenant_email);
 
     // Send branded email via Resend
     let sentEmail = false;
@@ -137,7 +134,6 @@ export async function POST(req: Request) {
           console.error('[invite-tenant] Resend error:', emailError);
         } else {
           sentEmail = true;
-          console.log('[invite-tenant] Email sent to', tenant_email);
         }
       } catch (emailErr: any) {
         console.error('[invite-tenant] Email send failed:', emailErr.message);
@@ -162,7 +158,6 @@ export async function POST(req: Request) {
         });
         sentSms = true;
         sentToPhone = formatted;
-        console.log('[invite-tenant] SMS sent to', formatted);
       } catch (smsErr: any) {
         console.error('[invite-tenant] SMS failed:', smsErr.message);
       }

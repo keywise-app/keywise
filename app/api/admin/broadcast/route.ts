@@ -95,7 +95,6 @@ export async function POST(req: Request) {
       failed_count: failedCount,
     });
 
-    console.log(`[broadcast] Sent ${sentCount}/${recipients.length}, failed ${failedCount}`);
     return NextResponse.json({ sent: sentCount, failed: failedCount, total: recipients.length });
   } catch (err: any) {
     console.error('[broadcast] Error:', err.message);

@@ -22,8 +22,6 @@ export async function GET(req: Request) {
     .eq('role', 'landlord')
     .not('email', 'is', null);
 
-  console.log('[monthly-snapshot] Sending to', landlords?.length ?? 0, 'landlords');
-
   let sent = 0;
   for (const landlord of landlords || []) {
     try {
@@ -59,7 +57,6 @@ export async function sendMonthlySnapshot(landlord: any, supabase: any) {
 
   // Skip landlords with no data
   if (leases.length === 0) {
-    console.log('[monthly-snapshot] Skipping', landlord.email, '— no leases');
     return;
   }
 
@@ -112,7 +109,6 @@ export async function sendMonthlySnapshot(landlord: any, supabase: any) {
     html,
   });
 
-  console.log('[monthly-snapshot] Sent to', landlord.email);
 }
 
 function buildSnapshotHtml({

@@ -6,7 +6,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+const rateLimitMap = new Map<string, number[]>();
+function isRateLimited(ip: string, limit = 5, windowMs = 60000): boolean {
+  const now = Date.now();
+  const recent = (rateLimitMap.get(ip) || []).filter(t => now - t < windowMs);
+  if (recent.length >= limit) return true;
+  rateLimitMap.set(ip, [...recent, now]);
+  return false;
+}
+
 export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  if (isRateLimited(ip)) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
   try {
     const { email } = await req.json();
     if (!email) {
@@ -24,7 +36,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('[waitlist] Added:', email);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('[waitlist] Unexpected error:', err);

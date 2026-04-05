@@ -301,7 +301,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       }
 
       if (payments.length > 0) {
-        await supabase.from('payments').insert(payments);
+        await supabase.from('payments').upsert(payments, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
       }
     }
 

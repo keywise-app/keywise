@@ -7,9 +7,6 @@ export async function POST(req: Request) {
   try {
     const { fileUrl, fileType } = await req.json();
 
-    console.log('[extract-lease] fileType:', fileType);
-    console.log('[extract-lease] fileUrl:', fileUrl?.slice(0, 100));
-
     if (!fileUrl) {
       return NextResponse.json({ error: 'No file URL received.' });
     }
@@ -27,7 +24,6 @@ export async function POST(req: Request) {
     }
     const buffer = await fileResponse.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
-    console.log('[extract-lease] fetched file, base64 length:', base64.length);
 
     const content: any[] = [];
 
@@ -86,9 +82,7 @@ If a field is not found use an empty string. Return only the JSON object.`,
       }),
     });
 
-    console.log('[extract-lease] Claude response status:', response.status);
     const result = await response.json();
-    console.log('[extract-lease] Claude full response:', JSON.stringify(result).slice(0, 600));
 
     if (!response.ok) {
       console.error('[extract-lease] Claude error body:', result);
@@ -96,7 +90,6 @@ If a field is not found use an empty string. Return only the JSON object.`,
     }
 
     const text = result.content?.[0]?.text || '';
-    console.log('[extract-lease] extracted text:', text.slice(0, 200));
     const cleaned = text.replace(/```json|```/g, '').trim();
     try {
       const parsed = JSON.parse(cleaned);

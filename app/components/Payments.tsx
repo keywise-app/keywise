@@ -155,21 +155,17 @@ export default function Payments() {
     const today = new Date().toISOString().split('T')[0];
 
     for (const { date, amount } of dates) {
-      const { data: existing } = await supabase
-        .from('payments').select('id')
-        .eq('lease_id', selectedLease.id).eq('due_date', date).single();
-      if (!existing) {
-        await supabase.from('payments').insert({
-          user_id: user.id,
-          lease_id: selectedLease.id,
-          tenant_name: selectedLease.tenant_name,
-          property: selectedLease.property,
-          amount: Math.round(amount),
-          due_date: date,
-          status: 'pending',
-        });
-        created++;
-      } else { skipped++; }
+      const { error: upsertErr } = await supabase.from('payments').upsert({
+        user_id: user.id,
+        lease_id: selectedLease.id,
+        tenant_name: selectedLease.tenant_name,
+        property: selectedLease.property,
+        amount: Math.round(amount),
+        due_date: date,
+        status: 'pending',
+      }, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
+      if (!upsertErr) created++;
+      else skipped++;
     }
 
     // Save schedule settings back to lease

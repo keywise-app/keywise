@@ -360,7 +360,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
                 let paymentCount = 0;
                 while (current <= endDate) {
-                  await supabase.from('payments').insert({
+                  await supabase.from('payments').upsert({
                     user_id: user.id,
                     lease_id: newLeaseData.id,
                     tenant_name: newLeaseData.tenant_name,
@@ -368,7 +368,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                     amount: newLeaseData.rent,
                     due_date: current.toISOString().split('T')[0],
                     status: 'pending',
-                  });
+                  }, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
                   current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
                   paymentCount++;
                 }

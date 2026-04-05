@@ -114,7 +114,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: emailError.message }, { status: 500 });
     }
 
-    console.log('[signing-link] Sent signing link to:', tenant_email);
     return NextResponse.json({ success: true, token });
   } catch (err: any) {
     console.error('[signing-link] Unexpected error:', err);

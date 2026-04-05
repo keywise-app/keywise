@@ -13,8 +13,6 @@ export async function POST(req: Request) {
   try {
     const { user_id } = await req.json();
 
-    console.log('[stripe/connect] user_id received:', user_id);
-
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
@@ -25,16 +23,12 @@ export async function POST(req: Request) {
       metadata: { user_id },
     });
 
-    console.log('[stripe/connect] Stripe account created:', account.id);
-
     // Save the account ID to the profiles table.
     // upsert handles both missing and existing rows.
     const { data: upsertData, error: dbError } = await supabase
       .from('profiles')
       .upsert({ id: user_id, stripe_account_id: account.id }, { onConflict: 'id' })
       .select('id, stripe_account_id');
-
-    console.log('[stripe/connect] Supabase upsert result — data:', upsertData, 'error:', dbError);
 
     if (dbError) {
       console.error('[stripe/connect] Failed to save stripe_account_id:', dbError.message, dbError.code, dbError.details);

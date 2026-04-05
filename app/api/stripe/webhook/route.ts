@@ -48,8 +48,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook signature invalid' }, { status: 400 });
   }
 
-  console.log('[webhook] event:', event.type);
-
   try {
     // ── Rent payment succeeded ──────────────────────────────────────────────
     if (event.type === 'payment_intent.succeeded') {
@@ -71,7 +69,6 @@ export async function POST(req: Request) {
             .from('payments')
             .update({ status: 'paid', paid_date: today, method: 'Stripe' })
             .eq('id', existing.id);
-          console.log(`Marked payment ${existing.id} as paid (payment_intent: ${intent.id})`);
           return NextResponse.json({ received: true });
         }
       }
@@ -90,7 +87,6 @@ export async function POST(req: Request) {
             .from('payments')
             .update({ status: 'paid', paid_date: today, method: 'Stripe' })
             .eq('id', existing.id);
-          console.log(`Marked payment ${existing.id} as paid (fallback, payment_intent: ${intent.id})`);
         }
       }
     }
@@ -98,10 +94,6 @@ export async function POST(req: Request) {
     // ── Checkout session completed (Payment Links use this) ───────────────
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      console.log('[webhook] checkout.session.completed:', session.id);
-      console.log('[webhook] metadata:', JSON.stringify(session.metadata));
-      console.log('[webhook] payment_link:', session.payment_link);
-
       const { lease_id, tenant_name, due_date } = session.metadata || {};
       const today = new Date().toISOString().split('T')[0];
 
@@ -114,7 +106,6 @@ export async function POST(req: Request) {
           .eq('due_date', due_date)
           .neq('status', 'paid');
         if (error) console.error('[webhook] checkout update error (lease_id):', error);
-        else console.log(`[webhook] Marked payment as paid: lease=${lease_id} due=${due_date}`);
       }
       // Fallback: match by tenant_name + due_date
       else if (tenant_name && due_date) {
@@ -125,7 +116,6 @@ export async function POST(req: Request) {
           .eq('due_date', due_date)
           .neq('status', 'paid');
         if (error) console.error('[webhook] checkout update error (tenant):', error);
-        else console.log(`[webhook] Marked payment as paid: tenant=${tenant_name} due=${due_date}`);
       }
       // Last resort: match by payment_link URL
       else if (session.payment_link) {
@@ -140,7 +130,6 @@ export async function POST(req: Request) {
               .eq('payment_link_url', link.url)
               .neq('status', 'paid');
             if (error) console.error('[webhook] checkout update error (link url):', error);
-            else console.log(`[webhook] Marked payment as paid via payment_link_url`);
           }
         } catch (e: any) {
           console.error('[webhook] Could not retrieve payment link:', e.message);
@@ -211,7 +200,6 @@ export async function POST(req: Request) {
   </p>
 </div>`,
         });
-        console.log('[webhook] Trial ending email sent to', profile.email);
       }
     }
 
@@ -259,7 +247,6 @@ export async function POST(req: Request) {
   </p>
 </div>`,
           });
-          console.log('[webhook] Payment failed email sent to', profile.email);
         }
       }
     }

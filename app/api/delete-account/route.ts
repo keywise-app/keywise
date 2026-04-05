@@ -35,7 +35,6 @@ export async function POST(req: Request) {
         .delete()
         .in('lease_id', leaseIds);
       if (error) console.error('[delete-account] signing_tokens:', error.message);
-      else console.log('[delete-account] Deleted signing_tokens for', leaseIds.length, 'leases');
     }
 
     // 2–8. Tables keyed by user_id
@@ -43,7 +42,6 @@ export async function POST(req: Request) {
     for (const table of tables) {
       const { error } = await supabase.from(table).delete().eq('user_id', user_id);
       if (error) console.error(`[delete-account] ${table}:`, error.message);
-      else console.log(`[delete-account] Deleted from ${table}`);
     }
 
     // 9. profiles
@@ -62,7 +60,6 @@ export async function POST(req: Request) {
         for (const sub of subscriptions.data) {
           if (sub.status !== 'canceled') {
             await stripe.subscriptions.cancel(sub.id);
-            console.log('[delete-account] Cancelled Stripe subscription', sub.id);
           }
         }
       } catch (stripeErr: any) {
@@ -78,7 +75,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to delete auth user: ' + authError.message }, { status: 500 });
     }
 
-    console.log('[delete-account] Successfully deleted user', user_id);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('[delete-account] Unexpected error:', err.message);
