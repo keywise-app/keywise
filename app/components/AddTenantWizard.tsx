@@ -277,6 +277,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     if (error) { alert('Error saving lease: ' + error.message); setCompleting(false); return; }
 
     // Auto-generate payment schedule from today forward
+    console.error('[wizard] Generating payments — rent:', lease.rent, 'end_date:', lease.end_date, 'payment_day:', lease.payment_day);
     if (lease.end_date && lease.rent) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -301,8 +302,12 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       }
 
       if (payments.length > 0) {
-        await supabase.from('payments').upsert(payments, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
+        const { error: payErr } = await supabase.from('payments').upsert(payments, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
+        if (payErr) console.error('[wizard] Payment schedule error:', payErr.message);
+        else console.error('[wizard] Created', payments.length, 'payments');
       }
+    } else {
+      console.error('[wizard] Skipping payment schedule — missing end_date or rent');
     }
 
     if (inviteMethod !== 'skip' && form.email) {
