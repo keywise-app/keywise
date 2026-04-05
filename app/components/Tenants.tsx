@@ -131,25 +131,38 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
 
   const removeTenant = async () => {
     if (!selected) return;
-    if (!confirm('Remove ' + selected.tenant_name + '? This will delete all their records including payments, documents and signing history.')) return;
+    if (!confirm('Remove ' + selected.tenant_name + '? This will delete all their records.')) return;
 
-    // 1. Delete signing tokens first (references leases)
-    const { error: e1 } = await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
-    if (e1) { alert('Error removing signing tokens: ' + e1.message); return; }
+    // 1. Get all inspection IDs for this lease
+    const { data: inspectionRows } = await supabase.from('inspections').select('id').eq('lease_id', selected.id);
+    const inspectionIds = inspectionRows?.map(i => i.id) || [];
 
-    // 2. Delete payments (references leases)
-    const { error: e2 } = await supabase.from('payments').delete().eq('lease_id', selected.id);
-    if (e2) { alert('Error removing payments: ' + e2.message); return; }
+    // 2. Delete signing tokens for inspections
+    if (inspectionIds.length > 0) {
+      await supabase.from('signing_tokens').delete().in('inspection_id', inspectionIds);
+    }
 
-    // 3. Delete documents (references leases)
-    const { error: e3 } = await supabase.from('documents').delete().eq('lease_id', selected.id);
-    if (e3) { alert('Error removing documents: ' + e3.message); return; }
+    // 3. Delete signing tokens for documents/lease
+    await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
 
-    // 4. Finally delete the lease
-    const { error: e4 } = await supabase.from('leases').delete().eq('id', selected.id);
-    if (e4) { alert('Error removing lease: ' + e4.message); return; }
+    // 4. Delete inspection photos
+    if (inspectionIds.length > 0) {
+      await supabase.from('inspection_photos').delete().in('inspection_id', inspectionIds);
+    }
 
-    // Update UI
+    // 5. Delete inspections
+    await supabase.from('inspections').delete().eq('lease_id', selected.id);
+
+    // 6. Delete payments
+    await supabase.from('payments').delete().eq('lease_id', selected.id);
+
+    // 7. Delete documents
+    await supabase.from('documents').delete().eq('lease_id', selected.id);
+
+    // 8. Delete lease
+    const { error } = await supabase.from('leases').delete().eq('id', selected.id);
+    if (error) { alert('Error deleting: ' + error.message); return; }
+
     const remaining = leases.filter(l => l.id !== selected.id);
     setLeases(remaining);
     setSelected(remaining.length > 0 ? remaining[0] : null);
