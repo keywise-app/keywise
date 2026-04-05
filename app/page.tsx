@@ -277,7 +277,7 @@ export default function Home() {
     const initialSearch = window.location.search;
     const initialHash = window.location.hash;
     const initialParams = new URLSearchParams(initialSearch);
-    const isTenantFlow = initialParams.get('tenant') === 'true';
+    const isTenantFlow = initialParams.get('tenant') === 'true' || initialHash.includes('tenant=true');
     const isRecovery = initialHash.includes('type=recovery') || initialHash.includes('type=signup');
 
     // Clean auth hash fragments from URL (left by Supabase redirects)

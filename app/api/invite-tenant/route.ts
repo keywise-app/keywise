@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       type: 'magiclink',
       email: tenant_email,
       options: {
-        redirectTo: 'https://keywise.app/?tenant=true',
+        redirectTo: 'https://keywise.app/tenant-login',
       },
     });
 
