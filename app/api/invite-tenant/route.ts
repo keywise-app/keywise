@@ -143,46 +143,41 @@ export async function POST(req: Request) {
       }
     }
 
-    // Send SMS via Twilio if phone exists
+    // Send SMS if phone exists
     let sentSms = false;
     let sentToPhone: string | null = null;
 
-    const phoneToUse = lease?.phone || tenant_phone;
-    console.error('[invite-tenant] Step 4: SMS check — lease.phone:', lease?.phone, '| tenant_phone:', tenant_phone, '| using:', phoneToUse || 'NONE');
-    if (phoneToUse && magicLink) {
-      const digits = phoneToUse.replace(/\D/g, '');
-      const formatted = phoneToUse.startsWith('+') ? phoneToUse : digits.length === 10 ? '+1' + digits : digits.length === 11 && digits.startsWith('1') ? '+' + digits : '+1' + digits;
+    const formatPhone = (phone: string | null | undefined): string | null => {
+      if (!phone) return null;
+      const digits = phone.replace(/\D/g, '');
+      if (digits.length === 10) return '+1' + digits;
+      if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+      if (phone.startsWith('+')) return phone;
+      return digits.length > 0 ? '+1' + digits : null;
+    };
+
+    const formattedPhone = formatPhone(lease?.phone) || formatPhone(tenant_phone);
+    console.error('[invite-tenant] Step 4: SMS — lease.phone:', lease?.phone, '| tenant_phone:', tenant_phone, '| formatted:', formattedPhone || 'NONE');
+
+    if (formattedPhone && magicLink) {
       const smsBody = `Hi ${tenant_name || 'there'}! ${landlordName} invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
 
-      console.error('[invite-tenant] Twilio configured:', !!process.env.TWILIO_ACCOUNT_SID, '| sending to:', formatted);
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
-        try {
-          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          await twilioClient.messages.create({ body: smsBody, from: process.env.TWILIO_PHONE_NUMBER, to: formatted });
+      try {
+        console.error('[invite-tenant] Sending SMS to:', formattedPhone);
+        const smsRes = await fetch(`${baseUrl}/api/send-sms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: formattedPhone, message: smsBody }),
+        });
+        const smsResult = await smsRes.json();
+        console.error('[invite-tenant] SMS response:', smsRes.status, JSON.stringify(smsResult));
+        if (smsRes.ok && smsResult.success) {
           sentSms = true;
-          sentToPhone = formatted;
-          console.error('[invite-tenant] Twilio SMS sent OK to:', formatted);
-        } catch (smsErr: any) {
-          console.error('[invite-tenant] Twilio SMS failed:', smsErr.message);
+          sentToPhone = formattedPhone;
         }
-      }
-
-      // Fallback: try /api/send-sms if Twilio failed or not configured
-      if (!sentSms) {
-        try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
-          console.error('[invite-tenant] Fallback SMS — to:', formatted, '| baseUrl:', baseUrl);
-          const smsRes = await fetch(`${baseUrl}/api/send-sms`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: formatted, message: smsBody }),
-          });
-          const smsResult = await smsRes.json();
-          console.error('[invite-tenant] SMS response:', smsRes.status, JSON.stringify(smsResult));
-          if (smsRes.ok) { sentSms = true; sentToPhone = formatted; }
-        } catch (smsErr: any) {
-          console.error('[invite-tenant] Fallback SMS failed:', smsErr.message);
-        }
+      } catch (smsErr: any) {
+        console.error('[invite-tenant] SMS failed:', smsErr.message);
       }
     }
 
