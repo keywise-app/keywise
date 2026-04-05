@@ -57,14 +57,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
 
     // Use server-side APIs to bypass RLS
     const [payRes, landlordRes, docRes] = await Promise.all([
-      fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`).then(() =>
-        supabase.from('payments').select('*').eq('lease_id', leaseData.id).order('due_date', { ascending: false })
-      ),
+      fetch(`/api/tenant/payments?lease_id=${leaseData.id}&tenant_name=${encodeURIComponent(leaseData.tenant_name || '')}`).then(r => r.json()),
       fetch(`/api/tenant/landlord-info?lease_id=${leaseData.id}`).then(r => r.json()),
       fetch(`/api/tenant/documents?lease_id=${leaseData.id}`).then(r => r.json()),
     ]);
 
-    if (payRes.data) setPayments(payRes.data);
+    if (payRes.payments) setPayments(payRes.payments);
     if (landlordRes.landlord) setLandlord(landlordRes.landlord);
     if (docRes.documents) setDocuments(docRes.documents);
     if (docRes.requests) setDocRequests(docRes.requests);
