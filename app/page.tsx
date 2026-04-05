@@ -272,10 +272,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Clean auth hash fragments from URL (left by Supabase redirects)
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        const isTenantFlow = new URLSearchParams(window.location.search).get('tenant') === 'true';
+        // Only treat as tenant flow if explicitly ?tenant=true AND not from a password reset
+        const params = new URLSearchParams(window.location.search);
+        const isTenantFlow = params.get('tenant') === 'true';
+        if (isTenantFlow) window.history.replaceState({}, '', '/');
 
         const linkLeaseByEmail = async () => {
           // Link this user's ID to their lease by email — but never link leases
@@ -302,7 +310,6 @@ export default function Home() {
           );
           await linkLeaseByEmail();
           setUserRole('tenant');
-          window.history.replaceState({}, '', '/');
         } else if (profile?.role === 'tenant') {
           // Returning tenant — attempt to link in case it wasn't set yet
           await linkLeaseByEmail();
@@ -311,7 +318,6 @@ export default function Home() {
           // landlord, null, or isTenantFlow but user is already a landlord
           setUserRole('landlord');
           if (!profile?.full_name) setShowOnboarding(true);
-          if (isTenantFlow) window.history.replaceState({}, '', '/');
         }
       }
       setLoading(false);
