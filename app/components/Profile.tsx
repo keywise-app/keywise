@@ -103,23 +103,16 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
         body: JSON.stringify({ user_id: userId, email: profile.email, name: profile.full_name }),
       });
       const data = await res.json();
-      if (data.error) { alert(data.error); setSubscribing(false); return; }
-      // Subscription created — open billing portal to add payment method
-      setSubscriptionStatus('trialing');
-      setTrialEndsAt(data.trialEndsAt || null);
-      setStripeCustomerId(data.stripeCustomerId || stripeCustomerId);
-      // Immediately open billing portal so they can add a payment method
-      const portalRes = await fetch('/api/stripe/billing-portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
-      });
-      const portalData = await portalRes.json();
-      if (portalData.url) window.location.href = portalData.url;
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        alert(data.error || 'Failed to start checkout');
+        setSubscribing(false);
+      }
     } catch (err: any) {
-      alert(err.message || 'Failed to start trial.');
+      alert(err.message || 'Failed to start checkout.');
+      setSubscribing(false);
     }
-    setSubscribing(false);
   };
 
   const openBillingPortal = async () => {
