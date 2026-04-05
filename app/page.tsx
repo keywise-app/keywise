@@ -272,22 +272,31 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Detect recovery/signup flow from Supabase hash redirect
+    const hash = window.location.hash;
+    const isRecovery = hash.includes('type=recovery') || hash.includes('type=signup');
+
     // Clean auth hash fragments from URL (left by Supabase redirects)
-    if (window.location.hash && window.location.hash.includes('access_token')) {
+    if (hash && hash.includes('access_token')) {
       window.history.replaceState({}, '', window.location.pathname);
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        // Only treat as tenant flow if explicitly ?tenant=true AND not from a password reset
+        // If this is a password recovery flow, skip all tenant detection — just show landlord dashboard
+        if (isRecovery) {
+          setUserRole('landlord');
+          setLoading(false);
+          return;
+        }
+
+        // Only treat as tenant flow if explicitly ?tenant=true
         const params = new URLSearchParams(window.location.search);
         const isTenantFlow = params.get('tenant') === 'true';
         if (isTenantFlow) window.history.replaceState({}, '', '/');
 
         const linkLeaseByEmail = async () => {
-          // Link this user's ID to their lease by email — but never link leases
-          // that this user owns as a landlord (user_id = this user)
           await supabase
             .from('leases')
             .update({ tenant_user_id: session.user.id })
@@ -310,8 +319,8 @@ export default function Home() {
           );
           await linkLeaseByEmail();
           setUserRole('tenant');
-        } else if (profile?.role === 'tenant') {
-          // Returning tenant — attempt to link in case it wasn't set yet
+        } else if (profile?.role === 'tenant' && !isRecovery) {
+          // Returning tenant — but not during password recovery
           await linkLeaseByEmail();
           setUserRole('tenant');
         } else {
