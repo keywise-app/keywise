@@ -744,6 +744,17 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                             ✓ Mark Paid
                           </button>
                         )}
+                        {(p.status === 'pending' || p.status === 'overdue') && (
+                          <button onClick={async () => {
+                            if (!confirm(`Cancel payment of $${(p.amount || 0).toLocaleString()} for ${p.tenant_name}?`)) return;
+                            const { error } = await supabase.from('payments').delete().eq('id', p.id);
+                            if (error) alert('Error: ' + error.message);
+                            else fetchAll();
+                          }}
+                            style={{ background: 'none', border: `1px solid ${T.coral}`, color: T.coral, borderRadius: T.radiusSm, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Cancel
+                          </button>
+                        )}
                       </div>
                     </div>
                     {/* Mark Paid inline form */}
