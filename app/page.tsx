@@ -288,15 +288,8 @@ export default function Home() {
         const params = new URLSearchParams(window.location.search);
         const isTenantFlow = params.get('tenant') === 'true';
 
-        console.log('[auth] email:', session.user.email);
-        console.log('[auth] url:', window.location.href);
-        console.log('[auth] hash:', hash);
-        console.log('[auth] isRecovery:', isRecovery);
-        console.log('[auth] isTenantFlow:', isTenantFlow);
-
         // If this is a password recovery flow, skip all tenant detection
         if (isRecovery) {
-          console.log('[auth] Recovery flow — forcing landlord role');
           setUserRole('landlord');
           setLoading(false);
           return;
@@ -317,28 +310,23 @@ export default function Home() {
         const { data: profile } = await supabase
           .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
 
-        console.log('[auth] profile role:', profile?.role);
-        console.log('[auth] decision: isTenantFlow=' + isTenantFlow + ' role=' + profile?.role);
-
         if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
         if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
 
         if (isTenantFlow && profile?.role !== 'landlord') {
-          console.log('[auth] → tenant (first-time via magic link)');
+          // First-time tenant login via magic link — set role permanently
           await supabase.from('profiles').upsert(
             { id: session.user.id, email: session.user.email, role: 'tenant' },
             { onConflict: 'id' }
           );
           await linkLeaseByEmail();
           setUserRole('tenant');
-        } else if (profile?.role === 'tenant' && isTenantFlow) {
-          // Only show tenant portal if BOTH role=tenant AND ?tenant=true in URL
-          console.log('[auth] → tenant (returning with tenant param)');
+        } else if (profile?.role === 'tenant') {
+          // Returning tenant — ALWAYS show tenant portal (role is saved in DB)
           await linkLeaseByEmail();
           setUserRole('tenant');
         } else {
-          // landlord, null, no tenant param, or recovery
-          console.log('[auth] → landlord');
+          // Landlord, null role, or recovery flow
           setUserRole('landlord');
           if (!profile?.full_name) setShowOnboarding(true);
         }

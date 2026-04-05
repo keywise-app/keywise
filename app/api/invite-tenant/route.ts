@@ -145,21 +145,33 @@ export async function POST(req: Request) {
     let sentToPhone: string | null = null;
 
     if (lease?.phone && magicLink) {
-      try {
-        const twilioClient = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN
-        );
-        const formatted = lease.phone.startsWith('+') ? lease.phone : '+1' + lease.phone.replace(/\D/g, '');
-        await twilioClient.messages.create({
-          body: `Hi ${tenant_name || 'there'}! ${landlordName} invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: formatted,
-        });
-        sentSms = true;
-        sentToPhone = formatted;
-      } catch (smsErr: any) {
-        console.error('[invite-tenant] SMS failed:', smsErr.message);
+      const formatted = lease.phone.startsWith('+') ? lease.phone : '+1' + lease.phone.replace(/\D/g, '');
+      const smsBody = `Hi ${tenant_name || 'there'}! ${landlordName} invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`;
+
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        try {
+          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await twilioClient.messages.create({ body: smsBody, from: process.env.TWILIO_PHONE_NUMBER, to: formatted });
+          sentSms = true;
+          sentToPhone = formatted;
+        } catch (smsErr: any) {
+          console.error('[invite-tenant] Twilio SMS failed:', smsErr.message);
+        }
+      }
+
+      // Fallback: try /api/send-sms if Twilio failed or not configured
+      if (!sentSms) {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
+          const smsRes = await fetch(`${baseUrl}/api/send-sms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: formatted, message: smsBody }),
+          });
+          if (smsRes.ok) { sentSms = true; sentToPhone = formatted; }
+        } catch (smsErr: any) {
+          console.error('[invite-tenant] Fallback SMS failed:', smsErr.message);
+        }
       }
     }
 
