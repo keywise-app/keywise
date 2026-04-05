@@ -224,7 +224,8 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
     if (form.property_id && form.property_id !== '__new') {
       const unit = units.find(u => u.id === form.property_id);
-      propertyAddress = unit?.address || (unit?.unit_number ? 'Unit ' + unit.unit_number : form.address);
+      const building = unit?.building_id ? buildings.find(b => b.id === unit.building_id) : null;
+      propertyAddress = unit?.address || ((building?.address || form.address) + (unit?.unit_number ? ', Unit ' + unit.unit_number : ''));
     } else if (form.building_id && !addingNewProperty) {
       const building = buildings.find(b => b.id === form.building_id);
       propertyAddress = (building?.address || '') + (form.unit_number ? ', Unit ' + form.unit_number : '');

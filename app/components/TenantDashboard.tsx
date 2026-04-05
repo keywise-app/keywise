@@ -255,7 +255,10 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     </div>
   );
 
-  const propertyShort = lease.property?.split(',')[0] || lease.property;
+  // Keep street + unit, strip city/state
+  const parts = lease.property?.split(',') || [];
+  const unitPart = parts.find((p: string) => /unit|apt|suite|#/i.test(p.trim()));
+  const propertyShort = unitPart ? parts[0].trim() + ', ' + unitPart.trim() : parts[0]?.trim() || lease.property;
   const progress = leaseProgress();
 
   return (
