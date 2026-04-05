@@ -111,6 +111,15 @@ export async function POST(req: Request) {
         recentSignups: recentSignupsRes.data || [],
         feedback: feedbackRes.data || [],
         broadcasts: broadcastsRes.data || [],
+        aiUsage: await (async () => {
+          const today = new Date().toISOString().split('T')[0];
+          const { data: todayUsage } = await supabase.from('ai_usage').select('feature, count, user_id').eq('date', today);
+          const totalToday = (todayUsage || []).reduce((s: number, r: any) => s + (r.count || 0), 0);
+          const byUser: Record<string, number> = {};
+          for (const r of todayUsage || []) { byUser[r.user_id] = (byUser[r.user_id] || 0) + (r.count || 0); }
+          const topUsers = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, count]) => ({ user_id: id, count }));
+          return { totalToday, topUsers, entries: todayUsage?.length || 0 };
+        })(),
       });
     }
 

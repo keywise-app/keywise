@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { checkAiLimit } from '../../lib/aiRateLimit';
+import { createClient } from '@supabase/supabase-js';
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
@@ -17,6 +19,18 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Per-user AI rate limit
+    const authHeader = req.headers.get('authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        const { allowed, reason } = await checkAiLimit(user.id, 'general');
+        if (!allowed) return NextResponse.json({ error: 'rate_limit', message: reason }, { status: 429 });
+      }
+    }
+
     const { prompt, max_tokens } = await req.json();
 
     if (!prompt || typeof prompt !== 'string') {
