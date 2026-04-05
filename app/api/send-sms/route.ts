@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const { to, message } = await req.json();
 
     if (!to) {
-      return NextResponse.json({ error: 'No phone number provided.' });
+      return NextResponse.json({ error: 'No phone number provided.' }, { status: 400 });
     }
 
     // Format phone number — add +1 if not present

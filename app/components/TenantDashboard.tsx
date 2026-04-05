@@ -143,13 +143,16 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   };
 
   const openDocument = async (doc: any) => {
+    if (!doc.file_path) { alert('No file available for this document.'); return; }
     if (docUrls[doc.id]) { window.open(docUrls[doc.id], '_blank'); return; }
     setDocLoading(prev => ({ ...prev, [doc.id]: true }));
-    const { data } = await supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600);
-    if (data?.signedUrl) {
-      setDocUrls(prev => ({ ...prev, [doc.id]: data.signedUrl }));
-      window.open(data.signedUrl, '_blank');
-    }
+    try {
+      const { data } = await supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600);
+      if (data?.signedUrl) {
+        setDocUrls(prev => ({ ...prev, [doc.id]: data.signedUrl }));
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch { /* silent */ }
     setDocLoading(prev => ({ ...prev, [doc.id]: false }));
   };
 

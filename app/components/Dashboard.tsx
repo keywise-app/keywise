@@ -103,6 +103,7 @@ function AIDailyDigest({ leases, payments, maintenance, expenses }: {
   }, [leases.length]);
 
   const fetchDigest = async () => {
+    if (leases.length === 0) { setLoading(false); return; }
     setLoading(true);
     const now = new Date();
     const overduePayments = payments.filter(p => p.status === 'overdue');
