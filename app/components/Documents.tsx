@@ -103,7 +103,7 @@ export default function Documents() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     const [docsRes, leasesRes, propsRes, profRes] = await Promise.all([
-      supabase.from('documents').select('*').order('created_at', { ascending: false }),
+      supabase.from('documents').select('*').not('type', 'in', '("move_in","move_out","inspection")').order('created_at', { ascending: false }),
       supabase.from('leases').select('id, tenant_name, property, email').order('tenant_name'),
       supabase.from('properties').select('address'),
       user ? supabase.from('profiles').select('full_name, email').eq('id', user.id).single() : Promise.resolve({ data: null }),
