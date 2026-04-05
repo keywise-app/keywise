@@ -185,6 +185,9 @@ export async function POST(req: Request) {
     const today = new Date().toISOString().split('T')[0];
 
     // Insert all payment records
+    // Map frontend type to stored type: 'Monthly Rent' → 'rent'
+    const paymentType = type === 'Monthly Rent' ? 'rent' : (type || 'other').toLowerCase().replace(/\s+/g, '_');
+
     const insertRows = dates.map((d) => ({
       user_id: lease.user_id,
       lease_id,
@@ -194,6 +197,7 @@ export async function POST(req: Request) {
       due_date: d,
       status: d < today ? 'overdue' : 'pending',
       description: description || null,
+      type: paymentType,
       payment_link_url: paymentLink.url,
     }));
 

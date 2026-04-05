@@ -301,6 +301,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
           amount: rentAmount,
           due_date: current.toISOString().split('T')[0],
           status: 'pending',
+          type: 'rent',
         });
         current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
       }

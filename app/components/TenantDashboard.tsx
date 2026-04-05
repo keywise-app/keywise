@@ -436,14 +436,13 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {outstanding.map(p => {
-              const desc = (p.description || '').toLowerCase();
+              // Explicit rent check — only 'rent' type gets auto-pay
+              const isExplicitlyRent = p.type === 'rent';
               const pType = (p.type || '').toLowerCase();
-              const isManual = ['deposit', 'security_deposit', 'late_fee', 'other', 'repair', 'fee'].includes(pType) || desc.includes('deposit') || desc.includes('fee');
-              const isRent = !isManual && (pType === 'rent' || pType === 'monthly rent' || desc.includes('monthly rent') || (!p.type && !p.description));
+              const desc = (p.description || '').toLowerCase();
 
-              // Type badge
               const typeBadge = (() => {
-                if (isRent) return { label: 'Monthly Rent', bg: T.tealLight, color: T.tealDark };
+                if (isExplicitlyRent || pType === 'monthly rent') return { label: 'Monthly Rent', bg: T.tealLight, color: T.tealDark };
                 if (pType.includes('deposit')) return { label: 'Deposit', bg: T.bg, color: T.navy };
                 if (pType.includes('late') || desc.includes('late')) return { label: 'Late Fee', bg: T.coralLight, color: T.coral };
                 if (p.description) return { label: p.description.slice(0, 30), bg: T.bg, color: T.inkMid };
@@ -468,7 +467,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                 </div>
 
                 {/* Payment action */}
-                {autopayEnabled && isRent ? (
+                {autopayEnabled && isExplicitlyRent ? (
                   <div>
                     <div style={{ background: T.tealLight, color: T.tealDark, fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, textAlign: 'center' as const, marginBottom: 8 }}>
                       ✓ Auto-Pay Scheduled
