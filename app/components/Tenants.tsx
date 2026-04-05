@@ -1028,7 +1028,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
             {/* INSPECTIONS */}
             {tab === 'inspections' && selected && (
-              <Inspections lease={selected} />
+              <Inspections key={selected.id} lease={selected} />
             )}
 
             {/* TRANSITION */}
