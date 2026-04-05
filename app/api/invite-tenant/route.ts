@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { lease_id, tenant_email, tenant_name, tenant_phone } = await req.json();
-    console.error('[invite-tenant] Step 1: parsed body', { lease_id, tenant_email, tenant_name, tenant_phone: tenant_phone || 'NONE' });
+    const { lease_id, tenant_email, tenant_name, tenant_phone, sendEmail = true, sendSMS = true } = await req.json();
+    console.error('[invite-tenant] Step 1:', { lease_id, tenant_email, tenant_phone: tenant_phone || 'NONE', sendEmail, sendSMS });
 
     if (!lease_id || !tenant_email) {
       return NextResponse.json({ error: 'lease_id and tenant_email are required' }, { status: 400 });
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
     // Send branded email via Resend
     let sentEmail = false;
-    if (magicLink) {
+    if (magicLink && sendEmail) {
       const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
     const formattedPhone = formatPhone(lease?.phone) || formatPhone(tenant_phone);
     console.error('[invite-tenant] Step 4: SMS — lease.phone:', lease?.phone, '| tenant_phone:', tenant_phone, '| formatted:', formattedPhone || 'NONE');
 
-    if (formattedPhone && magicLink) {
+    if (formattedPhone && magicLink && sendSMS) {
       const smsBody = `Hi ${tenant_name || 'there'}! ${landlordName} invited you to Keywise to manage your lease and pay rent online. Tap here to get started: ${magicLink}`;
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
 

@@ -404,7 +404,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       const res = await fetch('/api/invite-tenant', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
-                        body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name, tenant_phone: selected.phone }),
+                        body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name, tenant_phone: selected.phone, sendEmail: true, sendSMS: !!selected.phone }),
                         signal: controller.signal,
                       });
                       clearTimeout(timeout);
