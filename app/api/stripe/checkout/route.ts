@@ -29,6 +29,16 @@ export async function POST(req: Request) {
       .single();
 
     let customerId = profile?.stripe_customer_id as string | undefined;
+
+    // Validate existing customer still works (may be from test mode)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch {
+        customerId = undefined; // Customer doesn't exist in this mode — create new
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({ email, name: name || email });
       customerId = customer.id;
