@@ -54,6 +54,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [markPaidMethod, setMarkPaidMethod] = useState('Zelle');
   const [markPaidDate, setMarkPaidDate] = useState(new Date().toISOString().split('T')[0]);
   const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
+  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
@@ -67,14 +68,17 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     const [lRes, pRes, profRes] = await Promise.all([
       supabase.from('leases').select('*').order('tenant_name'),
       supabase.from('payments').select('*').order('due_date', { ascending: false }),
-      user ? supabase.from('profiles').select('full_name, email, phone, company').eq('id', user.id).single() : Promise.resolve({ data: null }),
+      user ? supabase.from('profiles').select('full_name, email, phone, company, subscription_status').eq('id', user.id).single() : Promise.resolve({ data: null }),
     ]);
     if (lRes.data) {
       setLeases(lRes.data);
       if (lRes.data.length > 0 && !selected) setSelected(lRes.data[0]);
     }
     if (pRes.data) setPayments(pRes.data);
-    if (profRes.data) setProfile(profRes.data);
+    if (profRes.data) {
+      setProfile(profRes.data);
+      setIsPro((profRes.data as any).subscription_status === 'active');
+    }
     // Fetch documents for all tenants
     const { data: allDocs } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
     if (allDocs) setTenantDocs(allDocs);
@@ -648,11 +652,12 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   </div>
                   <button
                     onClick={() => {
+                      if (!isPro) { alert('Online payments require Keywise Pro ($19/mo). Upgrade in Settings.'); return; }
                       setShowPaymentRequest(true);
                       setPrSuccess('');
                       setPrForm({ type: 'Monthly Rent', amount: selected.rent ? String(selected.rent) : '', description: '', due_date: '', recurring: false, notify_email: true, notify_sms: true });
                     }}
-                    style={{ ...btn.primary, fontSize: 12, padding: '7px 14px' }}>
+                    style={{ ...btn.primary, fontSize: 12, padding: '7px 14px', opacity: isPro ? 1 : 0.6 }}>
                     + Payment Request
                   </button>
                 </div>

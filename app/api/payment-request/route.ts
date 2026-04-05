@@ -112,6 +112,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'lease_id, amount, and due_date are required' }, { status: 400 });
     }
 
+    // Server-side plan check — only Pro users can send payment requests
+    if (landlord_id) {
+      const { data: landlordCheck } = await supabase.from('profiles').select('subscription_status').eq('id', landlord_id).single();
+      if (landlordCheck?.subscription_status !== 'active') {
+        return NextResponse.json({ error: 'Online payments require a Keywise Pro subscription. Upgrade in Settings.' }, { status: 403 });
+      }
+    }
+
     // Fetch the lease to get the landlord's user_id and profile
     const { data: lease, error: leaseError } = await supabase
       .from('leases')
