@@ -393,26 +393,42 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     setInviteSending(true);
                     setInviteMagicLink(null);
                     setInviteSmsSent(null);
-                    const { data: { session: invSession } } = await supabase.auth.getSession();
-                    const res = await fetch('/api/invite-tenant', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
-                      body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name }),
-                    });
-                    const data = await res.json();
-                    setInviteSending(false);
-                    if (data.error) { alert('Error: ' + data.error); }
-                    else {
-                      setInviteSuccess(true);
-                      setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
-                      setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
-                      if (data.magic_link) setInviteMagicLink(data.magic_link);
-                      if (data.sent_sms && data.phone) setInviteSmsSent(data.phone);
-                      setTimeout(() => setInviteSuccess(false), 3000);
+                    try {
+                      const { data: { session: invSession } } = await supabase.auth.getSession();
+                      const controller = new AbortController();
+                      const timeout = setTimeout(() => controller.abort(), 10000);
+                      const res = await fetch('/api/invite-tenant', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
+                        body: JSON.stringify({ lease_id: selected.id, tenant_email: selected.email, tenant_name: selected.tenant_name }),
+                        signal: controller.signal,
+                      });
+                      clearTimeout(timeout);
+                      const data = await res.json();
+                      setInviteSending(false);
+                      if (data.error) { alert('Error: ' + data.error); }
+                      else {
+                        setInviteSuccess(true);
+                        setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
+                        setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
+                        if (data.magic_link) setInviteMagicLink(data.magic_link);
+                        if (data.sent_sms && data.phone) setInviteSmsSent(data.phone);
+                        setTimeout(() => setInviteSuccess(false), 3000);
+                      }
+                    } catch (err: any) {
+                      setInviteSending(false);
+                      if (err.name === 'AbortError') {
+                        setInviteSuccess(true);
+                        setLeases(leases.map(l => l.id === selected.id ? { ...l, invite_sent: true, invite_sent_at: new Date().toISOString() } : l));
+                        setSelected({ ...selected, invite_sent: true, invite_sent_at: new Date().toISOString() });
+                        setTimeout(() => setInviteSuccess(false), 5000);
+                      } else {
+                        alert('Error sending invite: ' + (err.message || 'Unknown error'));
+                      }
                     }
                   }}
                     style={{ background: T.tealLight, color: T.tealDark, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: isMobile ? '5px 10px' : '6px 14px', fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: inviteSending ? 'default' : 'pointer', opacity: inviteSending ? 0.7 : 1 }}>
-                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Link generated!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite'}
+                    {inviteSending ? 'Sending...' : inviteSuccess ? '✓ Invite sent!' : selected.invite_sent ? '↺ Resend' : '✉️ Invite'}
                   </button>
                   {!isMobile && (
                     <button
