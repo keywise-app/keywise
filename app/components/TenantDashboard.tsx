@@ -21,6 +21,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const [stripePaymentMethodId, setStripePaymentMethodId] = useState<string | null>(null);
   const [setupLoading, setSetupLoading] = useState(false);
   const [chargingPayment, setChargingPayment] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -345,6 +346,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
+      {/* Two-column grid on desktop */}
+      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+
+      {/* LEFT COLUMN */}
+      <div>
+
       {/* Outstanding Payments */}
       <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Outstanding Payments</div>
@@ -429,9 +436,36 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       {/* Documents */}
       {documents.length >= 0 && lease && (
         <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 16 }}>Documents</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: T.navy }}>Documents</div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.teal, color: '#fff', padding: '7px 14px', borderRadius: 8, cursor: uploading ? 'default' : 'pointer', fontWeight: 600, fontSize: 12, opacity: uploading ? 0.7 : 1 }}>
+              {uploading ? 'Uploading...' : '📎 Upload'}
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !lease) return;
+                  setUploading(true);
+                  const { data: { user } } = await supabase.auth.getUser();
+                  const path = `${user?.id || 'tenant'}/tenant-docs/${Date.now()}-${file.name}`;
+                  const { error: upErr } = await supabase.storage.from('documents').upload(path, file);
+                  if (upErr) { alert('Upload failed: ' + upErr.message); setUploading(false); return; }
+                  await fetch('/api/tenant/documents', { method: 'GET' }); // just to verify route works
+                  // Insert via direct supabase (tenant has insert permission)
+                  const { error: dbErr } = await supabase.from('documents').insert({
+                    user_id: lease.user_id, name: file.name.replace(/\.[^/.]+$/, ''),
+                    type: 'insurance_renters', ownership_level: 'tenant',
+                    tenant_name: lease.tenant_name, lease_id: lease.id,
+                    file_path: path, property: lease.property || '', file_url: '', size: (file.size / 1024).toFixed(0) + ' KB',
+                  });
+                  if (dbErr) alert('Save failed: ' + dbErr.message);
+                  else { fetchData(); }
+                  setUploading(false);
+                  e.target.value = '';
+                }} />
+            </label>
+          </div>
           {documents.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 20, color: T.inkMuted, fontSize: 13 }}>No documents yet.</div>
+            <div style={{ textAlign: 'center', padding: 20, color: T.inkMuted, fontSize: 13 }}>No documents yet. Upload your renter's insurance or other documents.</div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {documents.map(doc => (
@@ -464,6 +498,11 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           </div>
         </div>
       )}
+
+      </div>{/* END LEFT COLUMN */}
+
+      {/* RIGHT COLUMN */}
+      <div>
 
       {/* Lease Details + Landlord */}
       <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
@@ -541,6 +580,9 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           </>
         )}
       </div>
+
+      </div>{/* END RIGHT COLUMN */}
+      </div>{/* END GRID */}
 
       {/* Sign out */}
       <div style={{ textAlign: 'center', paddingTop: 8 }}>
