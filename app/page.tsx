@@ -273,20 +273,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Detect recovery/signup flow from Supabase hash redirect
-    const hash = window.location.hash;
-    const isRecovery = hash.includes('type=recovery') || hash.includes('type=signup');
+    // Capture URL params BEFORE any cleanup
+    const initialSearch = window.location.search;
+    const initialHash = window.location.hash;
+    const initialParams = new URLSearchParams(initialSearch);
+    const isTenantFlow = initialParams.get('tenant') === 'true';
+    const isRecovery = initialHash.includes('type=recovery') || initialHash.includes('type=signup');
 
     // Clean auth hash fragments from URL (left by Supabase redirects)
-    if (hash && hash.includes('access_token')) {
-      window.history.replaceState({}, '', window.location.pathname);
+    if (initialHash && initialHash.includes('access_token')) {
+      window.history.replaceState({}, '', window.location.pathname + (isTenantFlow ? '' : initialSearch));
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        const params = new URLSearchParams(window.location.search);
-        const isTenantFlow = params.get('tenant') === 'true';
 
         // If this is a password recovery flow, skip all tenant detection
         if (isRecovery) {
@@ -296,7 +297,6 @@ export default function Home() {
         }
 
         if (isTenantFlow) window.history.replaceState({}, '', '/');
-
         const linkLeaseByEmail = async () => {
           await supabase
             .from('leases')
