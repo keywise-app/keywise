@@ -277,15 +277,18 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     if (error) { alert('Error saving lease: ' + error.message); setCompleting(false); return; }
 
     // Auto-generate payment schedule from today forward
-    console.error('[wizard] Generating payments — rent:', lease.rent, 'end_date:', lease.end_date, 'payment_day:', lease.payment_day);
+    console.error('[wizard] Lease created:', lease.id, '| rent:', lease.rent, '| end_date:', lease.end_date, '| payment_day:', lease.payment_day);
     if (lease.end_date && lease.rent) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const payDay = lease.payment_day || 1;
+      const payDay = parseInt(String(lease.payment_day)) || 1;
       const endDate = new Date(lease.end_date);
+      const rentAmount = parseFloat(String(lease.rent)) || 0;
 
       let current = new Date(today.getFullYear(), today.getMonth(), payDay);
       if (current < today) current = new Date(today.getFullYear(), today.getMonth() + 1, payDay);
+
+      console.error('[wizard] Generating from', current.toISOString().split('T')[0], 'to', lease.end_date, '| payDay:', payDay, '| rent:', rentAmount);
 
       const payments: any[] = [];
       while (current <= endDate) {
@@ -294,20 +297,21 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
           lease_id: lease.id,
           tenant_name: lease.tenant_name,
           property: lease.property,
-          amount: lease.rent,
+          amount: rentAmount,
           due_date: current.toISOString().split('T')[0],
           status: 'pending',
         });
         current = new Date(current.getFullYear(), current.getMonth() + 1, payDay);
       }
 
+      console.error('[wizard] Payments to create:', payments.length);
       if (payments.length > 0) {
-        const { error: payErr } = await supabase.from('payments').upsert(payments, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
-        if (payErr) console.error('[wizard] Payment schedule error:', payErr.message);
-        else console.error('[wizard] Created', payments.length, 'payments');
+        const { error: payErr } = await supabase.from('payments').insert(payments);
+        if (payErr) console.error('[wizard] Payment insert error:', payErr.message);
+        else console.error('[wizard] Created', payments.length, 'payments OK');
       }
     } else {
-      console.error('[wizard] Skipping payment schedule — missing end_date or rent');
+      console.error('[wizard] Skipping payments — end_date:', lease.end_date, '| rent:', lease.rent);
     }
 
     if (inviteMethod !== 'skip' && form.email) {

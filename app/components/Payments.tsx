@@ -155,7 +155,10 @@ export default function Payments() {
     const today = new Date().toISOString().split('T')[0];
 
     for (const { date, amount } of dates) {
-      const { error: upsertErr } = await supabase.from('payments').upsert({
+      // Check if payment already exists for this date
+      const { data: existing } = await supabase.from('payments').select('id').eq('lease_id', selectedLease.id).eq('due_date', date);
+      if (existing && existing.length > 0) { skipped++; continue; }
+      const { error: insertErr } = await supabase.from('payments').insert({
         user_id: user.id,
         lease_id: selectedLease.id,
         tenant_name: selectedLease.tenant_name,
@@ -163,8 +166,8 @@ export default function Payments() {
         amount: Math.round(amount),
         due_date: date,
         status: 'pending',
-      }, { onConflict: 'lease_id,due_date', ignoreDuplicates: true });
-      if (!upsertErr) created++;
+      });
+      if (!insertErr) created++;
       else skipped++;
     }
 
