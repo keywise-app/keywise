@@ -1279,7 +1279,21 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 <div key={f} style={{ fontSize: 13, color: T.inkMid, padding: '4px 0' }}>✓ {f}</div>
               ))}
             </div>
-            <button onClick={() => { setShowUpgradeModal(false); window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'settings' })); }}
+            <button onClick={async () => {
+              setShowUpgradeModal(false);
+              try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+                const { data: prof } = await supabase.from('profiles').select('email, full_name').eq('id', user.id).single();
+                const res = await fetch('/api/stripe/subscribe', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ user_id: user.id, email: prof?.email || user.email, name: prof?.full_name || '' }),
+                });
+                const data = await res.json();
+                if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+                else alert(data.error || 'Could not start checkout');
+              } catch (err: any) { alert(err.message || 'Error'); }
+            }}
               style={{ ...btn.primary, width: '100%', padding: '14px', fontSize: 15, marginBottom: 10 }}>
               Upgrade to Pro — $19/month →
             </button>
