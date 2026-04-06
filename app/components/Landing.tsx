@@ -378,6 +378,9 @@ export default function Landing() {
           <Logo size={30} />
           {/* Desktop buttons */}
           <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
+            <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 8 }}>
+              Blog
+            </a>
             <button onClick={openLogin} className="landing-btn-ghost"
               style={{ background: 'transparent', color: INK_MID, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
               Log In
@@ -659,7 +662,7 @@ export default function Landing() {
         <div className="landing-footer-inner" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <Logo size={24} dark />
           <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-            {[{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Contact', href: '/contact' }].map(link => (
+            {[{ label: 'Blog', href: '/blog' }, { label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Contact', href: '/contact' }].map(link => (
               <a key={link.label} href={link.href}
                 style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontWeight: 500 }}
                 onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
