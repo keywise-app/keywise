@@ -580,6 +580,86 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* COMPARISON */}
+      <section className="landing-section" style={{ padding: '80px 40px', background: '#fff' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 className="landing-h2" style={{ fontSize: 36, fontWeight: 800, color: N, marginBottom: 12, letterSpacing: '-0.8px' }}>
+              Why landlords choose Keywise
+            </h2>
+            <p style={{ color: INK_MUTED, fontSize: 16, maxWidth: 500, margin: '0 auto' }}>
+              Professional property management tools at a fraction of the cost.
+            </p>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 160 }}>Feature</th>
+                  <th style={{ padding: '16px', textAlign: 'center', background: N, color: '#fff', fontWeight: 700, borderRadius: '12px 12px 0 0', minWidth: 120 }}>
+                    Keywise
+                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$19/mo</div>
+                  </th>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    Buildium
+                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>$50+/mo</div>
+                  </th>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    AppFolio
+                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>$280+/mo</div>
+                  </th>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    Innago
+                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>Free*</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: 'AI Lease PDF Extraction', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'Free for 1-2 Units', keywise: true, buildium: false, appfolio: false, innago: true },
+                  { feature: 'Online Rent Collection', keywise: true, buildium: true, appfolio: true, innago: true },
+                  { feature: 'Native Document Signing', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'Move-In/Out Inspections', keywise: true, buildium: true, appfolio: true, innago: false },
+                  { feature: 'Tenant Auto-Pay', keywise: true, buildium: true, appfolio: true, innago: true },
+                  { feature: 'AI Communications', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'Tenant Portal', keywise: true, buildium: true, appfolio: true, innago: true },
+                  { feature: 'Maintenance Tracking', keywise: true, buildium: true, appfolio: true, innago: true },
+                  { feature: 'No Per-Unit Fees', keywise: true, buildium: false, appfolio: false, innago: false },
+                ].map((row, i) => {
+                  const Check = () => <span style={{ color: '#00A86B', fontSize: 18, fontWeight: 700 }}>✓</span>;
+                  const X = () => <span style={{ color: '#FF6B6B', fontSize: 18 }}>✗</span>;
+                  return (
+                    <tr key={i} style={{ background: i % 2 === 0 ? BG : '#fff' }}>
+                      <td style={{ padding: '14px 16px', color: INK, fontWeight: 500 }}>{row.feature}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center', background: i % 2 === 0 ? '#E8F0FF' : '#F0F4FF' }}>{row.keywise ? <Check /> : <X />}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.buildium ? <Check /> : <X />}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.appfolio ? <Check /> : <X />}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.innago ? <Check /> : <X />}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p style={{ color: INK_MUTED, fontSize: 12, marginTop: 16, textAlign: 'center' }}>
+            *Innago is free but charges higher transaction fees. Competitor pricing based on publicly available information.
+          </p>
+
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <button onClick={openSignup}
+              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Start Free — No Credit Card Required →
+            </button>
+            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>
+              Free forever for 1-2 units · $19/mo for unlimited units
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* PRICING */}
       <section className="landing-section" style={{ background: BG, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
