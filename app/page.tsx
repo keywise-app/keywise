@@ -207,6 +207,14 @@ export default function Home() {
           setSubscriptionStatus('active');
         }
       });
+      // Google Ads conversion event
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-1046078634/_8rLCMetnZccEKrJ5_ID',
+          value: 19.0,
+          currency: 'USD',
+        });
+      }
     }
     if (params.get('setup_success') === 'true') {
       const paymentType = params.get('payment_type');
