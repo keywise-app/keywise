@@ -197,6 +197,16 @@ export default function Home() {
     if (params.get('tenant_preview') === 'true' && params.get('lease_id')) {
       setPreviewLeaseId(params.get('lease_id'));
     }
+    if (params.get('signup') === 'complete') {
+      window.history.replaceState({}, '', '/');
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-1046078634/_8rLCMetnZccEKrJ5_ID',
+          value: 1.0,
+          currency: 'USD',
+        });
+      }
+    }
     if (params.get('upgraded') === 'true') {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);

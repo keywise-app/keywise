@@ -145,12 +145,17 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setError(error.message);
-      else if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-1046078634/_8rLCMetnZccEKrJ5_ID',
-          value: 1.0,
-          currency: 'USD',
-        });
+      else {
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'conversion', {
+            send_to: 'AW-1046078634/_8rLCMetnZccEKrJ5_ID',
+            value: 1.0,
+            currency: 'USD',
+          });
+        }
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/?signup=complete');
+        }
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
