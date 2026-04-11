@@ -46,6 +46,8 @@ export default function AdminPage() {
   const [bcPreview, setBcPreview] = useState(false);
   const [intelRunning, setIntelRunning] = useState(false);
   const [intelReports, setIntelReports] = useState<any[]>([]);
+  const [buildPrompt, setBuildPrompt] = useState<string | null>(null);
+  const [promptCopied, setPromptCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [activeSection, setActiveSection] = useState('users');
 
@@ -504,13 +506,21 @@ export default function AdminPage() {
                   </div>
                   <div style={{ fontSize: 13, color: T.inkMid, lineHeight: 1.6 }}>{r.summary}</div>
                   {(r.urgent || []).map((u: any, i: number) => (
-                    <div key={i} style={{ background: '#FFF0F0', borderLeft: '3px solid #FF4444', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink }}>
-                      <strong>{u.title}</strong>: {u.description}
+                    <div key={i} style={{ background: '#FFF0F0', borderLeft: '3px solid #FF4444', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                      <div><strong>{u.title}</strong>: {u.description}</div>
+                      <button onClick={() => setBuildPrompt(`Build this feature for Keywise (keywise.app):\n\nFeature: ${u.title}\nDescription: ${u.description}\nPriority: ${u.priority || 'high'}\nEffort: ${u.effort || 'medium'}\nType: ${u.type || 'defensive'}\n\nContext:\n- Tech stack: Next.js app router, TypeScript, Supabase, Anthropic Claude API, Stripe Connect, Resend, Twilio\n- Brand colors: T.navy #0F3460, T.teal #00D4AA from app/lib/theme.ts\n- GitHub: github.com/keywise-app/keywise\n- Live at: keywise.app\n\nRequirements:\n1. Build the complete feature end to end\n2. Add any required Supabase tables (show me the SQL to run)\n3. Make it mobile responsive\n4. Use existing theme styles from app/lib/theme.ts\n5. Handle errors gracefully\n6. After building, run: git add . && git commit -m "Add: ${u.title}" && git push\n\nBuild it now.`)}
+                        style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Build This
+                      </button>
                     </div>
                   ))}
                   {(r.opportunities || []).map((o: any, i: number) => (
-                    <div key={i} style={{ background: '#FFF8E0', borderLeft: '3px solid #FFB347', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink }}>
-                      <strong>{o.title}</strong>: {o.description}
+                    <div key={i} style={{ background: '#FFF8E0', borderLeft: '3px solid #FFB347', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                      <div><strong>{o.title}</strong>: {o.description}</div>
+                      <button onClick={() => setBuildPrompt(`Build this feature for Keywise (keywise.app):\n\nFeature: ${o.title}\nDescription: ${o.description}\nPriority: ${o.priority || 'medium'}\nEffort: ${o.effort || 'medium'}\nSource: ${o.source || ''}\n\nContext:\n- Tech stack: Next.js app router, TypeScript, Supabase, Anthropic Claude API, Stripe Connect, Resend, Twilio\n- Brand colors: T.navy #0F3460, T.teal #00D4AA from app/lib/theme.ts\n- GitHub: github.com/keywise-app/keywise\n- Live at: keywise.app\n\nRequirements:\n1. Build the complete feature end to end\n2. Add any required Supabase tables (show me the SQL to run)\n3. Make it mobile responsive\n4. Use existing theme styles from app/lib/theme.ts\n5. Handle errors gracefully\n6. After building, run: git add . && git commit -m "Add: ${o.title}" && git push\n\nBuild it now.`)}
+                        style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Build This
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -519,6 +529,42 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* Build Prompt Modal */}
+      {buildPrompt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => { setBuildPrompt(null); setPromptCopied(false); }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 640, width: '100%', maxHeight: '85vh', overflow: 'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Claude Code Prompt</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Copy this prompt and paste it into Claude Code in your terminal.</div>
+            <textarea readOnly value={buildPrompt}
+              style={{ width: '100%', height: 280, padding: 14, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, fontFamily: 'monospace', color: T.ink, resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6, background: T.bg }}
+              onFocus={e => e.target.select()} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => { navigator.clipboard.writeText(buildPrompt); setPromptCopied(true); setTimeout(() => setPromptCopied(false), 2000); }}
+                style={{ flex: 1, background: T.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                {promptCopied ? '✓ Copied!' : 'Copy Prompt'}
+              </button>
+              <button onClick={() => window.open('https://claude.ai', '_blank')}
+                style={{ flex: 1, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: T.navy }}>
+                Open Claude.ai →
+              </button>
+            </div>
+            <div style={{ marginTop: 16, background: T.bg, borderRadius: 8, padding: 14, fontSize: 12, color: T.inkMid, lineHeight: 1.6 }}>
+              <strong>Steps:</strong><br/>
+              1. Copy the prompt above<br/>
+              2. Open Claude Code in your terminal: <code style={{ background: '#E0E6F0', padding: '1px 4px', borderRadius: 3 }}>claude</code><br/>
+              3. Paste the prompt and let it build<br/>
+              4. Review the changes, then it will commit and push automatically
+            </div>
+            <button onClick={() => { setBuildPrompt(null); setPromptCopied(false); }}
+              style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: T.inkMuted, fontSize: 13, cursor: 'pointer', padding: '8px' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
