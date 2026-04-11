@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [bcSending, setBcSending] = useState(false);
   const [bcResult, setBcResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
   const [bcPreview, setBcPreview] = useState(false);
+  const [intelRunning, setIntelRunning] = useState(false);
+  const [intelReports, setIntelReports] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [activeSection, setActiveSection] = useState('users');
 
@@ -85,7 +87,7 @@ export default function AdminPage() {
       body: JSON.stringify({ password, action: 'stats' }),
     });
     const data = await res.json();
-    if (!data.error) setStats(data);
+    if (!data.error) { setStats(data); if (data.intelReports) setIntelReports(data.intelReports); }
     setLoading(false);
   };
 
@@ -158,7 +160,7 @@ export default function AdminPage() {
       {/* Mobile section nav */}
       {isMobile && (
         <div style={{ display: 'flex', overflowX: 'auto', background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 12px', WebkitOverflowScrolling: 'touch' as any }}>
-          {[['users', 'Users'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast']].map(([id, label]) => (
+          {[['users', 'Users'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast'], ['intel', 'Intel']].map(([id, label]) => (
             <button key={id} onClick={() => { setActiveSection(id); document.getElementById('admin-' + id)?.scrollIntoView({ behavior: 'smooth' }); }}
               style={{ padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === id ? 700 : 400, color: activeSection === id ? T.navy : T.inkMuted, borderBottom: activeSection === id ? `2px solid ${T.navy}` : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'inherit', minHeight: 44 }}>
               {label}
@@ -458,6 +460,61 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* INTELLIGENCE */}
+        <div id="admin-intel" style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy }}>Competitive Intelligence</div>
+            <button onClick={async () => {
+              setIntelRunning(true);
+              try {
+                const res = await fetch('/api/admin/run-intelligence', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ password }),
+                });
+                const data = await res.json();
+                if (data.success) { fetchStats(); }
+                else alert(data.error || 'Failed');
+              } catch { alert('Error running intelligence'); }
+              setIntelRunning(false);
+            }} disabled={intelRunning}
+              style={{ padding: '8px 16px', background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: intelRunning ? 0.7 : 1 }}>
+              {intelRunning ? 'Running...' : 'Run Now'}
+            </button>
+          </div>
+
+          {intelReports.length === 0 ? (
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 24, textAlign: 'center', color: T.inkMuted, fontSize: 13 }}>
+              No intelligence reports yet. Click "Run Now" to generate.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {intelReports.map((r: any) => (
+                <div key={r.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: T.navy }}>{r.date}</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {(r.urgent?.length || 0) > 0 && <span style={{ background: '#FFF0F0', color: '#CC0000', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{r.urgent.length} urgent</span>}
+                      {(r.opportunities?.length || 0) > 0 && <span style={{ background: '#FFF8E0', color: '#9A6500', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{r.opportunities.length} opportunities</span>}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, color: T.inkMid, lineHeight: 1.6 }}>{r.summary}</div>
+                  {(r.urgent || []).map((u: any, i: number) => (
+                    <div key={i} style={{ background: '#FFF0F0', borderLeft: '3px solid #FF4444', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink }}>
+                      <strong>{u.title}</strong>: {u.description}
+                    </div>
+                  ))}
+                  {(r.opportunities || []).map((o: any, i: number) => (
+                    <div key={i} style={{ background: '#FFF8E0', borderLeft: '3px solid #FFB347', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink }}>
+                      <strong>{o.title}</strong>: {o.description}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </div>

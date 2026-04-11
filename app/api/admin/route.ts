@@ -111,6 +111,7 @@ export async function POST(req: Request) {
         recentSignups: recentSignupsRes.data || [],
         feedback: feedbackRes.data || [],
         broadcasts: broadcastsRes.data || [],
+        intelReports: await supabase.from('intelligence_reports').select('*').order('date', { ascending: false }).limit(7).then((r: any) => r.data || []),
         aiUsage: await (async () => {
           const today = new Date().toISOString().split('T')[0];
           const { data: todayUsage } = await supabase.from('ai_usage').select('feature, count, user_id').eq('date', today);
