@@ -937,7 +937,9 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             {/* DOCUMENTS */}
             {tab === 'documents' && selected && (() => {
               const docs = tenantDocs.filter(d => (d.tenant_name === selected.tenant_name || d.lease_id === selected.id) && d.type !== 'move_in' && d.type !== 'move_out' && d.type !== 'inspection');
-              const hasLease = docs.some((d: any) => d.type === 'lease');
+              const hasSignedLease = docs.some((d: any) => d.type === 'lease' && d.signed_at);
+              const hasUnsignedLease = docs.some((d: any) => d.type === 'lease' && !d.signed_at);
+              const hasLease = hasSignedLease || hasUnsignedLease;
               const insurance = docs.find((d: any) => d.type === 'insurance_renters');
               const insuranceExpired = insurance?.expiry_date && new Date(insurance.expiry_date) < new Date();
               const DOC_ICONS: Record<string, string> = { lease: '📄', insurance_renters: '🛡️', insurance_property: '🏠', inspection: '🔍', move_in: '📋', move_out: '📦', repair_receipt: '🔧', other: '📎' };
@@ -973,20 +975,35 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     </div>
                   </div>
 
-                  {/* Warnings */}
+                  {/* Lease status */}
+                  {hasSignedLease && (
+                    <div style={{ background: '#E8F8F0', borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 12, border: '1px solid #00A86B33' }}>
+                      <div style={{ fontWeight: 700, color: '#0F7040', fontSize: 13 }}>✓ Signed lease on file</div>
+                    </div>
+                  )}
+                  {hasUnsignedLease && !hasSignedLease && (
+                    <div style={{ background: T.amberLight, borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 12, border: `1px solid ${T.amberDark}33` }}>
+                      <div style={{ fontWeight: 700, color: T.amberDark, marginBottom: 4, fontSize: 13 }}>📄 Lease uploaded but not signed</div>
+                      <div style={{ fontSize: 12, color: T.inkMuted }}>Send for signature to complete the record.</div>
+                    </div>
+                  )}
                   {!hasLease && (
-                    <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.amberDark, fontWeight: 600 }}>
-                      ⚠ No signed lease on file
+                    <div style={{ background: T.amberLight, borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 12, border: `1px solid ${T.amberDark}33` }}>
+                      <div style={{ fontWeight: 700, color: T.amberDark, marginBottom: 4, fontSize: 13 }}>⚠ No lease on file</div>
+                      <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 8 }}>Upload or link a signed lease for this tenant.</div>
+                      <button onClick={() => { setDocForm({ name: '', type: 'lease', expiry_date: '' }); setShowDocUpload(true); }}
+                        style={{ ...btn.primary, fontSize: 12, padding: '6px 14px' }}>+ Upload Lease</button>
                     </div>
                   )}
-                  {!insurance && (
-                    <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.amberDark, fontWeight: 600 }}>
-                      ⚠ No renter's insurance on file
-                    </div>
-                  )}
+                  {/* Insurance status */}
                   {insuranceExpired && (
                     <div style={{ background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.coral, fontWeight: 600 }}>
                       ⚠ Renter's insurance expired {insurance.expiry_date}
+                    </div>
+                  )}
+                  {!insurance && !insuranceExpired && (
+                    <div style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: T.amberDark, fontWeight: 600 }}>
+                      ⚠ No renter's insurance on file
                     </div>
                   )}
 
@@ -1041,7 +1058,16 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                         <div onClick={() => docFileRef.current?.click()}
                           style={{ border: `2px dashed ${T.border}`, borderRadius: T.radiusSm, padding: 20, textAlign: 'center', cursor: 'pointer', marginBottom: 16, background: docFile ? '#E8F8F0' : T.surface }}>
                           <input ref={docFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) { setDocFile(f); if (!docForm.name) setDocForm(prev => ({ ...prev, name: f.name.replace(/\.[^/.]+$/, '') })); } }} />
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              setDocFile(f);
+                              const fname = f.name.toLowerCase();
+                              const isLease = fname.includes('lease') || fname.includes('rental agreement') || fname.includes('tenancy');
+                              const isInsurance = fname.includes('insurance') || fname.includes('policy');
+                              const autoType = isLease ? 'lease' : isInsurance ? 'insurance_renters' : docForm.type;
+                              setDocForm(prev => ({ ...prev, name: prev.name || f.name.replace(/\.[^/.]+$/, ''), type: autoType }));
+                            }} />
                           {docFile ? <div style={{ color: T.greenDark, fontWeight: 600, fontSize: 13 }}>✓ {docFile.name}</div>
                             : <div style={{ color: T.inkMuted, fontSize: 13 }}>Drop file or click to browse</div>}
                         </div>
