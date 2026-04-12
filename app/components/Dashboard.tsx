@@ -86,6 +86,76 @@ function OnboardingChecklist({ onNavigate }: { onNavigate: (p: string) => void }
   );
 }
 
+// ── SMART ACTIONS (proactive AI suggestions) ─────────────────────────────────
+function SmartActions({ leases, payments, maintenance, onNavigate, isMobile }: {
+  leases: any[]; payments: any[]; maintenance: any[]; onNavigate: (p: string) => void; isMobile?: boolean;
+}) {
+  const now = new Date();
+  const actions: { icon: string; title: string; desc: string; action: string; priority: 'high' | 'medium' | 'low'; page: string }[] = [];
+
+  // Check for leases expiring in 60-90 days (time to send renewal)
+  leases.filter(l => l.end_date).forEach(l => {
+    const days = Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000);
+    if (days > 30 && days <= 90) {
+      actions.push({ icon: '📄', title: `Send renewal offer to ${l.tenant_name}`, desc: `Lease expires in ${days} days. Send a renewal offer now to avoid vacancy.`, action: 'Draft Renewal', priority: 'high', page: 'tenants' });
+    }
+  });
+
+  // Check for overdue payments with no reminder sent recently
+  const overdue = payments.filter(p => p.status === 'overdue');
+  if (overdue.length > 0) {
+    actions.push({ icon: '💰', title: `${overdue.length} overdue payment${overdue.length > 1 ? 's' : ''} need attention`, desc: `Send a payment reminder or late notice to collect faster.`, action: 'View Payments', priority: 'high', page: 'tenants' });
+  }
+
+  // Check for open maintenance issues older than 7 days
+  const staleMaint = maintenance.filter(m => m.status !== 'resolved' && m.created_at && (now.getTime() - new Date(m.created_at).getTime()) > 7 * 86400000);
+  if (staleMaint.length > 0) {
+    actions.push({ icon: '🔧', title: `${staleMaint.length} maintenance issue${staleMaint.length > 1 ? 's' : ''} open > 7 days`, desc: 'Send tenant an update to keep them informed.', action: 'View Issues', priority: 'medium', page: 'operations' });
+  }
+
+  // Check for tenants without insurance
+  const noInsurance = leases.filter(l => l.status === 'active');
+  if (noInsurance.length > 0) {
+    actions.push({ icon: '🛡️', title: 'Request renter\'s insurance from tenants', desc: 'Protect yourself — request proof of insurance from all active tenants.', action: 'Request Docs', priority: 'low', page: 'tenants' });
+  }
+
+  // Check for vacant units (leases expired or no lease)
+  const expired = leases.filter(l => l.end_date && new Date(l.end_date) < now);
+  if (expired.length > 0) {
+    actions.push({ icon: '🏠', title: `${expired.length} unit${expired.length > 1 ? 's' : ''} may be vacant`, desc: 'Generate a property listing to find your next tenant faster.', action: 'Create Listing', priority: 'medium', page: 'tenants' });
+  }
+
+  if (actions.length === 0) return null;
+
+  const priorityColors = { high: { bg: '#FFF0F0', border: '#FF4444', dot: T.coral }, medium: { bg: '#FFF8E0', border: '#FFB347', dot: '#9A6500' }, low: { bg: T.bg, border: T.border, dot: T.inkMuted } };
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <span style={{ fontSize: 16 }}>✦</span>
+        <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Smart Actions</div>
+        <span style={{ fontSize: 11, color: T.tealDark, background: T.tealLight, padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>AI-powered</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {actions.slice(0, 5).map((a, i) => {
+          const c = priorityColors[a.priority];
+          return (
+            <div key={i} onClick={() => onNavigate(a.page)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: c.bg, borderLeft: `3px solid ${c.border}`, borderRadius: T.radiusSm, cursor: 'pointer' }}>
+              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, marginBottom: 2 }}>{a.title}</div>
+                <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.5 }}>{a.desc}</div>
+              </div>
+              <span style={{ fontSize: 12, color: T.tealDark, fontWeight: 600, flexShrink: 0, marginTop: 2 }}>{a.action} →</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── AI DAILY DIGEST ───────────────────────────────────────────────────────────
 function AIDailyDigest({ leases, payments, maintenance, expenses }: {
   leases: any[]; payments: any[]; maintenance: any[]; expenses: any[];
@@ -627,7 +697,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
         ))}
       </div>
 
-      {/* ── ROW 2: AI DAILY DIGEST (full width) ── */}
+      {/* ── ROW 2: SMART ACTIONS (proactive AI) ── */}
+      <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
+
+      {/* ── ROW 3: AI DAILY DIGEST (full width) ── */}
       <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
 
       {/* ── ROW 3: LEASE TIMELINE (full width) ── */}

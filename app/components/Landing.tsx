@@ -623,6 +623,8 @@ export default function Landing() {
               <tbody>
                 {[
                   { feature: 'AI Lease PDF Extraction', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'AI Smart Actions (proactive)', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'AI Transparency (shows its work)', keywise: true, buildium: false, appfolio: false, innago: false },
                   { feature: 'Free for 1-2 Units', keywise: true, buildium: false, appfolio: false, innago: true },
                   { feature: 'Online Rent Collection', keywise: true, buildium: true, appfolio: true, innago: true },
                   { feature: 'Native Document Signing', keywise: true, buildium: false, appfolio: false, innago: false },

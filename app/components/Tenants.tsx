@@ -1261,6 +1261,14 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
                 {draft && (
                   <div>
+                    {/* AI Transparency */}
+                    <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>✦</span>
+                      <div style={{ fontSize: 11, color: T.tealDark, lineHeight: 1.5 }}>
+                        <strong>AI used:</strong> {selected.tenant_name}'s lease data (rent ${selected.rent ? '$' + selected.rent.toLocaleString() : 'N/A'}, {selected.property?.split(',')[0]}{selected.late_fee_percent ? ', ' + selected.late_fee_percent + '% late fee' : ''}{selected.end_date ? ', ends ' + selected.end_date : ''}) · Tone: {tone} · {profile?.full_name ? 'Signed as ' + profile.full_name : 'No signature'}
+                      </div>
+                    </div>
+
                     <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 10, maxHeight: 300, overflowY: 'auto', color: T.ink }}>
                       {draft}
                     </div>
