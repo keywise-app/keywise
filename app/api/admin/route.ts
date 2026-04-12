@@ -112,6 +112,31 @@ export async function POST(req: Request) {
         feedback: feedbackRes.data || [],
         broadcasts: broadcastsRes.data || [],
         intelReports: await supabase.from('intelligence_reports').select('*').order('date', { ascending: false }).limit(7).then((r: any) => r.data || []),
+        traffic: await (async () => {
+          const t = new Date().toISOString().split('T')[0];
+          const w = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+          const [todayRes, weekRes, dailyRes, refRes] = await Promise.all([
+            supabase.from('page_views').select('id', { count: 'exact', head: true }).eq('date', t),
+            supabase.from('page_views').select('id', { count: 'exact', head: true }).gte('date', w),
+            supabase.from('page_views').select('date').gte('date', w),
+            supabase.from('page_views').select('referrer').gte('date', w),
+          ]);
+          const byDay: Record<string, number> = {};
+          for (const r of dailyRes.data || []) byDay[r.date] = (byDay[r.date] || 0) + 1;
+          const byRef: Record<string, number> = {};
+          for (const r of refRes.data || []) {
+            let ref = r.referrer || 'direct';
+            if (ref.includes('google')) ref = 'Google';
+            else if (ref.includes('reddit')) ref = 'Reddit';
+            else if (ref.includes('facebook') || ref.includes('fb.')) ref = 'Facebook';
+            else if (ref.includes('twitter') || ref.includes('x.com')) ref = 'Twitter/X';
+            else if (ref === 'direct' || ref === '') ref = 'Direct';
+            else if (ref.length > 30) ref = new URL(ref).hostname;
+            byRef[ref] = (byRef[ref] || 0) + 1;
+          }
+          const topRefs = Object.entries(byRef).sort((a, b) => b[1] - a[1]).slice(0, 8);
+          return { today: todayRes.count || 0, week: weekRes.count || 0, byDay, topRefs };
+        })(),
         aiUsage: await (async () => {
           const today = new Date().toISOString().split('T')[0];
           const { data: todayUsage } = await supabase.from('ai_usage').select('feature, count, user_id').eq('date', today);

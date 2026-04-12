@@ -303,6 +303,15 @@ export default function Landing() {
     else if (params.get('login') === 'true') setAuthMode('login');
   }, []);
 
+  // Track page visit
+  useEffect(() => {
+    fetch('/api/track-visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: '/', referrer: document.referrer || 'direct', user_agent: navigator.userAgent }),
+    }).catch(() => {});
+  }, []);
+
   // Sync URL when auth modal opens/closes
   useEffect(() => {
     if (authMode === 'signup') window.history.replaceState({}, '', '/?signup=true');

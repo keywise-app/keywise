@@ -17,6 +17,7 @@ type Stats = {
   recentSignups: any[];
   feedback: any[];
   broadcasts: any[];
+  traffic?: { today: number; week: number; byDay: Record<string, number>; topRefs: [string, number][] };
 };
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
@@ -162,7 +163,7 @@ export default function AdminPage() {
       {/* Mobile section nav */}
       {isMobile && (
         <div style={{ display: 'flex', overflowX: 'auto', background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 12px', WebkitOverflowScrolling: 'touch' as any }}>
-          {[['users', 'Users'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast'], ['intel', 'Intel']].map(([id, label]) => (
+          {[['users', 'Users'], ['traffic', 'Traffic'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast'], ['intel', 'Intel']].map(([id, label]) => (
             <button key={id} onClick={() => { setActiveSection(id); document.getElementById('admin-' + id)?.scrollIntoView({ behavior: 'smooth' }); }}
               style={{ padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === id ? 700 : 400, color: activeSection === id ? T.navy : T.inkMuted, borderBottom: activeSection === id ? `2px solid ${T.navy}` : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'inherit', minHeight: 44 }}>
               {label}
@@ -201,6 +202,52 @@ export default function AdminPage() {
         </div>
 
         {/* REVENUE */}
+        {/* TRAFFIC */}
+        {stats.traffic && (
+          <div id="admin-traffic" style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Site Traffic</div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
+              <StatCard label="Today" value={stats.traffic.today} color={T.teal} />
+              <StatCard label="This Week" value={stats.traffic.week} />
+            </div>
+            {/* Daily chart */}
+            {stats.traffic.byDay && (
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 12 }}>Visits by Day</div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
+                  {(() => {
+                    const days: [string, number][] = [];
+                    for (let i = 6; i >= 0; i--) {
+                      const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
+                      days.push([d, stats.traffic.byDay[d] || 0]);
+                    }
+                    const max = Math.max(...days.map(d => d[1]), 1);
+                    return days.map(([d, c]) => (
+                      <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: T.navy }}>{c}</span>
+                        <div style={{ width: '100%', height: Math.max(4, (c / max) * 60), background: T.teal, borderRadius: 4 }} />
+                        <span style={{ fontSize: 9, color: T.inkMuted }}>{d.slice(5)}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+            {/* Top referrers */}
+            {stats.traffic.topRefs && stats.traffic.topRefs.length > 0 && (
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 10 }}>Top Referrers (7 days)</div>
+                {stats.traffic.topRefs.map(([ref, count]: [string, number]) => (
+                  <div key={ref} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
+                    <span style={{ color: T.ink, fontWeight: 500 }}>{ref}</span>
+                    <span style={{ color: T.navy, fontWeight: 700 }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div id="admin-revenue" style={{ marginBottom: 32 }}>
           <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Revenue</div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
