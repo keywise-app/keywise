@@ -34,6 +34,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [docForm, setDocForm] = useState({ name: '', type: 'other', expiry_date: '' });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docSaving, setDocSaving] = useState(false);
+  const [alreadySigned, setAlreadySigned] = useState(false);
+  const [signedDate, setSignedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [signerName, setSignerName] = useState('');
   const [showDocRequest, setShowDocRequest] = useState(false);
   const [docReqType, setDocReqType] = useState('insurance_renters');
   const [docReqMsg, setDocReqMsg] = useState('');
@@ -959,9 +962,14 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   lease_id: selected.id, expiry_date: docForm.expiry_date || null,
                   notes: '', file_url: '', file_path: path,
                   size: (docFile.size / 1024).toFixed(0) + ' KB',
+                  signed_at: alreadySigned ? new Date(signedDate).toISOString() : null,
+                  signer_name: alreadySigned ? signerName || null : null,
+                  signature_type: alreadySigned ? 'external' : null,
+                  requires_signature: !alreadySigned,
                 });
                 setDocSaving(false); setShowDocUpload(false); setDocFile(null);
                 setDocForm({ name: '', type: 'other', expiry_date: '' });
+                setAlreadySigned(false); setSignerName('');
                 fetchAll();
               };
 
@@ -1022,7 +1030,8 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                                 <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
                                 <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                                   <span style={{ fontSize: 10, fontWeight: 600, color: T.inkMuted, background: T.surface, border: `1px solid ${T.border}`, padding: '1px 6px', borderRadius: 10, textTransform: 'capitalize' }}>{(d.type || 'other').replace(/_/g, ' ')}</span>
-                                  {d.signed_at && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed</span>}
+                                  {d.signed_at && d.signature_type === 'external' && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed externally</span>}
+                                  {d.signed_at && d.signature_type !== 'external' && <span style={{ fontSize: 10, fontWeight: 700, color: T.greenDark, background: '#E8F8F0', padding: '1px 6px', borderRadius: 10 }}>✓ Signed</span>}
                                   {isExpired && <span style={{ fontSize: 10, fontWeight: 700, color: T.coral, background: T.coralLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRED</span>}
                                   {isExpiring && <span style={{ fontSize: 10, fontWeight: 700, color: T.amberDark, background: T.amberLight, padding: '1px 6px', borderRadius: 10 }}>EXPIRING</span>}
                                   {d.expiry_date && !isExpired && !isExpiring && <span style={{ fontSize: 10, color: T.inkMuted }}>Exp: {d.expiry_date}</span>}
@@ -1089,6 +1098,24 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                           <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Expiry Date (optional)</label>
                           <input style={input} type="date" value={docForm.expiry_date} onChange={e => setDocForm({ ...docForm, expiry_date: e.target.value })} />
                         </div>
+                        <div style={{ marginBottom: 14 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={alreadySigned} onChange={e => setAlreadySigned(e.target.checked)} style={{ width: 16, height: 16 }} />
+                            <span style={{ fontSize: 13, color: T.ink, fontWeight: 600 }}>This document has already been signed</span>
+                          </label>
+                        </div>
+                        {alreadySigned && (
+                          <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 14 }}>
+                            <div style={{ marginBottom: 10 }}>
+                              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Date Signed</label>
+                              <input type="date" value={signedDate} onChange={e => setSignedDate(e.target.value)} style={input} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Signed By (optional)</label>
+                              <input type="text" value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="e.g. John Smith" style={input} />
+                            </div>
+                          </div>
+                        )}
                         <div style={{ position: 'sticky', bottom: 0, background: T.surface, paddingTop: 16, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10 }}>
                           <button onClick={saveDoc} disabled={docSaving || !docFile} style={{ ...btn.primary, flex: 1, opacity: !docFile ? 0.5 : 1 }}>
                             {docSaving ? 'Saving...' : 'Save Document'}
