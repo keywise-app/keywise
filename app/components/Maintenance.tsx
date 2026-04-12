@@ -61,6 +61,9 @@ export default function Maintenance() {
   const [parsing, setParsing] = useState(false);
   const [aiAssessmentNew, setAiAssessmentNew] = useState('');
   const [assessing, setAssessing] = useState(false);
+  const [predictions, setPredictions] = useState<any>(null);
+  const [predicting, setPredicting] = useState(false);
+  const [showPredictions, setShowPredictions] = useState(true);
 
   const emptyForm = {
     property: '', issue: '', category: 'General', priority: 'medium',
@@ -82,6 +85,57 @@ export default function Maintenance() {
     const { data } = await supabase.from('properties').select('address');
     if (data) setProperties(data.map(p => p.address));
   };
+
+  // Generate predictive maintenance analysis
+  const runPredictions = async () => {
+    if (issues.length === 0) return;
+    setPredicting(true);
+    const month = new Date().toLocaleString('default', { month: 'long' });
+    const season = (() => { const m = new Date().getMonth(); if (m >= 2 && m <= 4) return 'Spring'; if (m >= 5 && m <= 7) return 'Summer'; if (m >= 8 && m <= 10) return 'Fall'; return 'Winter'; })();
+    const issuesSummary = issues.slice(0, 20).map(i => `${i.category}: ${i.issue} (${i.priority}, ${i.status}, ${i.property?.split(',')[0] || 'unknown'}${i.cost ? ', $' + i.cost : ''})`).join('\n');
+    const categories = issues.reduce((acc: Record<string, number>, i) => { acc[i.category] = (acc[i.category] || 0) + 1; return acc; }, {});
+
+    const result = await callClaude(`You are a property maintenance expert. Analyze this maintenance history and provide predictive insights.
+
+Current month: ${month} (${season})
+Properties: ${properties.slice(0, 10).join(', ')}
+Issue categories: ${Object.entries(categories).map(([k, v]) => `${k}: ${v}`).join(', ')}
+
+Recent maintenance issues:
+${issuesSummary}
+
+Return ONLY valid JSON (no markdown):
+{
+  "health_score": 85,
+  "seasonal_alerts": [{"title":"","description":"","urgency":"high","category":""}],
+  "predicted_issues": [{"title":"","likelihood":"high","timeframe":"Next 30 days","property":"","category":"","preventive_action":""}],
+  "cost_forecast": {"next_month": 0, "next_quarter": 0},
+  "recommendations": [{"title":"","description":"","savings":""}]
+}
+
+Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2-3. Be specific to the actual properties and history shown.`);
+
+    try {
+      const cleaned = result.replace(/```json|```/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      setPredictions(match ? JSON.parse(match[0]) : null);
+    } catch {
+      setPredictions(null);
+    }
+    setPredicting(false);
+  };
+
+  // Auto-run predictions when issues load
+  useEffect(() => {
+    if (issues.length > 0 && !predictions && !predicting) {
+      const cached = sessionStorage.getItem('kw_predictions');
+      if (cached) { try { setPredictions(JSON.parse(cached)); } catch {} }
+    }
+  }, [issues.length]);
+
+  useEffect(() => {
+    if (predictions) sessionStorage.setItem('kw_predictions', JSON.stringify(predictions));
+  }, [predictions]);
 
   // Parse free text into structured form using Claude
   const parseFreeText = async () => {
@@ -208,8 +262,122 @@ export default function Maintenance() {
   const totalCost = issues.filter(i => i.cost > 0).reduce((s, i) => s + i.cost, 0);
   const filtered = filter === 'all' ? issues : issues.filter(i => i.status === filter);
 
+  const urgencyColors: Record<string, { bg: string; border: string; text: string }> = {
+    high: { bg: '#FFF0F0', border: '#FF4444', text: '#CC0000' },
+    medium: { bg: '#FFF8E0', border: '#FFB347', text: '#9A6500' },
+    low: { bg: '#E0FAF5', border: '#00D4AA', text: '#00A886' },
+  };
+
   return (
     <div>
+      {/* Predictive Maintenance */}
+      {issues.length > 0 && (
+        <div style={{ background: '#0F3460', borderRadius: 12, padding: isMobile ? 16 : 20, marginBottom: 20, color: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showPredictions ? 16 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16 }}>✦</span>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>Predictive Maintenance</span>
+              <span style={{ background: '#00D4AA', color: '#0F3460', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>AI</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={runPredictions} disabled={predicting}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', opacity: predicting ? 0.7 : 1 }}>
+                {predicting ? 'Analyzing...' : predictions ? '↻ Refresh' : 'Run Analysis'}
+              </button>
+              <button onClick={() => setShowPredictions(!showPredictions)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.6)', padding: '5px 8px', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
+                {showPredictions ? '▲' : '▼'}
+              </button>
+            </div>
+          </div>
+
+          {showPredictions && predictions && (
+            <div>
+              {/* Health Score + Cost Forecast */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: predictions.health_score >= 80 ? '#00D4AA' : predictions.health_score >= 60 ? '#FFB347' : '#FF6B6B' }}>
+                    {predictions.health_score || '—'}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>Health Score</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>${(predictions.cost_forecast?.next_month || 0).toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>Est. Next Month</div>
+                </div>
+                {!isMobile && (
+                  <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>${(predictions.cost_forecast?.next_quarter || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>Est. Next Quarter</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Seasonal Alerts */}
+              {(predictions.seasonal_alerts || []).length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Seasonal Alerts</div>
+                  {predictions.seasonal_alerts.map((a: any, i: number) => {
+                    const c = urgencyColors[a.urgency] || urgencyColors.medium;
+                    return (
+                      <div key={i} style={{ background: c.bg, borderLeft: `3px solid ${c.border}`, borderRadius: 8, padding: '10px 14px', marginBottom: 8 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: '#0F3460', marginBottom: 2 }}>{a.title}</div>
+                        <div style={{ fontSize: 12, color: '#4A5068' }}>{a.description}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Predicted Issues */}
+              {(predictions.predicted_issues || []).length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Predicted Issues</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
+                    {predictions.predicted_issues.map((p: any, i: number) => (
+                      <div key={i} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>{p.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                            background: p.likelihood === 'high' ? '#FF6B6B33' : '#FFB34733',
+                            color: p.likelihood === 'high' ? '#FF6B6B' : '#FFB347' }}>
+                            {p.likelihood}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{p.timeframe}{p.property ? ' · ' + p.property : ''}</div>
+                        <div style={{ fontSize: 12, color: '#00D4AA', fontWeight: 600 }}>→ {p.preventive_action}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommendations */}
+              {(predictions.recommendations || []).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Cost-Saving Recommendations</div>
+                  {predictions.recommendations.map((r: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 8 }}>
+                      <span style={{ color: '#00D4AA', fontWeight: 700, flexShrink: 0 }}>$</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{r.title}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{r.description}{r.savings ? ` — Est. savings: ${r.savings}` : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {showPredictions && !predictions && !predicting && (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>Click "Run Analysis" to get AI predictions based on your maintenance history.</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
         {[
