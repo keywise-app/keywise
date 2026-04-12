@@ -30,6 +30,9 @@ const MESSAGE_TYPES = [
   { id: 'rent-increase', label: '📈 Rent Increase', desc: 'Formal notice with required lead time' },
   { id: 'violation', label: '⚠️ Lease Violation', desc: 'Notice to remedy a violation' },
   { id: 'maintenance', label: '🔧 Maintenance Update', desc: 'Update on repair status' },
+  { id: 'welcome', label: '👋 Welcome New Tenant', desc: 'Warm welcome with key info' },
+  { id: 'check-in', label: '💬 Check-In', desc: 'Friendly periodic check-in' },
+  { id: 'listing', label: '🏠 Property Listing', desc: 'Compelling listing description' },
   { id: 'reply', label: '✦ AI Reply to Tenant', desc: 'Paste their message, AI replies based on your lease' },
 ];
 

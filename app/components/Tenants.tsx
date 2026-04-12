@@ -56,6 +56,8 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [tone, setTone] = useState<'professional' | 'friendly' | 'firm'>('professional');
+  const [translating, setTranslating] = useState(false);
 
   useEffect(() => {
     if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
@@ -203,6 +205,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     { id: 'move-out', label: '📦 Move-Out' },
     { id: 'rent-increase', label: '📈 Rent Increase' },
     { id: 'violation', label: '⚠️ Violation' },
+    { id: 'welcome', label: '👋 Welcome' },
+    { id: 'check-in', label: '💬 Check-In' },
+    { id: 'listing', label: '🏠 Property Listing' },
     { id: 'general', label: '✉️ General' },
   ];
 
@@ -214,14 +219,19 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     const lateFeeLine = selected.late_fee_percent
       ? 'Late fee per lease: ' + (selected.late_fee_type === 'fixed' ? '$' + selected.late_fee_percent : selected.late_fee_percent + '%') + ' after ' + (selected.late_fee_days || 3) + ' days.'
       : '';
+    const toneInstr = tone === 'friendly' ? 'Use a warm, friendly, conversational tone.' : tone === 'firm' ? 'Use a firm, direct, no-nonsense tone.' : 'Use a professional, courteous tone.';
+    const sig = profile?.full_name ? '\n\nSign off as: ' + profile.full_name + (profile?.company ? ', ' + profile.company : '') : '';
     const prompts: Record<string, string> = {
-      'late-rent': 'Draft a professional late rent notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Rent: $' + selected.rent + '/mo. ' + lateFeeLine + ' Request payment within 3 days. Be firm but respectful. ' + context,
-      'entry-notice': 'Draft a 24-hour entry notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.',
-      'lease-renewal': 'Draft a warm lease renewal offer. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo, Lease ends: ' + selected.end_date + '. ' + (context || 'Offer 12-month renewal at 3% increase, 30-day response window.'),
-      'move-out': 'Draft move-out instructions. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Lease ends: ' + selected.end_date + '. Include cleaning expectations, key return, deposit return timeline (21 days). ' + context,
-      'rent-increase': 'Draft a formal rent increase notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo. ' + (context || '5% increase effective in 60 days.'),
-      'violation': 'Draft a lease violation notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Violation: ' + (context || 'describe violation') + '. Include correction required and deadline.',
-      'general': 'Draft a professional message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Message: ' + (context || 'general communication'),
+      'late-rent': toneInstr + ' Draft a late rent notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Rent: $' + selected.rent + '/mo. ' + lateFeeLine + ' Request payment within 3 days.' + sig + ' ' + context,
+      'entry-notice': toneInstr + ' Draft a 24-hour entry notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.' + sig,
+      'lease-renewal': toneInstr + ' Draft a lease renewal offer. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo, Lease ends: ' + selected.end_date + '. ' + (context || 'Offer 12-month renewal at 3% increase, 30-day response window.') + sig,
+      'move-out': toneInstr + ' Draft move-out instructions. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Lease ends: ' + selected.end_date + '. Include cleaning expectations, key return, deposit return timeline (21 days).' + sig + ' ' + context,
+      'rent-increase': toneInstr + ' Draft a rent increase notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo. ' + (context || '5% increase effective in 60 days.') + sig,
+      'violation': toneInstr + ' Draft a lease violation notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Violation: ' + (context || 'describe violation') + '. Include correction required and deadline.' + sig,
+      'welcome': toneInstr + ' Draft a warm welcome message for a new tenant. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Include key info: rent amount $' + selected.rent + '/mo, due date, how to pay online via Keywise, emergency contact info. Make them feel at home.' + sig,
+      'check-in': toneInstr + ' Draft a friendly check-in message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Ask how things are going, if there are any maintenance issues, remind them you are available. Keep it brief and genuine.' + sig,
+      'listing': 'Write a compelling property listing description for: ' + selected.property + '. Rent: $' + selected.rent + '/mo. ' + (context || 'Include highlights, nearby amenities, and a call to action.') + ' Format for online listing sites (Zillow, Apartments.com). 150-200 words.',
+      'general': toneInstr + ' Draft a message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Message: ' + (context || 'general communication') + sig,
     };
     const result = await callClaude(prompts[msgType]);
     setDraft(result);
@@ -1227,6 +1237,17 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   ))}
                 </div>
 
+                {/* Tone selector */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, alignSelf: 'center', marginRight: 4 }}>Tone:</div>
+                  {([['professional', 'Professional'], ['friendly', 'Friendly'], ['firm', 'Firm']] as const).map(([val, lbl]) => (
+                    <button key={val} onClick={() => setTone(val)}
+                      style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${tone === val ? T.navy : T.border}`, background: tone === val ? T.navy : T.surface, color: tone === val ? '#fff' : T.inkMid, fontFamily: 'inherit' }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+
                 <div style={{ marginBottom: 12 }}>
                   <label style={label}>Additional context (optional)</label>
                   <textarea value={context} onChange={e => setContext(e.target.value)}
@@ -1243,7 +1264,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 10, maxHeight: 300, overflowY: 'auto', color: T.ink }}>
                       {draft}
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button onClick={() => { navigator.clipboard.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                         style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
                         {copied ? '✓ Copied!' : '📋 Copy'}
@@ -1251,6 +1272,19 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       <button onClick={() => window.open('mailto:' + (selected.email || '') + '?subject=' + encodeURIComponent(MSG_TYPES.find(m => m.id === msgType)?.label + ' — ' + selected.property) + '&body=' + encodeURIComponent(draft))}
                         style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>
                         ✉️ Open in Email
+                      </button>
+                      <button onClick={async () => {
+                        setTranslating(true);
+                        const translated = await callClaude('Translate this message to Spanish. Keep the same formatting and tone. Only output the translation, nothing else:\n\n' + draft);
+                        setDraft(translated);
+                        setTranslating(false);
+                      }} disabled={translating}
+                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px', opacity: translating ? 0.7 : 1 }}>
+                        {translating ? 'Translating...' : '🌐 Spanish'}
+                      </button>
+                      <button onClick={draftMessage} disabled={drafting}
+                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                        ↻ Regenerate
                       </button>
                       <button onClick={() => setDraft('')} style={{ ...btn.danger, fontSize: 12, padding: '6px 14px' }}>Dismiss</button>
                     </div>
