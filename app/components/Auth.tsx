@@ -96,7 +96,7 @@ export default function Auth() {
       else {
         if (typeof window !== 'undefined' && window.gtag) {
           window.gtag('event', 'conversion', {
-            send_to: 'AW-1046078634/_8rLCMetnZccEKrJ5_ID',
+            send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
             value: 1.0,
             currency: 'USD',
           });
