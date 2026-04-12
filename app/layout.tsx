@@ -12,8 +12,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Keywise — Property Management, Made Intelligent",
   description:
-    "AI-powered property management for independent landlords. Lease tracking, online rent collection, tenant communications, maintenance tracking, and more — all in one place.",
+    "AI-powered property management for independent landlords. Lease tracking, online rent collection, document signing and more. Free for 1-2 units.",
   metadataBase: new URL("https://keywise.app"),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   openGraph: {
     title: "Keywise — Property Management, Made Intelligent",
     description:
