@@ -15,7 +15,7 @@ async function runIntelligence(supabase: any) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      max_tokens: 1500,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{
         role: 'user',
@@ -29,27 +29,42 @@ Search the web for:
 
 Keywise features: AI lease PDF extraction, online rent collection via Stripe, document signing, move-in/out inspections, tenant portal with auto-pay, AI communications, maintenance tracking, expense tracking, monthly snapshot emails, admin dashboard.
 
-Return ONLY valid JSON:
+IMPORTANT: Return ONLY a valid JSON object. No markdown, no code blocks, no explanations. Start your response with { and end with }. Keep descriptions concise (under 100 chars each).
+
 {
+  "summary": "2-3 sentence executive summary",
   "urgent": [{"title": "", "description": "", "competitor": "", "priority": "high", "effort": "low", "type": "defensive"}],
   "opportunities": [{"title": "", "description": "", "source": "", "priority": "medium", "effort": "medium", "type": "feature"}],
   "trends": [{"title": "", "description": "", "impact": "medium"}],
-  "competitor_updates": [{"competitor": "", "update": "", "threat_level": "medium"}],
-  "summary": "2-3 sentence executive summary"
+  "competitor_updates": [{"competitor": "", "update": "", "threat_level": "medium"}]
 }`
       }],
     }),
   });
 
   const result = await response.json();
+  console.error('[intelligence] Response status:', response.status);
+  console.error('[intelligence] Content blocks:', result.content?.length, result.content?.map((c: any) => c.type));
+
   const textBlock = result.content?.filter((c: any) => c.type === 'text').pop();
+  console.error('[intelligence] Text preview:', (textBlock?.text || '').slice(0, 300));
 
   let intelligence: any = {};
   try {
-    const text = textBlock?.text || '{}';
-    intelligence = JSON.parse(text.replace(/```json|```/g, '').trim());
-  } catch {
-    intelligence = { summary: 'Error parsing intelligence report', urgent: [], opportunities: [], trends: [], competitor_updates: [] };
+    const raw = textBlock?.text || '{}';
+    // Remove markdown code blocks
+    let cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Extract JSON object from surrounding text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) cleaned = jsonMatch[0];
+    intelligence = JSON.parse(cleaned);
+  } catch (err: any) {
+    console.error('[intelligence] Parse error:', err.message);
+    console.error('[intelligence] Raw text:', (textBlock?.text || '').slice(0, 500));
+    intelligence = {
+      summary: 'Intelligence report generated but could not be parsed. Raw response saved in logs.',
+      urgent: [], opportunities: [], trends: [], competitor_updates: [],
+    };
   }
 
   // Save report
