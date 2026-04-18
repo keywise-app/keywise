@@ -4,12 +4,14 @@ import { T } from '../lib/theme';
 import Maintenance from './Maintenance';
 import Expenses from './Expenses';
 import Documents from './Documents';
+import PreventiveMaintenance from './PreventiveMaintenance';
 
 export default function Operations() {
-  const [tab, setTab] = useState<'maintenance' | 'expenses' | 'documents'>('maintenance');
+  const [tab, setTab] = useState<'maintenance' | 'preventive' | 'expenses' | 'documents'>('maintenance');
 
   const tabs = [
     { id: 'maintenance', label: '🔧 Maintenance' },
+    { id: 'preventive', label: '📡 Preventive AI' },
     { id: 'expenses', label: '💰 Expenses' },
     { id: 'documents', label: '📁 Documents' },
   ];
@@ -32,6 +34,7 @@ export default function Operations() {
       </div>
 
       {tab === 'maintenance' && <Maintenance />}
+      {tab === 'preventive' && <PreventiveMaintenance />}
       {tab === 'expenses' && <Expenses />}
       {tab === 'documents' && <Documents />}
     </div>
