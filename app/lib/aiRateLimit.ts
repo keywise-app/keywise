@@ -7,7 +7,6 @@ const DAILY_LIMITS: Record<string, number> = {
   property_lookup: 5,
   inspection_report: 5,
   maintenance_assess: 10,
-  preventive_maintenance: 10,
   general: 30,
 };
 

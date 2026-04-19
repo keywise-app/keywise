@@ -86,7 +86,7 @@ export default function Maintenance() {
     if (data) setProperties(data.map(p => p.address));
   };
 
-  // Generate predictive maintenance analysis
+  // Generate AI maintenance insights from history
   const runPredictions = async () => {
     if (issues.length === 0) return;
     setPredicting(true);
@@ -95,7 +95,7 @@ export default function Maintenance() {
     const issuesSummary = issues.slice(0, 20).map(i => `${i.category}: ${i.issue} (${i.priority}, ${i.status}, ${i.property?.split(',')[0] || 'unknown'}${i.cost ? ', $' + i.cost : ''})`).join('\n');
     const categories = issues.reduce((acc: Record<string, number>, i) => { acc[i.category] = (acc[i.category] || 0) + 1; return acc; }, {});
 
-    const result = await callClaude(`You are a property maintenance expert. Analyze this maintenance history and provide predictive insights.
+    const result = await callClaude(`You are a property maintenance expert. Analyze this maintenance history and provide actionable insights.
 
 Current month: ${month} (${season})
 Properties: ${properties.slice(0, 10).join(', ')}
@@ -270,13 +270,13 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
 
   return (
     <div>
-      {/* Predictive Maintenance */}
+      {/* AI Maintenance Insights */}
       {issues.length > 0 && (
         <div style={{ background: '#0F3460', borderRadius: 12, padding: isMobile ? 16 : 20, marginBottom: 20, color: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showPredictions ? 16 : 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 16 }}>✦</span>
-              <span style={{ fontWeight: 700, fontSize: 15 }}>Predictive Maintenance</span>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>AI Maintenance Insights</span>
               <span style={{ background: '#00D4AA', color: '#0F3460', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>AI</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>

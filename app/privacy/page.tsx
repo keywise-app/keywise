@@ -1,5 +1,25 @@
-'use client';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Keywise',
+  description: 'Keywise privacy policy explaining how we collect, use, and protect landlord and tenant data.',
+  alternates: { canonical: 'https://keywise.app/privacy' },
+  openGraph: {
+    title: 'Privacy Policy | Keywise',
+    description: 'Keywise privacy policy explaining how we collect, use, and protect landlord and tenant data.',
+    url: 'https://keywise.app/privacy',
+    siteName: 'Keywise',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy | Keywise',
+    description: 'Keywise privacy policy explaining how we collect, use, and protect landlord and tenant data.',
+  },
+  robots: { index: true, follow: true },
+};
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';

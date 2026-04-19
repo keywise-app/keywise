@@ -1,5 +1,25 @@
-'use client';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | Keywise',
+  description: 'Keywise terms of service for property management software. Usage policies, payment terms, and liability.',
+  alternates: { canonical: 'https://keywise.app/terms' },
+  openGraph: {
+    title: 'Terms of Service | Keywise',
+    description: 'Keywise terms of service for property management software. Usage policies, payment terms, and liability.',
+    url: 'https://keywise.app/terms',
+    siteName: 'Keywise',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms of Service | Keywise',
+    description: 'Keywise terms of service for property management software.',
+  },
+  robots: { index: true, follow: true },
+};
 
 const N = '#0F3460';
 const TEAL_DARK = '#00A886';

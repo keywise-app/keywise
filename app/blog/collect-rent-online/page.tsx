@@ -2,9 +2,23 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'How to Collect Rent Online: Best Options for Small Landlords | Keywise',
-  description: 'Compare the best ways to collect rent online: Venmo, Zelle, PayPal, and dedicated landlord tools. Find what works for your portfolio.',
+  title: 'How to Collect Rent Online in 2026 | Keywise',
+  description: 'Compare the best options for collecting rent online — Venmo, Zelle, Stripe, and dedicated property management tools.',
   alternates: { canonical: 'https://keywise.app/blog/collect-rent-online' },
+  openGraph: {
+    title: 'How to Collect Rent Online in 2026 | Keywise',
+    description: 'Compare the best options for collecting rent online — Venmo, Zelle, Stripe, and dedicated property management tools.',
+    url: 'https://keywise.app/blog/collect-rent-online',
+    siteName: 'Keywise',
+    type: 'article',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How to Collect Rent Online in 2026 | Keywise',
+    description: 'Compare the best options for collecting rent online — Venmo, Zelle, Stripe, and dedicated property management tools.',
+  },
+  robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
@@ -96,6 +110,13 @@ export default function Page() {
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           For landlords with 1-2 units, the free plan covers everything except online payments. If you upgrade to Pro ($19/mo), you unlock unlimited units plus the full payment system.
         </p>
+
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          <Link href="/blog/late-rent-notice" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ How to Write a Late Rent Notice (Free Template)</Link>
+          <Link href="/blog/property-management-software-comparison" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Best Property Management Software for Small Landlords (2026)</Link>
+          <Link href="/blog/free-lease-agreement-template" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Free Lease Agreement Template for Small Landlords (2026)</Link>
+        </div>
 
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Collect rent the easy way</h3>

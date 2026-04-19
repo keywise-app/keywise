@@ -3,8 +3,22 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
-  description: 'Step-by-step guide to writing a professional late rent notice. Includes a free template and legal tips for landlords.',
+  description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
   alternates: { canonical: 'https://keywise.app/blog/late-rent-notice' },
+  openGraph: {
+    title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
+    description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
+    url: 'https://keywise.app/blog/late-rent-notice',
+    siteName: 'Keywise',
+    type: 'article',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
+    description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
+  },
+  robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
@@ -92,6 +106,13 @@ export default function Page() {
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           You can edit the draft, then send it via email or SMS in one click. Every notice is timestamped and saved in the tenant's file, building the paper trail you'd need if it ever came to court.
         </p>
+
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          <Link href="/blog/collect-rent-online" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ How to Collect Rent Online: Best Options for Small Landlords</Link>
+          <Link href="/blog/free-lease-agreement-template" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Free Lease Agreement Template for Small Landlords (2026)</Link>
+          <Link href="/blog/security-deposit-laws" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Security Deposit Laws: What Every Landlord Needs to Know</Link>
+        </div>
 
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Stop writing late notices from scratch</h3>

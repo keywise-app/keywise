@@ -10,27 +10,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Keywise — Property Management, Made Intelligent",
+  title: "Keywise — AI Property Management for Small Landlords",
   description:
-    "AI-powered property management for independent landlords. Lease tracking, online rent collection, document signing and more. Free for 1-2 units.",
+    "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
   metadataBase: new URL("https://keywise.app"),
+  alternates: { canonical: "https://keywise.app" },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
   },
   openGraph: {
-    title: "Keywise — Property Management, Made Intelligent",
+    title: "Keywise — AI Property Management for Small Landlords",
     description:
-      "AI-powered property management for independent landlords. Lease tracking, online rent collection, tenant communications and more.",
+      "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
     url: "https://keywise.app",
     siteName: "Keywise",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
-        height: 630,
-        alt: "Keywise — Property Management, Made Intelligent",
+        height: 628,
+        alt: "Keywise — AI Property Management for Small Landlords",
       },
     ],
     locale: "en_US",
@@ -38,9 +39,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Keywise — Property Management, Made Intelligent",
+    title: "Keywise — AI Property Management for Small Landlords",
     description:
-      "AI-powered property management for independent landlords. Lease tracking, online rent collection, tenant communications and more.",
+      "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -72,7 +73,29 @@ gtag('js', new Date());
 gtag('config', 'AW-18070985639');`}
         </Script>
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "Keywise",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "19.00",
+                priceCurrency: "USD",
+              },
+              description:
+                "AI-powered property management software for independent landlords.",
+              url: "https://keywise.app",
+            }),
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

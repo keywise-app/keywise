@@ -2,9 +2,23 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Move-In Inspection Checklist for Landlords (Free Download) | Keywise',
-  description: 'A complete room-by-room move-in inspection checklist for landlords. Protect your security deposit and document property condition.',
+  title: 'Move-In Inspection Checklist for Landlords (Free) | Keywise',
+  description: 'Complete move-in inspection checklist to protect your security deposit. Room-by-room guide with photo documentation tips.',
   alternates: { canonical: 'https://keywise.app/blog/move-in-inspection-checklist' },
+  openGraph: {
+    title: 'Move-In Inspection Checklist for Landlords (Free) | Keywise',
+    description: 'Complete move-in inspection checklist to protect your security deposit. Room-by-room guide with photo documentation tips.',
+    url: 'https://keywise.app/blog/move-in-inspection-checklist',
+    siteName: 'Keywise',
+    type: 'article',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Move-In Inspection Checklist for Landlords (Free) | Keywise',
+    description: 'Complete move-in inspection checklist to protect your security deposit. Room-by-room guide with photo documentation tips.',
+  },
+  robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
@@ -126,6 +140,13 @@ export default function Page() {
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           When you're done, Keywise generates a professional inspection report and sends it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later.
         </p>
+
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          <Link href="/blog/security-deposit-laws" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Security Deposit Laws: What Every Landlord Needs to Know</Link>
+          <Link href="/blog/free-lease-agreement-template" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Free Lease Agreement Template for Small Landlords (2026)</Link>
+          <Link href="/blog/late-rent-notice" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ How to Write a Late Rent Notice (Free Template)</Link>
+        </div>
 
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Run inspections in minutes, not hours</h3>

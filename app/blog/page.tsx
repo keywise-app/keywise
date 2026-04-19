@@ -2,8 +2,23 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Keywise Blog — Property Management Tips for Landlords',
-  description: 'Practical guides for independent landlords: rent collection, lease templates, inspection checklists, and more.',
+  title: 'Landlord Resources & Guides | Keywise Blog',
+  description: 'Free guides for small landlords — lease templates, inspection checklists, rent collection tips, and more.',
+  alternates: { canonical: 'https://keywise.app/blog' },
+  openGraph: {
+    title: 'Landlord Resources & Guides | Keywise Blog',
+    description: 'Free guides for small landlords — lease templates, inspection checklists, rent collection tips, and more.',
+    url: 'https://keywise.app/blog',
+    siteName: 'Keywise',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Landlord Resources & Guides | Keywise Blog',
+    description: 'Free guides for small landlords — lease templates, inspection checklists, rent collection tips, and more.',
+  },
+  robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
@@ -35,6 +50,27 @@ const POSTS = [
     description: 'Comparing Venmo, Zelle, PayPal, and dedicated tools — find the best way to collect rent for your small portfolio.',
     date: 'April 2026',
     tag: 'Rent Collection',
+  },
+  {
+    slug: 'free-lease-agreement-template',
+    title: 'Free Lease Agreement Template for Small Landlords (2026)',
+    description: 'Download a free, lawyer-reviewed residential lease template. Covers rent, deposits, maintenance, and early termination.',
+    date: 'April 2026',
+    tag: 'Templates',
+  },
+  {
+    slug: 'security-deposit-laws',
+    title: 'Security Deposit Laws: What Every Landlord Needs to Know',
+    description: 'State-by-state guide to security deposit limits, return deadlines, and deduction rules that keep you out of court.',
+    date: 'April 2026',
+    tag: 'Legal',
+  },
+  {
+    slug: 'property-management-software-comparison',
+    title: 'Best Property Management Software for Small Landlords (2026)',
+    description: 'Honest comparison of Avail, RentRedi, TurboTenant, Apartments.com, and Keywise for 1-10 unit portfolios.',
+    date: 'April 2026',
+    tag: 'Software',
   },
 ];
 

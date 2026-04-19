@@ -1,63 +1,20 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://keywise.app';
+  const base = 'https://keywise.app';
   const lastModified = new Date();
 
   return [
-    {
-      url: `${baseUrl}/`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/blog/late-rent-notice`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/blog/move-in-inspection-checklist`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/blog/collect-rent-online`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
+    { url: base, lastModified, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${base}/blog`, lastModified, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${base}/blog/late-rent-notice`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/move-in-inspection-checklist`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/collect-rent-online`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/free-lease-agreement-template`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/security-deposit-laws`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/property-management-software-comparison`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/contact`, lastModified, changeFrequency: 'yearly', priority: 0.5 },
+    { url: `${base}/privacy`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${base}/terms`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
   ];
 }

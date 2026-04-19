@@ -761,20 +761,45 @@ export default function Landing() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background: INK, padding: '32px 40px' }}>
-        <div className="landing-footer-inner" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <Logo size={24} dark />
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-            {[{ label: 'Blog', href: '/blog' }, { label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Contact', href: '/contact' }].map(link => (
-              <a key={link.label} href={link.href}
-                style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontWeight: 500 }}
-                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
-                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.4)'}>
-                {link.label}
-              </a>
-            ))}
+      <footer style={{ background: INK, padding: '40px 40px 32px' }}>
+        <div className="landing-footer-inner" style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32, marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div>
+              <Logo size={24} dark />
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>AI property management for independent landlords.</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Resources</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { label: 'Free Lease Template', href: '/blog/free-lease-agreement-template' },
+                  { label: 'Late Rent Notice Template', href: '/blog/late-rent-notice' },
+                  { label: 'Move-In Inspection Checklist', href: '/blog/move-in-inspection-checklist' },
+                ].map(link => (
+                  <a key={link.label} href={link.href}
+                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Company</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[{ label: 'Blog', href: '/blog' }, { label: 'Contact', href: '/contact' }, { label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }].map(link => (
+                  <a key={link.label} href={link.href}
+                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
             © 2026 Keywise. Property management, made intelligent.
           </div>
         </div>
