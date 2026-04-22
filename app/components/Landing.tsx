@@ -288,22 +288,48 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
   );
 }
 
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: `1px solid ${BORDER}` }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+        <span style={{ fontSize: 16, fontWeight: 600, color: N, flex: 1, paddingRight: 16 }}>{q}</span>
+        <span style={{ fontSize: 20, color: INK_MUTED, flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
+      </button>
+      {open && (
+        <div style={{ paddingBottom: 20, fontSize: 14, color: INK_MID, lineHeight: 1.7 }}>{a}</div>
+      )}
+    </div>
+  );
+}
+
 export default function Landing() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [waitlistEmail, setWaitlistEmail] = useState('');
-  const [waitlistLoading, setWaitlistLoading] = useState(false);
-  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
   const featuresRef = useRef<HTMLDivElement>(null);
+  const demoRef = useRef<HTMLDivElement>(null);
 
-  // Read URL params on mount
+  // Inline signup state
+  const [heroEmail, setHeroEmail] = useState('');
+  const [heroLoading, setHeroLoading] = useState(false);
+  const [heroSent, setHeroSent] = useState(false);
+  const [heroError, setHeroError] = useState('');
+  const [showHeroInput, setShowHeroInput] = useState(false);
+
+  // Exit intent
+  const [showExitIntent, setShowExitIntent] = useState(false);
+  const [exitEmail, setExitEmail] = useState('');
+  const [exitLoading, setExitLoading] = useState(false);
+  const [exitSent, setExitSent] = useState(false);
+  const exitShown = useRef(false);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('signup') === 'true') setAuthMode('signup');
     else if (params.get('login') === 'true') setAuthMode('login');
   }, []);
 
-  // Track page visit
   useEffect(() => {
     fetch('/api/track-visit', {
       method: 'POST',
@@ -312,11 +338,22 @@ export default function Landing() {
     }).catch(() => {});
   }, []);
 
-  // Sync URL when auth modal opens/closes
   useEffect(() => {
     if (authMode === 'signup') window.history.replaceState({}, '', '/?signup=true');
     else if (authMode === 'login') window.history.replaceState({}, '', '/?login=true');
     else window.history.replaceState({}, '', '/');
+  }, [authMode]);
+
+  // Exit intent detection
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (e.clientY < 10 && !exitShown.current && !authMode) {
+        exitShown.current = true;
+        setShowExitIntent(true);
+      }
+    };
+    document.addEventListener('mouseleave', handler);
+    return () => document.removeEventListener('mouseleave', handler);
   }, [authMode]);
 
   const openSignup = () => { setAuthMode('signup'); setMobileMenuOpen(false); };
@@ -326,21 +363,31 @@ export default function Landing() {
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+  const scrollToDemo = () => {
+    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-  const handleWaitlist = async () => {
-    if (!waitlistEmail || waitlistLoading) return;
-    setWaitlistLoading(true);
-    try {
-      await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: waitlistEmail }),
+  const sendMagicLink = async (email: string, setLoading: (b: boolean) => void, setSent: (b: boolean) => void, setError: (s: string) => void) => {
+    if (!email) { setError('Please enter your email.'); return; }
+    setLoading(true);
+    setError('');
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: 'https://keywise.app/?welcome=true',
+        shouldCreateUser: true,
+      },
+    });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setSent(true);
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'conversion', {
+        send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
+        value: 1.0,
+        currency: 'USD',
       });
-      setWaitlistSuccess(true);
-    } catch {
-      setWaitlistSuccess(true); // Show success regardless — don't block on network errors
     }
-    setWaitlistLoading(false);
   };
 
   return (
@@ -375,15 +422,13 @@ export default function Landing() {
           .landing-section { padding: 60px 20px !important; }
           .landing-nav-inner { padding: 0 20px !important; }
           .landing-footer-inner { flex-direction: column !important; align-items: flex-start !important; }
-          .landing-hero-ctas { flex-direction: column !important; align-items: flex-start !important; }
+          .landing-hero-ctas { flex-direction: column !important; align-items: stretch !important; }
           .landing-hero-ctas button { width: 100% !important; justify-content: center !important; }
           .landing-hamburger { display: flex !important; }
           .landing-nav-buttons { display: none !important; }
           .landing-mobile-menu { display: block; }
-          .landing-waitlist-form { flex-direction: column !important; }
-          .landing-waitlist-form input { width: 100% !important; }
-          .landing-waitlist-form button { width: 100% !important; }
           .landing-final-h2 { font-size: 32px !important; }
+          .landing-faq-grid { padding: 0 !important; }
         }
 
         @media (min-width: 769px) and (max-width: 1024px) {
@@ -393,11 +438,15 @@ export default function Landing() {
         }
       `}</style>
 
+      {/* URGENCY BANNER */}
+      <div style={{ background: TEAL, color: N, padding: '9px 20px', textAlign: 'center', fontSize: 13, fontWeight: 700 }}>
+        Free for the first 1,000 landlords — lock in early pricing
+      </div>
+
       {/* NAVBAR */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}` }}>
         <div className="landing-nav-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <Logo size={30} />
-          {/* Desktop buttons */}
           <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
             <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 8 }}>
               Blog
@@ -411,7 +460,6 @@ export default function Landing() {
               Start Free
             </button>
           </div>
-          {/* Hamburger */}
           <button className="landing-hamburger"
             onClick={() => setMobileMenuOpen(o => !o)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -420,7 +468,6 @@ export default function Landing() {
             <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
           </button>
         </div>
-        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="landing-mobile-menu" style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={openLogin}
@@ -429,7 +476,7 @@ export default function Landing() {
             </button>
             <button onClick={openSignup}
               style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
-              Start Free
+              Start Free in 30 Seconds
             </button>
           </div>
         )}
@@ -445,48 +492,55 @@ export default function Landing() {
             </div>
             <h1 className="landing-h1" style={{ fontSize: 52, fontWeight: 800, color: N, lineHeight: 1.08, letterSpacing: '-1.5px', margin: '0 0 20px' }}>
               Property management,<br />
-              <span style={{ color: TEAL_DARK }}>made intelligent.</span>
+              <span style={{ color: TEAL_DARK }}>done in 10 seconds.</span>
             </h1>
-            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 460 }}>
-              Keywise uses AI to handle the time-consuming parts of being a landlord — lease tracking, rent collection, tenant communications, and maintenance. All in one place.
+            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 480 }}>
+              Upload your lease. AI does the rest. Collect rent, sign documents, manage tenants — all in one place. Free for 1-2 units.
             </p>
-            <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-              <button onClick={openSignup} className="landing-btn-primary"
-                style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
-                Start for free →
-              </button>
-              <button onClick={scrollToFeatures} className="landing-btn-ghost"
-                style={{ background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                See how it works
-              </button>
-            </div>
-            <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
-              Free forever · Pro $19/month · Cancel anytime
-            </div>
 
-            {/* Early access capture */}
-            {!waitlistSuccess ? (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 8, fontWeight: 500 }}>Or get early access — no account needed</div>
-                <div className="landing-waitlist-form" style={{ display: 'flex', gap: 8, maxWidth: 380 }}>
+            {/* Inline magic link signup */}
+            {heroSent ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 12, padding: '14px 18px' }}>
+                <span style={{ fontSize: 20 }}>✓</span>
+                <span style={{ fontSize: 14, color: '#166534', fontWeight: 600 }}>Check your email for a link to get started</span>
+              </div>
+            ) : showHeroInput ? (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 8, maxWidth: 420 }}>
                   <input
                     type="email"
-                    placeholder="your@email.com"
-                    value={waitlistEmail}
-                    onChange={e => setWaitlistEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleWaitlist()}
-                    style={{ flex: 1, background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: INK }}
+                    placeholder="you@email.com"
+                    value={heroEmail}
+                    onChange={e => setHeroEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendMagicLink(heroEmail, setHeroLoading, setHeroSent, setHeroError)}
+                    autoFocus
+                    style={{ flex: 1, background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 16px', fontSize: 14, outline: 'none', fontFamily: 'inherit', color: INK }}
                   />
-                  <button onClick={handleWaitlist} disabled={waitlistLoading || !waitlistEmail}
-                    style={{ background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: !waitlistEmail || waitlistLoading ? 'default' : 'pointer', opacity: !waitlistEmail || waitlistLoading ? 0.6 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
-                    {waitlistLoading ? '…' : 'Get early access'}
+                  <button onClick={() => sendMagicLink(heroEmail, setHeroLoading, setHeroSent, setHeroError)} disabled={heroLoading || !heroEmail}
+                    className="landing-btn-primary"
+                    style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 700, cursor: !heroEmail || heroLoading ? 'default' : 'pointer', opacity: !heroEmail || heroLoading ? 0.6 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const, transition: 'all 0.15s' }}>
+                    {heroLoading ? 'Sending…' : 'Continue →'}
                   </button>
                 </div>
+                {heroError && <div style={{ color: CORAL, fontSize: 13, marginTop: 8 }}>{heroError}</div>}
+                <div style={{ fontSize: 12, color: INK_MUTED, marginTop: 8 }}>We'll send a magic link — no password needed</div>
               </div>
             ) : (
-              <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 20, height: 20, borderRadius: '50%', background: TEAL_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: TEAL_DARK, fontWeight: 700 }}>✓</span>
-                <span style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 600 }}>You're on the list! We'll be in touch soon.</span>
+              <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                <button onClick={() => setShowHeroInput(true)} className="landing-btn-primary"
+                  style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Try Free — No Credit Card →
+                </button>
+                <button onClick={scrollToDemo} className="landing-btn-ghost"
+                  style={{ background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                  Watch 30-sec Demo →
+                </button>
+              </div>
+            )}
+
+            {!showHeroInput && !heroSent && (
+              <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
+                No credit card · Cancel anytime · 1-2 units free forever
               </div>
             )}
 
@@ -507,12 +561,79 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* DEMO VIDEO */}
+      <section ref={demoRef} id="demo" className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            See it in action
+          </div>
+          <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 32, letterSpacing: '-0.5px' }}>
+            Watch Keywise set up a tenant in 30 seconds
+          </h2>
+          <div style={{
+            position: 'relative',
+            paddingBottom: '62.5%',
+            height: 0,
+            overflow: 'hidden',
+            borderRadius: 16,
+            boxShadow: '0 20px 60px rgba(15,52,96,0.15)',
+            background: N,
+          }}>
+            {/* Placeholder — replace src with your Loom embed URL */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${TEAL}22`, border: `2px solid ${TEAL}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: `22px solid ${TEAL}`, marginLeft: 4 }} />
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Demo video coming soon</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BUILT BY A LANDLORD */}
+      <section className="landing-section" style={{ padding: '80px 40px', background: BG }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Why Keywise
+            </div>
+            <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 12, letterSpacing: '-0.5px' }}>
+              Built by a landlord, for landlords
+            </h2>
+            <p style={{ color: INK_MUTED, fontSize: 16, maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
+              I own a duplex in Southern California. Spent years juggling spreadsheets, DocuSign, and Venmo. Built Keywise to solve my own problem first.
+            </p>
+          </div>
+
+          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {[
+              { icon: '💸', title: '"$15 per DocuSign link"', desc: 'Every new lease, every addendum, every renewal. Adds up fast for a small landlord.' },
+              { icon: '📝', title: '"Typing the same info 5 times"', desc: "Tenant name, rent, late fees — entering the same lease data into every tool I use." },
+              { icon: '💬', title: '"Chasing rent on Venmo"', desc: "Reminding tenants every month. Manually tracking who's late. Feels unprofessional." },
+            ].map(card => (
+              <div key={card.title}
+                style={{ background: SURFACE, borderRadius: 12, padding: 24, borderLeft: `4px solid ${TEAL}`, boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>{card.icon}</div>
+                <div style={{ fontWeight: 700, color: N, fontSize: 15, marginBottom: 8 }}>{card.title}</div>
+                <div style={{ color: INK_MUTED, fontSize: 13, lineHeight: 1.6 }}>{card.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <div style={{ color: N, fontSize: 18, fontWeight: 600 }}>
+              Keywise solves all of this — for free if you have 1-2 units.
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* PROBLEM */}
       <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Managing rentals shouldn't feel<br className="landing-h2-br" />like a second job.
+              Managing rentals shouldn't feel<br className="landing-h2-br" /> like a second job.
             </h2>
             <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Sound familiar?</p>
           </div>
@@ -541,7 +662,7 @@ export default function Landing() {
               <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Features</span>
             </div>
             <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Everything you need.<br className="landing-h2-br" />Nothing you don't.
+              Everything you need.<br className="landing-h2-br" /> Nothing you don't.
             </h2>
           </div>
           <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -665,12 +786,14 @@ export default function Landing() {
           </p>
 
           <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={openSignup}
-              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Start Free — No Credit Card Required →
+            <button onClick={() => setShowHeroInput(true)}
+              className="landing-btn-primary"
+              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+              onMouseEnter={e => { window.scrollTo({ top: 0, behavior: 'smooth' }); setShowHeroInput(true); }}>
+              Start Free in 30 Seconds →
             </button>
             <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>
-              Free forever for 1-2 units · $19/mo for unlimited units
+              No credit card · Cancel anytime · 1-2 units free forever
             </div>
           </div>
         </div>
@@ -701,7 +824,7 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <button onClick={openSignup} className="landing-btn-ghost"
+              <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-ghost"
                 style={{ width: '100%', background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                 Get started free →
               </button>
@@ -727,7 +850,7 @@ export default function Landing() {
                     </div>
                   ))}
                 </div>
-                <button onClick={openSignup} className="landing-btn-teal"
+                <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-teal"
                   style={{ width: '100%', background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                   Start free trial →
                 </button>
@@ -737,6 +860,23 @@ export default function Landing() {
           <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
             $2 per online payment transaction. No hidden fees.
           </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
+        <div className="landing-faq-grid" style={{ maxWidth: 680, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 className="landing-h2" style={{ fontSize: 36, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
+              Frequently asked questions
+            </h2>
+          </div>
+          <FAQItem q="Is it really free?" a="Yes. 1-2 units are free forever — no credit card required, no trial that expires. You only pay if you upgrade to Pro for unlimited units and online rent collection." />
+          <FAQItem q="Do I need technical skills?" a="Not at all. Keywise is designed for landlords, not IT departments. If you can attach a file to an email, you can use Keywise. Upload a lease PDF and AI handles the rest." />
+          <FAQItem q="Can I import my existing lease?" a="Yes. Upload any lease PDF and Keywise's AI extracts all the key terms — tenant name, rent amount, dates, late fees, deposit — automatically. No manual data entry." />
+          <FAQItem q="What if I have more than 2 units?" a="Upgrade to Pro for $19/month — unlimited units, online rent collection, payment reminders, and priority support. No per-unit fees." />
+          <FAQItem q="Can I cancel anytime?" a="Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period." />
+          <FAQItem q="Is my data secure?" a="Yes. Keywise uses Supabase for database and authentication (enterprise-grade encryption at rest and in transit), Stripe for payments (PCI-DSS Level 1 certified), and all connections are over HTTPS/TLS." />
         </div>
       </section>
 
@@ -752,11 +892,11 @@ export default function Landing() {
           <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.6)', margin: '0 0 36px', lineHeight: 1.6 }}>
             Join landlords who've replaced spreadsheets and late-night emails with Keywise.
           </p>
-          <button onClick={openSignup} className="landing-btn-teal"
+          <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-teal"
             style={{ background: TEAL, color: N, border: 'none', borderRadius: 14, padding: '16px 40px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 8px 32px ${TEAL}44` }}>
-            Start for free →
+            Start Free in 30 Seconds →
           </button>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>No credit card required · Setup in minutes</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>No credit card · Cancel anytime · 1-2 units free forever</p>
         </div>
       </section>
 
@@ -804,6 +944,49 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* EXIT INTENT POPUP */}
+      {showExitIntent && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowExitIntent(false)}>
+          <div style={{ background: SURFACE, borderRadius: 20, padding: 36, maxWidth: 420, width: '100%', position: 'relative', boxShadow: '0 24px 80px rgba(15,52,96,0.25)' }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowExitIntent(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: INK_MUTED, lineHeight: 1, padding: 4 }}>×</button>
+            {exitSent ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: 32, marginBottom: 16 }}>✓</div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: N, marginBottom: 8 }}>Check your email!</div>
+                <div style={{ color: INK_MUTED, fontSize: 14 }}>Click the magic link to get started — no password needed.</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>👋</div>
+                  <h3 style={{ color: N, fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>Before you go...</h3>
+                  <p style={{ color: INK_MUTED, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+                    Save 5 hours every month on property management. Try Keywise free — no credit card needed.
+                  </p>
+                </div>
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  value={exitEmail}
+                  onChange={e => setExitEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMagicLink(exitEmail, setExitLoading, setExitSent, () => {})}
+                  style={{ width: '100%', background: BG, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '13px 16px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK, marginBottom: 10 }}
+                />
+                <button onClick={() => sendMagicLink(exitEmail, setExitLoading, setExitSent, () => {})} disabled={exitLoading || !exitEmail}
+                  className="landing-btn-primary"
+                  style={{ width: '100%', background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: !exitEmail || exitLoading ? 'default' : 'pointer', opacity: !exitEmail || exitLoading ? 0.6 : 1, fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                  {exitLoading ? 'Sending…' : 'Send Me the Free Link →'}
+                </button>
+                <div style={{ textAlign: 'center', fontSize: 12, color: INK_MUTED, marginTop: 10 }}>No password needed — we'll email you a magic link</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {authMode && <AuthModal mode={authMode} onClose={closeAuth} />}
     </div>
