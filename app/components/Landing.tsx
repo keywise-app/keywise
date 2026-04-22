@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import AnimatedDemo from './AnimatedDemo';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -561,31 +562,26 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* DEMO VIDEO */}
-      <section ref={demoRef} id="demo" className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
+      {/* ANIMATED DEMO */}
+      <section ref={demoRef} id="demo" className="landing-section" style={{ padding: '80px 40px', background: BG }}>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
             See it in action
           </div>
-          <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 32, letterSpacing: '-0.5px' }}>
-            Watch Keywise set up a tenant in 30 seconds
+          <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 16, letterSpacing: '-0.5px' }}>
+            From PDF to Paid in Seconds
           </h2>
-          <div style={{
-            position: 'relative',
-            paddingBottom: '62.5%',
-            height: 0,
-            overflow: 'hidden',
-            borderRadius: 16,
-            boxShadow: '0 20px 60px rgba(15,52,96,0.15)',
-            background: N,
-          }}>
-            {/* Placeholder — replace src with your Loom embed URL */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${TEAL}22`, border: `2px solid ${TEAL}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 0, height: 0, borderTop: '14px solid transparent', borderBottom: '14px solid transparent', borderLeft: `22px solid ${TEAL}`, marginLeft: 4 }} />
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Demo video coming soon</div>
-            </div>
+          <p style={{ color: INK_MUTED, fontSize: 16, marginBottom: 40, maxWidth: 600, margin: '0 auto 40px' }}>
+            Watch how Keywise sets up a tenant and starts collecting rent — automatically.
+          </p>
+          <AnimatedDemo />
+          <div style={{ marginTop: 32 }}>
+            <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="landing-btn-primary"
+              style={{ background: N, color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+              Try It Free →
+            </button>
+            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>No credit card · 1-2 units free forever</div>
           </div>
         </div>
       </section>
