@@ -435,14 +435,15 @@ export default function Home() {
               );
             })}
           </div>
-          <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 10 }}>
             <button onClick={() => setShowFeedback(true)}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
               💡 Feedback
             </button>
-            <button onClick={() => supabase.auth.signOut()}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', padding: 0 }}>
-              Sign out
+            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/'; }}
+              style={{ width: '100%', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 14px', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'inherit' }}>
+              <span>👋</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -464,8 +465,8 @@ export default function Home() {
                   <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
                   {unreadCount > 0 && <span style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: '50%', background: '#EF4444', color: '#fff', fontSize: 8, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </button>
-                <button onClick={() => supabase.auth.signOut()}
-                  style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer' }}>
+                <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/'; }}
+                  style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: T.inkMuted, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Sign out
                 </button>
               </div>
