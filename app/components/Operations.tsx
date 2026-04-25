@@ -4,14 +4,16 @@ import { T } from '../lib/theme';
 import Maintenance from './Maintenance';
 import Expenses from './Expenses';
 import Documents from './Documents';
+import PropertyValuation from './PropertyValuation';
 
 export default function Operations() {
-  const [tab, setTab] = useState<'maintenance' | 'expenses' | 'documents'>('maintenance');
+  const [tab, setTab] = useState<'maintenance' | 'expenses' | 'documents' | 'valuation'>('maintenance');
 
   const tabs = [
     { id: 'maintenance', label: '🔧 Maintenance' },
     { id: 'expenses', label: '💰 Expenses' },
     { id: 'documents', label: '📁 Documents' },
+    { id: 'valuation', label: '✦ Valuation' },
   ];
 
   return (
@@ -34,6 +36,7 @@ export default function Operations() {
       {tab === 'maintenance' && <Maintenance />}
       {tab === 'expenses' && <Expenses />}
       {tab === 'documents' && <Documents />}
+      {tab === 'valuation' && <PropertyValuation />}
     </div>
   );
 }
