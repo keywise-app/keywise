@@ -84,14 +84,19 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     setLoading(true);
-    const res = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, action: 'stats' }),
-    });
-    const data = await res.json();
-    if (!data.error) { setStats(data); if (data.intelReports) setIntelReports(data.intelReports); }
-    setLoading(false);
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, action: 'stats' }),
+      });
+      const data = await res.json();
+      if (!data.error) { setStats(data); if (data.intelReports) setIntelReports(data.intelReports); }
+    } catch (err) {
+      console.error('[admin] Refresh error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateFeedback = async (id: string, status: string, admin_notes: string) => {
@@ -150,8 +155,8 @@ export default function AdminPage() {
           {!isMobile && <span style={{ fontSize: 12, color: T.teal, marginLeft: 12 }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: 'pointer', minHeight: 36 }}>
-            ↻ Refresh
+          <button onClick={fetchStats} disabled={loading} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: loading ? 'default' : 'pointer', minHeight: 36, opacity: loading ? 0.6 : 1, fontFamily: 'inherit' }}>
+            {loading ? '⟳ Refreshing...' : '↻ Refresh'}
           </button>
           <button onClick={() => { sessionStorage.removeItem('kw_admin'); setAuthed(false); setStats(null); }}
             style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: 'pointer', minHeight: 36 }}>
