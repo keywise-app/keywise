@@ -201,42 +201,95 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const totalPaid = tenantPayments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
   const outstanding = tenantPayments.filter(p => p.status !== 'paid').reduce((s, p) => s + (p.amount || 0), 0);
 
-  const MSG_TYPES = [
-    { id: 'late-rent', label: '💰 Late Rent' },
-    { id: 'entry-notice', label: '🔑 Entry Notice' },
-    { id: 'lease-renewal', label: '📄 Lease Renewal' },
-    { id: 'move-out', label: '📦 Move-Out' },
-    { id: 'rent-increase', label: '📈 Rent Increase' },
-    { id: 'violation', label: '⚠️ Violation' },
-    { id: 'welcome', label: '👋 Welcome' },
-    { id: 'check-in', label: '💬 Check-In' },
-    { id: 'listing', label: '🏠 Property Listing' },
-    { id: 'general', label: '✉️ General' },
+  const TEMPLATES = [
+    { cat: 'Lease', items: [
+      { id: 'lease-renewal', label: '🔄 Renewal Offer', desc: 'Offer renewal with optional rent increase', fields: ['new_rent', 'term_months'] },
+      { id: 'non-renewal', label: '📅 Non-Renewal', desc: 'Notify lease will not be renewed', fields: ['move_out_date'] },
+      { id: 'rent-increase', label: '📈 Rent Increase', desc: '60-day rent increase notice', fields: ['new_rent', 'effective_date'] },
+    ]},
+    { cat: 'Rent', items: [
+      { id: 'late-rent', label: '⚠️ Late Rent', desc: 'Overdue rent reminder', fields: [] },
+      { id: 'payment-reminder', label: '🔔 Payment Reminder', desc: 'Upcoming rent reminder', fields: [] },
+    ]},
+    { cat: 'Property', items: [
+      { id: 'entry-notice', label: '🔑 Entry Notice', desc: '24-hour entry notice', fields: ['entry_date', 'entry_time', 'reason'] },
+      { id: 'maintenance-update', label: '🔧 Maintenance Update', desc: 'Repair status update', fields: ['issue', 'status'] },
+      { id: 'inspection', label: '🔍 Inspection', desc: 'Schedule property inspection', fields: ['inspection_date'] },
+    ]},
+    { cat: 'Move In/Out', items: [
+      { id: 'welcome', label: '🏠 Welcome', desc: 'Welcome new tenant', fields: [] },
+      { id: 'move-out', label: '📦 Move-Out', desc: 'Move-out instructions', fields: ['move_out_date'] },
+    ]},
+    { cat: 'Other', items: [
+      { id: 'violation', label: '⚠️ Violation', desc: 'Lease violation notice', fields: [] },
+      { id: 'check-in', label: '💬 Check-In', desc: 'Friendly check-in', fields: [] },
+      { id: 'listing', label: '🏠 Listing', desc: 'Property listing description', fields: [] },
+      { id: 'general', label: '✉️ Custom', desc: 'Write your own', fields: [] },
+    ]},
   ];
+
+  const [templateFields, setTemplateFields] = useState<Record<string, string>>({});
+
+  const currentTemplate = TEMPLATES.flatMap(c => c.items).find(t => t.id === msgType);
+
+  const getSuggestions = () => {
+    if (!selected) return [];
+    const today = new Date();
+    const endDate = selected.end_date ? new Date(selected.end_date) : null;
+    const daysUntilEnd = endDate ? Math.ceil((endDate.getTime() - today.getTime()) / 86400000) : null;
+    const suggestions: { icon: string; title: string; desc: string; template: string }[] = [];
+
+    if (daysUntilEnd !== null && daysUntilEnd > 0 && daysUntilEnd <= 90) {
+      suggestions.push({ icon: '🔄', title: `Lease ending in ${daysUntilEnd} days`, desc: 'Send renewal offer now to avoid vacancy', template: 'lease-renewal' });
+    }
+    if (daysUntilEnd !== null && daysUntilEnd > 0 && daysUntilEnd <= 60) {
+      suggestions.push({ icon: '📈', title: 'Time for rent increase notice', desc: '60-day notice required in most states', template: 'rent-increase' });
+    }
+
+    const overdue = tenantPayments.filter(p => p.status === 'overdue');
+    if (overdue.length > 0) {
+      suggestions.push({ icon: '⚠️', title: `${overdue.length} overdue payment${overdue.length > 1 ? 's' : ''}`, desc: 'Send late rent notice', template: 'late-rent' });
+    }
+
+    return suggestions;
+  };
+
+  // Legacy compat
+  const MSG_TYPES = TEMPLATES.flatMap(c => c.items);
 
   const draftMessage = async () => {
     if (!selected) return;
     setDrafting(true);
     setDraft('');
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = selected.end_date ? new Date(selected.end_date) : null;
+    const daysUntilEnd = endDate ? Math.ceil((endDate.getTime() - new Date().getTime()) / 86400000) : null;
     const lateFeeLine = selected.late_fee_percent
       ? 'Late fee per lease: ' + (selected.late_fee_type === 'fixed' ? '$' + selected.late_fee_percent : selected.late_fee_percent + '%') + ' after ' + (selected.late_fee_days || 3) + ' days.'
       : '';
     const toneInstr = tone === 'friendly' ? 'Use a warm, friendly, conversational tone.' : tone === 'firm' ? 'Use a firm, direct, no-nonsense tone.' : 'Use a professional, courteous tone.';
-    const sig = profile?.full_name ? '\n\nSign off as: ' + profile.full_name + (profile?.company ? ', ' + profile.company : '') : '';
+    const sig = profile?.full_name ? '\n\nSign off as: ' + profile.full_name + (profile?.company ? ', ' + profile.company : '') + (profile?.phone ? '\n' + profile.phone : '') + (profile?.email ? '\n' + profile.email : '') : '';
+    const fieldsInfo = Object.entries(templateFields).filter(([,v]) => v).map(([k,v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
+
+    const baseContext = `${toneInstr} Date: ${today}. Tenant: ${selected.tenant_name}, Property: ${selected.property}, Rent: $${selected.rent}/mo${selected.end_date ? ', Lease ends: ' + selected.end_date : ''}${daysUntilEnd !== null ? ' (' + daysUntilEnd + ' days)' : ''}. ${lateFeeLine}`;
+
     const prompts: Record<string, string> = {
-      'late-rent': toneInstr + ' Draft a late rent notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Rent: $' + selected.rent + '/mo. ' + lateFeeLine + ' Request payment within 3 days.' + sig + ' ' + context,
-      'entry-notice': toneInstr + ' Draft a 24-hour entry notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.' + sig,
-      'lease-renewal': toneInstr + ' Draft a lease renewal offer. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo, Lease ends: ' + selected.end_date + '. ' + (context || 'Offer 12-month renewal at 3% increase, 30-day response window.') + sig,
-      'move-out': toneInstr + ' Draft move-out instructions. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Lease ends: ' + selected.end_date + '. Include cleaning expectations, key return, deposit return timeline (21 days).' + sig + ' ' + context,
-      'rent-increase': toneInstr + ' Draft a rent increase notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + ', Current rent: $' + selected.rent + '/mo. ' + (context || '5% increase effective in 60 days.') + sig,
-      'violation': toneInstr + ' Draft a lease violation notice. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Violation: ' + (context || 'describe violation') + '. Include correction required and deadline.' + sig,
-      'welcome': toneInstr + ' Draft a warm welcome message for a new tenant. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Include key info: rent amount $' + selected.rent + '/mo, due date, how to pay online via Keywise, emergency contact info. Make them feel at home.' + sig,
-      'check-in': toneInstr + ' Draft a friendly check-in message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Ask how things are going, if there are any maintenance issues, remind them you are available. Keep it brief and genuine.' + sig,
-      'listing': 'Write a compelling property listing description for: ' + selected.property + '. Rent: $' + selected.rent + '/mo. ' + (context || 'Include highlights, nearby amenities, and a call to action.') + ' Format for online listing sites (Zillow, Apartments.com). 150-200 words.',
-      'general': toneInstr + ' Draft a message. Date: ' + today + '. Tenant: ' + selected.tenant_name + ', Property: ' + selected.property + '. Message: ' + (context || 'general communication') + sig,
+      'late-rent': `${baseContext} Draft a late rent notice. Request payment within 3 days.${sig} ${context}`,
+      'payment-reminder': `${baseContext} Draft a friendly payment reminder. Rent is due soon. Mention they can pay online via Keywise.${sig}`,
+      'entry-notice': `${baseContext} Draft a 24-hour entry notice. ${fieldsInfo ? 'Details: ' + fieldsInfo + '.' : 'Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.'}${sig}`,
+      'lease-renewal': `${baseContext} Draft a lease renewal offer. ${fieldsInfo ? 'New terms: ' + fieldsInfo + '.' : (context || 'Offer 12-month renewal at 3% increase, 30-day response window.')} Explain briefly why — market conditions, property improvements, great tenant relationship.${sig}`,
+      'non-renewal': `${baseContext} Draft a non-renewal notice. ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include move-out instructions and security deposit return timeline (21 days). Be professional and respectful.${sig}`,
+      'rent-increase': `${baseContext} Draft a rent increase notice. ${fieldsInfo ? 'New rent: $' + templateFields.new_rent + ', effective: ' + templateFields.effective_date + '.' : (context || '5% increase effective in 60 days.')} Explain reasoning briefly — market rate, property improvements. Include required notice period.${sig}`,
+      'maintenance-update': `${baseContext} Draft a maintenance status update. ${fieldsInfo ? 'Issue: ' + (templateFields.issue || '') + '. Status: ' + (templateFields.status || '') + '.' : ''} ${context || ''}${sig}`,
+      'inspection': `${baseContext} Draft an inspection notice. ${fieldsInfo ? 'Date: ' + templateFields.inspection_date + '.' : ''} Will take approximately 30-45 minutes. Tenant should be present or arrange access.${sig}`,
+      'move-out': `${baseContext} Draft move-out instructions. ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include cleaning expectations, key return, deposit return timeline (21 days).${sig} ${context}`,
+      'violation': `${baseContext} Draft a lease violation notice. Violation: ${context || 'describe violation'}. Include correction required and deadline.${sig}`,
+      'welcome': `${baseContext} Draft a warm welcome message for a new tenant. Include key info: rent amount $${selected.rent}/mo, due date, how to pay online via Keywise, emergency contact info. Make them feel at home.${sig}`,
+      'check-in': `${baseContext} Draft a friendly check-in message. Ask how things are going, if there are any maintenance issues, remind them you are available. Keep it brief and genuine.${sig}`,
+      'listing': `Write a compelling property listing description for: ${selected.property}. Rent: $${selected.rent}/mo. ${context || 'Include highlights, nearby amenities, and a call to action.'} Format for online listing sites. 150-200 words.`,
+      'general': `${baseContext} Draft a message. Topic: ${context || 'general communication'}${sig}`,
     };
-    const result = await callClaude(prompts[msgType]);
+    const result = await callClaude(prompts[msgType] || prompts.general);
     setDraft(result);
     setDrafting(false);
   };
@@ -544,6 +597,24 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
           {/* Tab content */}
           <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto' }}>
+
+            {/* SUGGESTED ACTIONS */}
+            {tab === 'overview' && !editing && getSuggestions().length > 0 && (
+              <div style={{ background: T.amberLight, borderRadius: T.radiusSm, padding: 14, marginBottom: 16, border: `1px solid ${T.amber}44` }}>
+                <div style={{ fontWeight: 700, color: T.navy, fontSize: 13, marginBottom: 10 }}>💡 Suggested Actions</div>
+                {getSuggestions().map(s => (
+                  <div key={s.template} onClick={() => { setTab('communications'); setMsgType(s.template); setDraft(''); setTemplateFields({}); }}
+                    style={{ padding: '10px 12px', background: T.surface, borderRadius: 8, marginBottom: 6, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center', border: `1px solid ${T.border}` }}>
+                    <div style={{ fontSize: 22, flexShrink: 0 }}>{s.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{s.title}</div>
+                      <div style={{ fontSize: 12, color: T.inkMuted }}>{s.desc}</div>
+                    </div>
+                    <div style={{ color: T.teal, fontSize: 16, flexShrink: 0 }}>→</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* OVERVIEW — view or edit */}
             {tab === 'overview' && !editing && (
@@ -1276,23 +1347,51 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             {/* COMMUNICATIONS */}
             {tab === 'communications' && (
               <div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                  {MSG_TYPES.map(t => (
-                    <button key={t.id} onClick={() => { setMsgType(t.id); setDraft(''); }}
-                      style={{
-                        padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: msgType === t.id ? T.navy : T.bg,
-                        color: msgType === t.id ? 'white' : T.inkMid,
-                        border: `1px solid ${msgType === t.id ? T.navy : T.border}`,
-                      }}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
+                {/* Template categories */}
+                {TEMPLATES.map(cat => (
+                  <div key={cat.cat} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>{cat.cat}</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {cat.items.map(t => (
+                        <button key={t.id} onClick={() => { setMsgType(t.id); setDraft(''); setTemplateFields({}); }}
+                          style={{
+                            padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                            background: msgType === t.id ? T.navy : T.bg,
+                            color: msgType === t.id ? 'white' : T.inkMid,
+                            border: `1px solid ${msgType === t.id ? T.navy : T.border}`,
+                          }}
+                          title={t.desc}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
 
-                {/* Tone selector */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, alignSelf: 'center', marginRight: 4 }}>Tone:</div>
+                {/* Template-specific fields */}
+                {currentTemplate && currentTemplate.fields.length > 0 && (
+                  <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 12, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>{currentTemplate.desc}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: currentTemplate.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                      {currentTemplate.fields.map(f => (
+                        <div key={f}>
+                          <label style={label}>{f.replace(/_/g, ' ')}</label>
+                          <input
+                            type={f.includes('date') ? 'date' : f.includes('rent') || f.includes('fee') ? 'number' : f.includes('time') ? 'time' : 'text'}
+                            value={templateFields[f] || ''}
+                            onChange={e => setTemplateFields(prev => ({ ...prev, [f]: e.target.value }))}
+                            placeholder={f.includes('rent') ? 'e.g. 2500' : f.includes('reason') ? 'e.g. plumbing repair' : ''}
+                            style={input}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tone + context */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginRight: 4 }}>Tone:</div>
                   {([['professional', 'Professional'], ['friendly', 'Friendly'], ['firm', 'Firm']] as const).map(([val, lbl]) => (
                     <button key={val} onClick={() => setTone(val)}
                       style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${tone === val ? T.navy : T.border}`, background: tone === val ? T.navy : T.surface, color: tone === val ? '#fff' : T.inkMid, fontFamily: 'inherit' }}>
@@ -1304,12 +1403,12 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 <div style={{ marginBottom: 12 }}>
                   <label style={label}>Additional context (optional)</label>
                   <textarea value={context} onChange={e => setContext(e.target.value)}
-                    placeholder="Add specific details, dates, amounts…"
-                    style={{ ...input, minHeight: 70, resize: 'vertical' as const }} />
+                    placeholder="Add specific details, dates, amounts, or special instructions…"
+                    style={{ ...input, minHeight: 60, resize: 'vertical' as const }} />
                 </div>
 
                 <button onClick={draftMessage} disabled={drafting} style={{ ...btn.primary, marginBottom: 16 }}>
-                  {drafting ? 'Drafting…' : '✦ Draft Message'}
+                  {drafting ? '✦ Drafting…' : '✦ Draft Message'}
                 </button>
 
                 {draft && (
@@ -1322,9 +1421,10 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                       </div>
                     </div>
 
-                    <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 10, maxHeight: 300, overflowY: 'auto', color: T.ink }}>
+                    <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 4, maxHeight: 300, overflowY: 'auto', color: T.ink }}>
                       {draft}
                     </div>
+                    <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 10, textAlign: 'right' }}>{draft.split(/\s+/).filter(Boolean).length} words</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button onClick={() => { navigator.clipboard.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                         style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>

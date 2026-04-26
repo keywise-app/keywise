@@ -22,19 +22,34 @@ type Profile = {
   address: string;
 };
 
-const MESSAGE_TYPES = [
-  { id: 'late-rent', label: '💰 Late Rent', desc: 'Firm but professional overdue notice' },
-  { id: 'entry-notice', label: '🔑 Entry Notice', desc: '24-hour notice before visiting' },
-  { id: 'lease-renewal', label: '📄 Lease Renewal', desc: 'Offer to renew with new terms' },
-  { id: 'move-out', label: '📦 Move-Out', desc: 'Instructions and deposit timeline' },
-  { id: 'rent-increase', label: '📈 Rent Increase', desc: 'Formal notice with required lead time' },
-  { id: 'violation', label: '⚠️ Lease Violation', desc: 'Notice to remedy a violation' },
-  { id: 'maintenance', label: '🔧 Maintenance Update', desc: 'Update on repair status' },
-  { id: 'welcome', label: '👋 Welcome New Tenant', desc: 'Warm welcome with key info' },
-  { id: 'check-in', label: '💬 Check-In', desc: 'Friendly periodic check-in' },
-  { id: 'listing', label: '🏠 Property Listing', desc: 'Compelling listing description' },
-  { id: 'reply', label: '✦ AI Reply to Tenant', desc: 'Paste their message, AI replies based on your lease' },
+const TEMPLATES = [
+  { cat: 'Lease', items: [
+    { id: 'lease-renewal', label: '🔄 Renewal Offer', desc: 'Offer renewal with optional rent increase', fields: ['new_rent', 'term_months'] },
+    { id: 'non-renewal', label: '📅 Non-Renewal', desc: 'Notify lease will not be renewed', fields: ['move_out_date'] },
+    { id: 'rent-increase', label: '📈 Rent Increase', desc: '60-day rent increase notice', fields: ['new_rent', 'effective_date'] },
+  ]},
+  { cat: 'Rent', items: [
+    { id: 'late-rent', label: '⚠️ Late Rent', desc: 'Overdue rent reminder', fields: [] },
+    { id: 'payment-reminder', label: '🔔 Payment Reminder', desc: 'Upcoming rent reminder', fields: [] },
+  ]},
+  { cat: 'Property', items: [
+    { id: 'entry-notice', label: '🔑 Entry Notice', desc: '24-hour entry notice', fields: ['entry_date', 'entry_time', 'reason'] },
+    { id: 'maintenance', label: '🔧 Maintenance Update', desc: 'Repair status update', fields: ['issue', 'status'] },
+    { id: 'inspection', label: '🔍 Inspection', desc: 'Schedule property inspection', fields: ['inspection_date'] },
+  ]},
+  { cat: 'Move In/Out', items: [
+    { id: 'welcome', label: '🏠 Welcome', desc: 'Welcome new tenant', fields: [] },
+    { id: 'move-out', label: '📦 Move-Out', desc: 'Move-out instructions', fields: ['move_out_date'] },
+  ]},
+  { cat: 'Other', items: [
+    { id: 'violation', label: '⚠️ Violation', desc: 'Lease violation notice', fields: [] },
+    { id: 'check-in', label: '💬 Check-In', desc: 'Friendly check-in', fields: [] },
+    { id: 'listing', label: '🏠 Listing', desc: 'Property listing', fields: [] },
+    { id: 'reply', label: '✦ AI Reply', desc: 'Paste tenant message, AI replies', fields: [] },
+  ]},
 ];
+
+const MESSAGE_TYPES = TEMPLATES.flatMap(c => c.items);
 
 export default function Communications() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -64,6 +79,8 @@ export default function Communications() {
   const [inboxSendEmail, setInboxSendEmail] = useState(false);
   const [inboxSendSMS, setInboxSendSMS] = useState(false);
   const [inboxCopied, setInboxCopied] = useState(false);
+  const [templateFields, setTemplateFields] = useState<Record<string, string>>({});
+  const [tone, setTone] = useState<'professional' | 'friendly' | 'firm'>('professional');
   const [sending, setSending] = useState(false);
   const [smsStatus, setSmsStatus] = useState('');
   const [sendEmail, setSendEmail] = useState(false);
@@ -221,6 +238,8 @@ export default function Communications() {
     if (!tenant) return '';
 
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const endDate = tenant.end_date ? new Date(tenant.end_date) : null;
+    const daysUntilEnd = endDate ? Math.ceil((endDate.getTime() - new Date().getTime()) / 86400000) : null;
     const signature = [
       profile?.full_name || 'Your Landlord',
       profile?.company || '',
@@ -228,8 +247,10 @@ export default function Communications() {
       profile?.email || '',
       profile?.address || '',
     ].filter(Boolean).join('\n');
+    const toneInstr = tone === 'friendly' ? 'Use a warm, friendly, conversational tone.' : tone === 'firm' ? 'Use a firm, direct, no-nonsense tone.' : 'Use a professional, courteous tone.';
+    const fieldsInfo = Object.entries(templateFields).filter(([,v]) => v).map(([k,v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(', ');
 
-    const base = 'Today\'s date: ' + today + '\n\nLandlord:\n' + signature + '\n\nTenant: ' + tenant.tenant_name + '\nProperty: ' + tenant.property + '\nRent: $' + tenant.rent + '/mo\nLease ends: ' + tenant.end_date + '.';
+    const base = `${toneInstr} Today's date: ${today}.\n\nLandlord:\n${signature}\n\nTenant: ${tenant.tenant_name}\nProperty: ${tenant.property}\nRent: $${tenant.rent}/mo\nLease ends: ${tenant.end_date || 'N/A'}${daysUntilEnd !== null ? ' (' + daysUntilEnd + ' days)' : ''}.`;
 
     if (msgType === 'reply') {
       return 'You are a professional landlord. ' + base + '\n' +
@@ -239,15 +260,21 @@ export default function Communications() {
     }
 
     const prompts: Record<string, string> = {
-      'late-rent': 'Draft a professional late rent notice letter. ' + base + ' Rent is overdue. Include today\'s date at the top. Request payment within 3 days, mention a late fee applies per the lease. Sign with the landlord\'s full signature block. Be firm but respectful. ' + context,
-      'entry-notice': 'Draft a formal 24-hour entry notice. ' + base + ' Include today\'s date at the top. Reason for entry: ' + (context || 'routine inspection') + '. Include proposed date and time (suggest next business day 10am-12pm). Sign with the landlord\'s full signature block.',
-      'lease-renewal': 'Draft a warm lease renewal offer letter. ' + base + ' Include today\'s date at the top. ' + (context || 'Offer 12-month renewal at 3% increase, request response within 30 days.') + ' Sign with the landlord\'s full signature block.',
-      'move-out': 'Draft formal move-out instructions. ' + base + ' Include today\'s date at the top. Include: cleaning expectations, key return, forwarding address request, deposit return timeline (21 days). Sign with the landlord\'s full signature block. ' + context,
-      'rent-increase': 'Draft a formal rent increase notice. ' + base + ' Include today\'s date at the top. ' + (context || 'Increase of 5%, effective in 60 days') + '. Include required notice period. Sign with the landlord\'s full signature block.',
-      'violation': 'Draft a formal lease violation notice. ' + base + ' Include today\'s date at the top. Violation: ' + (context || 'describe the violation') + '. Include what was violated, correction required, deadline, and next steps. Sign with the landlord\'s full signature block.',
-      'maintenance': 'Draft a professional maintenance update. ' + base + ' Include today\'s date at the top. Update: ' + (context || 'work is scheduled and will be completed soon') + '. Sign with the landlord\'s full signature block.',
+      'late-rent': `Draft a late rent notice. ${base} Rent is overdue. Request payment within 3 days. Sign with landlord's full signature. ${context}`,
+      'payment-reminder': `Draft a friendly upcoming payment reminder. ${base} Rent is due soon. Mention they can pay online via Keywise. Sign with landlord's name. ${context}`,
+      'entry-notice': `Draft a 24-hour entry notice. ${base} ${fieldsInfo ? 'Details: ' + fieldsInfo + '.' : 'Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.'} Sign with landlord's signature.`,
+      'lease-renewal': `Draft a lease renewal offer. ${base} ${fieldsInfo ? 'New terms: ' + fieldsInfo + '.' : (context || 'Offer 12-month renewal at 3% increase, 30-day response window.')} Briefly explain reasoning. Sign with landlord's signature.`,
+      'non-renewal': `Draft a non-renewal notice. ${base} ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include move-out instructions and deposit return timeline (21 days). Sign with landlord's signature.`,
+      'rent-increase': `Draft a rent increase notice. ${base} ${fieldsInfo ? 'New rent: $' + templateFields.new_rent + ', effective: ' + templateFields.effective_date + '.' : (context || '5% increase effective in 60 days.')} Include required notice period. Sign with landlord's signature.`,
+      'maintenance': `Draft a maintenance status update. ${base} ${fieldsInfo ? 'Issue: ' + (templateFields.issue || '') + '. Status: ' + (templateFields.status || '') + '.' : ''} ${context || 'Work is scheduled.'} Sign with landlord's name.`,
+      'inspection': `Draft an inspection notice. ${base} ${fieldsInfo ? 'Date: ' + templateFields.inspection_date + '.' : ''} Will take 30-45 minutes. Tenant should be present or arrange access. Sign with landlord's signature.`,
+      'move-out': `Draft move-out instructions. ${base} ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include cleaning expectations, key return, deposit return (21 days). Sign with landlord's signature. ${context}`,
+      'violation': `Draft a lease violation notice. ${base} Violation: ${context || 'describe violation'}. Include correction required and deadline. Sign with landlord's signature.`,
+      'welcome': `Draft a warm welcome message for a new tenant. ${base} Include key info: rent $${tenant.rent}/mo, due date, how to pay online via Keywise. Make them feel at home. Sign with landlord's name.`,
+      'check-in': `Draft a friendly check-in message. ${base} Ask how things are, if any maintenance issues. Keep it brief and genuine. Sign with landlord's name.`,
+      'listing': `Write a compelling property listing for: ${tenant.property}. Rent: $${tenant.rent}/mo. ${context || 'Include highlights and amenities.'} 150-200 words.`,
     };
-    return prompts[msgType] || '';
+    return prompts[msgType] || `${toneInstr} Draft a message. ${base} Topic: ${context || 'general'} Sign with landlord's name.`;
   };
 
   const draft = async () => {
@@ -701,29 +728,35 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       {tab === 'draft' && (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
           <div>
-            <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Message Type</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {MESSAGE_TYPES.map(t => (
-                  <div key={t.id} onClick={() => { setMsgType(t.id); setResult(''); setContext(''); setTenantMessage(''); setSmsStatus(''); }}
-                    style={{
-                      padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-                      background: msgType === t.id ? '#D8EDDF' : '#F7F5F0',
-                      border: '1px solid ' + (msgType === t.id ? '#2D6A4F' : '#E8E3D8'),
-                    }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: msgType === t.id ? '#1A472A' : '#1C1C1C' }}>{t.label}</div>
-                    <div style={{ fontSize: 11, color: '#8C8070', marginTop: 2 }}>{t.desc}</div>
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 14 }}>Message Template</div>
+              {TEMPLATES.map(cat => (
+                <div key={cat.cat} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>{cat.cat}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {cat.items.map(t => (
+                      <div key={t.id} onClick={() => { setMsgType(t.id); setResult(''); setContext(''); setTenantMessage(''); setSmsStatus(''); setTemplateFields({}); }}
+                        style={{
+                          padding: '10px 14px', borderRadius: T.radiusSm, cursor: 'pointer',
+                          background: msgType === t.id ? T.tealLight : T.bg,
+                          border: `1px solid ${msgType === t.id ? T.teal + '66' : T.border}`,
+                        }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: msgType === t.id ? T.tealDark : T.ink }}>{t.label}</div>
+                        <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{t.desc}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
 
           <div>
-            <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Tenant</div>
+            {/* Tenant selector */}
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 14 }}>Tenant</div>
               <select value={tenantIdx} onChange={e => { setTenantIdx(+e.target.value); setResult(''); setSmsStatus(''); }}
-                style={{ width: '100%', background: '#F7F5F0', border: '1px solid #E8E3D8', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', marginBottom: 10 }}>
+                style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', marginBottom: 10, fontFamily: 'inherit', color: T.ink }}>
                 {loadingTenants
                   ? <option>Loading tenants…</option>
                   : tenants.length === 0
@@ -732,60 +765,91 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                 }
               </select>
               {tenant && (
-                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#8C8070' }}>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: T.inkMuted }}>
                   {tenant.email && <span>📧 {tenant.email}</span>}
                   {tenant.phone && <span>📞 {tenant.phone}</span>}
                 </div>
               )}
-              {!loadingTenants && tenants.length === 0 && (
-                <div style={{ fontSize: 12, color: '#C0392B', marginTop: 8 }}>Add leases first to use Communications.</div>
-              )}
               {!profile?.full_name && (
-                <div style={{ fontSize: 12, color: '#D4701A', marginTop: 10, background: '#FEF0E4', padding: '8px 10px', borderRadius: 6 }}>
+                <div style={{ fontSize: 12, color: T.amberDark, marginTop: 10, background: T.amberLight, padding: '8px 10px', borderRadius: 6 }}>
                   ⚠ Complete your <strong>Profile</strong> so letters include your name and contact info.
                 </div>
               )}
             </div>
 
+            {/* Template-specific fields */}
+            {(() => {
+              const tmpl = MESSAGE_TYPES.find(t => t.id === msgType);
+              return tmpl && tmpl.fields && tmpl.fields.length > 0 ? (
+                <div style={{ ...card, marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>{tmpl.desc}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: tmpl.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                    {tmpl.fields.map((f: string) => (
+                      <div key={f}>
+                        <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>{f.replace(/_/g, ' ')}</label>
+                        <input
+                          type={f.includes('date') ? 'date' : f.includes('rent') || f.includes('fee') ? 'number' : f.includes('time') ? 'time' : 'text'}
+                          value={templateFields[f] || ''}
+                          onChange={e => setTemplateFields(prev => ({ ...prev, [f]: e.target.value }))}
+                          style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: T.ink }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             {msgType === 'reply' && (
-              <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>✦ AI Reply to Tenant</div>
+              <div style={{ ...card, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 14 }}>✦ AI Reply to Tenant</div>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, color: '#8C8070', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>Tenant's Message</label>
+                  <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>Tenant's Message</label>
                   <textarea value={tenantMessage} onChange={e => setTenantMessage(e.target.value)}
                     placeholder="Paste what the tenant wrote here…"
-                    style={{ width: '100%', background: '#F7F5F0', border: '1px solid #E8E3D8', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 90, boxSizing: 'border-box' as const, fontFamily: 'sans-serif' }} />
+                    style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 90, boxSizing: 'border-box' as const, fontFamily: 'inherit', color: T.ink }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: '#8C8070', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>Relevant Lease Terms (optional)</label>
+                  <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>Relevant Lease Terms (optional)</label>
                   <textarea value={leaseTerms} onChange={e => setLeaseTerms(e.target.value)}
                     placeholder="Paste the relevant section of your lease here…"
-                    style={{ width: '100%', background: '#F7F5F0', border: '1px solid #E8E3D8', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 80, boxSizing: 'border-box' as const, fontFamily: 'sans-serif' }} />
+                    style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 80, boxSizing: 'border-box' as const, fontFamily: 'inherit', color: T.ink }} />
                 </div>
               </div>
             )}
 
             {msgType !== 'reply' && (
-              <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <label style={{ fontSize: 11, color: '#8C8070', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 8 }}>Additional Context (optional)</label>
+              <div style={{ ...card, marginBottom: 16 }}>
+                {/* Tone selector */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginRight: 4 }}>Tone:</div>
+                  {([['professional', 'Professional'], ['friendly', 'Friendly'], ['firm', 'Firm']] as const).map(([val, lbl]) => (
+                    <button key={val} onClick={() => setTone(val)}
+                      style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${tone === val ? T.navy : T.border}`, background: tone === val ? T.navy : T.surface, color: tone === val ? '#fff' : T.inkMid, fontFamily: 'inherit' }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 5 }}>Additional Context (optional)</label>
                 <textarea value={context} onChange={e => setContext(e.target.value)}
                   placeholder="Add specific details, dates, amounts, or any special instructions…"
-                  style={{ width: '100%', background: '#F7F5F0', border: '1px solid #E8E3D8', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 80, boxSizing: 'border-box' as const, fontFamily: 'sans-serif' }} />
+                  style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 70, boxSizing: 'border-box' as const, fontFamily: 'inherit', color: T.ink }} />
               </div>
             )}
 
             <button onClick={draft} disabled={loading || !tenant}
-              style={{ width: '100%', background: '#1A472A', color: 'white', border: 'none', borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 16, opacity: !tenant ? 0.5 : 1 }}>
-              {loading ? 'Drafting…' : '✦ Draft Message'}
+              style={{ ...btn.primary, width: '100%', marginBottom: 16, opacity: !tenant ? 0.5 : 1 }}>
+              {loading ? '✦ Drafting…' : '✦ Draft Message'}
             </button>
 
             {result && (
-              <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Draft</div>
+              <div style={{ ...card }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 12 }}>Draft</div>
 
-                <div style={{ background: '#F7F5F0', borderRadius: 10, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+                <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 300, overflowY: 'auto', marginBottom: 4, border: `1px solid ${T.border}`, color: T.ink }}>
                   {result}
                 </div>
+                <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 12, textAlign: 'right' }}>{result.split(/\s+/).filter(Boolean).length} words</div>
 
                 <div style={{ background: '#F7F5F0', borderRadius: 10, padding: 16, marginBottom: 14 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#8C8070', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 12 }}>Send Via</div>
