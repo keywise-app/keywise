@@ -40,7 +40,7 @@ export default function Communications() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingTenants, setLoadingTenants] = useState(true);
-  const [tab, setTab] = useState<'transition' | 'draft' | 'history'>('transition');
+  const [tab, setTab] = useState<'inbox' | 'transition' | 'draft' | 'history'>('inbox');
   const [transitionMsgs, setTransitionMsgs] = useState<Record<string, { text: string; loading: boolean; copied: boolean; smsStatus: string; sending: boolean }>>({});
   const [generatingAll, setGeneratingAll] = useState(false);
   const [msgType, setMsgType] = useState('late-rent');
@@ -50,8 +50,20 @@ export default function Communications() {
   const [leaseTerms, setLeaseTerms] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<{ type: string; tenant: string; preview: string; date: string; channels: string[] }[]>([]);
+  const [history, setHistory] = useState<{ id?: string; type: string; tenant: string; preview: string; date: string; channels: string[] }[]>([]);
   const [copied, setCopied] = useState(false);
+
+  // Smart Reply inbox state
+  const [inboxTenant, setInboxTenant] = useState(0);
+  const [inboxMessage, setInboxMessage] = useState('');
+  const [inboxReply, setInboxReply] = useState<{ reply: string; category: string; urgency: string; suggested_actions: string[]; sentiment: string } | null>(null);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxError, setInboxError] = useState('');
+  const [inboxSending, setInboxSending] = useState(false);
+  const [inboxSmsStatus, setInboxSmsStatus] = useState('');
+  const [inboxSendEmail, setInboxSendEmail] = useState(false);
+  const [inboxSendSMS, setInboxSendSMS] = useState(false);
+  const [inboxCopied, setInboxCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [smsStatus, setSmsStatus] = useState('');
   const [sendEmail, setSendEmail] = useState(false);
@@ -87,6 +99,121 @@ export default function Communications() {
     };
     fetchData();
   }, []);
+
+  // Fetch persisted history
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('message_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) {
+        setHistory(data.map((m: any) => ({
+          id: m.id,
+          type: m.type,
+          tenant: m.tenant_name,
+          preview: m.preview,
+          date: m.created_at ? new Date(m.created_at).toLocaleDateString() : '',
+          channels: m.channels || [],
+        })));
+      }
+    })();
+  }, []);
+
+  const saveToHistory = async (type: string, tenantName: string, preview: string, channels: string[], fullText: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const entry = {
+      user_id: user?.id,
+      type,
+      tenant_name: tenantName,
+      preview: preview.slice(0, 120),
+      full_text: fullText,
+      channels,
+    };
+    const { data } = await supabase.from('message_history').insert(entry).select().single();
+    setHistory(h => [{
+      id: data?.id,
+      type,
+      tenant: tenantName,
+      preview: preview.slice(0, 80) + '…',
+      date: new Date().toLocaleDateString(),
+      channels,
+    }, ...h.slice(0, 49)]);
+  };
+
+  // Smart Reply handler
+  const generateSmartReply = async () => {
+    if (!inboxMessage.trim()) return;
+    const t = tenants[inboxTenant];
+    if (!t) return;
+    setInboxLoading(true);
+    setInboxReply(null);
+    setInboxError('');
+    setInboxSmsStatus('');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setInboxLoading(false); return; }
+
+    try {
+      const res = await fetch('/api/smart-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          tenant_name: t.tenant_name,
+          property: t.property,
+          rent: t.rent,
+          lease_end: t.end_date,
+          tenant_message: inboxMessage,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setInboxError(data.message || 'Failed to generate reply.');
+      } else if (data.result) {
+        setInboxReply(data.result);
+      }
+    } catch {
+      setInboxError('Network error. Please try again.');
+    }
+    setInboxLoading(false);
+  };
+
+  const sendInboxReply = async () => {
+    const t = tenants[inboxTenant];
+    if (!t || !inboxReply) return;
+    setInboxSending(true);
+    setInboxSmsStatus('');
+    const statuses: string[] = [];
+    const channels: string[] = [];
+
+    if (inboxSendEmail && t.email) {
+      const subject = encodeURIComponent('Re: ' + t.property);
+      const body = encodeURIComponent(inboxReply.reply);
+      window.open('mailto:' + t.email + '?subject=' + subject + '&body=' + body);
+      channels.push('email');
+      statuses.push('✓ Email opened');
+    }
+
+    if (inboxSendSMS && t.phone) {
+      const smsText = await callClaude('Summarize into a short friendly SMS under 300 chars. No headers. End with sender first name (' + (profile?.full_name?.split(' ')[0] || '') + ').\n\n' + inboxReply.reply);
+      const res = await fetch('/api/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: t.phone, message: smsText }),
+      });
+      const data = await res.json();
+      if (data.error) statuses.push('✗ SMS failed: ' + data.error);
+      else { channels.push('sms'); statuses.push('✓ SMS sent'); }
+    } else if (inboxSendSMS && !t.phone) {
+      statuses.push('✗ No phone on file');
+    }
+
+    await saveToHistory('AI Reply (' + inboxReply.category + ')', t.tenant_name, inboxReply.reply, channels, inboxReply.reply);
+    setInboxSmsStatus(statuses.join(' · '));
+    setInboxSending(false);
+  };
 
   const tenant = tenants[tenantIdx];
 
@@ -171,13 +298,13 @@ const sendAll = async () => {
     }
   }
 
-  setHistory(h => [{
-    type: MESSAGE_TYPES.find(m => m.id === msgType)?.label || msgType,
-    tenant: tenant.tenant_name,
-    preview: result.slice(0, 80) + '…',
-    date: new Date().toLocaleDateString(),
+  await saveToHistory(
+    MESSAGE_TYPES.find(m => m.id === msgType)?.label || msgType,
+    tenant.tenant_name,
+    result,
     channels,
-  }, ...h.slice(0, 9)]);
+    result
+  );
 
   setSmsStatus(statuses.join(' · '));
   setSending(false);
@@ -259,10 +386,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto' as const, paddingBottom: 2 }}>
         {([
-          { id: 'transition', label: '🔑 Tenant Transition' },
-          { id: 'draft', label: '✦ Draft Message' },
+          { id: 'inbox', label: '✦ AI Smart Reply' },
+          { id: 'draft', label: '📝 Draft Message' },
+          { id: 'transition', label: '🔑 Transition' },
           { id: 'history', label: '📋 History (' + history.length + ')' },
         ] as const).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -276,6 +404,162 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
           </button>
         ))}
       </div>
+
+      {/* AI SMART REPLY INBOX */}
+      {tab === 'inbox' && (
+        <div>
+          <div style={{ ...card, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 14 }}>✦</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>AI Smart Reply</span>
+              <span style={{ background: T.teal, color: T.navy, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>AI</span>
+            </div>
+            <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.5 }}>
+              Paste a tenant message. AI analyzes it against their lease, open maintenance issues, and payment history — then drafts a professional reply.
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+            {/* Left: input */}
+            <div>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Tenant</label>
+                <select value={inboxTenant} onChange={e => { setInboxTenant(+e.target.value); setInboxReply(null); setInboxSmsStatus(''); }}
+                  style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: T.ink }}>
+                  {loadingTenants
+                    ? <option>Loading…</option>
+                    : tenants.length === 0
+                      ? <option>No tenants — add leases first</option>
+                      : tenants.map((t, i) => <option key={t.id} value={i}>{t.tenant_name} — {t.property}</option>)
+                  }
+                </select>
+              </div>
+
+              <div style={{ ...card }}>
+                <label style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>Tenant's Message</label>
+                <textarea value={inboxMessage} onChange={e => setInboxMessage(e.target.value)}
+                  placeholder="Paste the tenant's email, text, or message here..."
+                  style={{ width: '100%', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: 140, boxSizing: 'border-box' as const, fontFamily: 'inherit', color: T.ink, lineHeight: 1.6 }} />
+                <button onClick={generateSmartReply} disabled={inboxLoading || !inboxMessage.trim() || tenants.length === 0}
+                  style={{ ...btn.primary, width: '100%', marginTop: 12, opacity: !inboxMessage.trim() || tenants.length === 0 ? 0.5 : 1 }}>
+                  {inboxLoading ? '✦ Analyzing & Drafting...' : '✦ Generate AI Reply'}
+                </button>
+              </div>
+            </div>
+
+            {/* Right: reply */}
+            <div>
+              {inboxError && (
+                <div style={{ background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: T.coral, fontWeight: 600 }}>
+                  {inboxError}
+                </div>
+              )}
+
+              {!inboxReply && !inboxLoading && (
+                <div style={{ ...card, textAlign: 'center', padding: 40 }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>💬</div>
+                  <div style={{ color: T.inkMuted, fontSize: 13 }}>Paste a tenant message and click "Generate AI Reply" to get a professional response drafted instantly.</div>
+                </div>
+              )}
+
+              {inboxLoading && (
+                <div style={{ ...card, textAlign: 'center', padding: 40 }}>
+                  <div style={{ fontSize: 14, color: T.tealDark, fontWeight: 600 }}>✦ Analyzing message...</div>
+                  <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 6 }}>Checking lease terms, maintenance issues, and payment history</div>
+                </div>
+              )}
+
+              {inboxReply && (
+                <div>
+                  {/* Classification badges */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, textTransform: 'uppercase',
+                      background: inboxReply.urgency === 'high' ? T.coralLight : inboxReply.urgency === 'medium' ? T.amberLight : T.tealLight,
+                      color: inboxReply.urgency === 'high' ? T.coral : inboxReply.urgency === 'medium' ? T.amberDark : T.tealDark }}>
+                      {inboxReply.urgency} urgency
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: T.bg, color: T.inkMid, textTransform: 'uppercase' }}>
+                      {inboxReply.category}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
+                      background: inboxReply.sentiment === 'negative' ? T.coralLight : inboxReply.sentiment === 'positive' ? T.greenLight : T.bg,
+                      color: inboxReply.sentiment === 'negative' ? T.coral : inboxReply.sentiment === 'positive' ? T.greenDark : T.inkMid }}>
+                      {inboxReply.sentiment}
+                    </span>
+                  </div>
+
+                  {/* Draft reply */}
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>AI Draft Reply</div>
+                    <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: T.ink, border: `1px solid ${T.border}` }}>
+                      {inboxReply.reply}
+                    </div>
+                  </div>
+
+                  {/* Suggested actions */}
+                  {inboxReply.suggested_actions && inboxReply.suggested_actions.length > 0 && (
+                    <div style={{ ...card, marginBottom: 14 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Suggested Actions</div>
+                      {inboxReply.suggested_actions.map((a, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, fontSize: 13, color: T.inkMid }}>
+                          <span style={{ color: T.tealDark, fontWeight: 700 }}>→</span>
+                          <span>{a}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Send controls */}
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>Send Via</div>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                      <button onClick={() => setInboxSendEmail(!inboxSendEmail)}
+                        style={{
+                          flex: 1, padding: '10px', borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                          background: inboxSendEmail ? T.tealLight : T.surface,
+                          color: inboxSendEmail ? T.tealDark : T.inkMid,
+                          border: `1px solid ${inboxSendEmail ? T.teal + '66' : T.border}`,
+                        }}>
+                        {inboxSendEmail ? '✓ ' : ''}✉️ Email
+                      </button>
+                      <button onClick={() => setInboxSendSMS(!inboxSendSMS)}
+                        style={{
+                          flex: 1, padding: '10px', borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                          background: inboxSendSMS ? T.tealLight : T.surface,
+                          color: inboxSendSMS ? T.tealDark : T.inkMid,
+                          border: `1px solid ${inboxSendSMS ? T.teal + '66' : T.border}`,
+                        }}>
+                        {inboxSendSMS ? '✓ ' : ''}📱 SMS
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={sendInboxReply} disabled={inboxSending || (!inboxSendEmail && !inboxSendSMS)}
+                        style={{ ...btn.primary, flex: 1, opacity: !inboxSendEmail && !inboxSendSMS ? 0.5 : 1 }}>
+                        {inboxSending ? 'Sending...' : 'Send Reply'}
+                      </button>
+                      <button onClick={() => { navigator.clipboard.writeText(inboxReply.reply); setInboxCopied(true); setTimeout(() => setInboxCopied(false), 2000); }}
+                        style={{ ...btn.ghost }}>
+                        {inboxCopied ? '✓ Copied' : '📋 Copy'}
+                      </button>
+                    </div>
+
+                    {inboxSmsStatus && (
+                      <div style={{
+                        marginTop: 10, padding: '8px 14px', borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600,
+                        background: inboxSmsStatus.includes('✗') ? T.coralLight : T.greenLight,
+                        color: inboxSmsStatus.includes('✗') ? T.coral : T.greenDark,
+                      }}>
+                        {inboxSmsStatus}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {tab === 'transition' && (
         <div>
@@ -573,20 +857,24 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       )}
 
       {tab === 'history' && (
-        <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div style={{ ...card }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Message History</div>
+            <span style={{ fontSize: 12, color: T.inkMuted }}>{history.length} messages</span>
+          </div>
           {history.length === 0
-            ? <div style={{ textAlign: 'center', color: '#8C8070', padding: 40, fontSize: 13 }}>No messages drafted yet.</div>
+            ? <div style={{ textAlign: 'center', color: T.inkMuted, padding: 40, fontSize: 13 }}>No messages sent yet. Draft a message or use Smart Reply to get started.</div>
             : history.map((h, i) => (
-              <div key={i} style={{ padding: '14px 0', borderBottom: '1px solid #F0EDE8' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{h.type} → {h.tenant}</div>
-                  <div style={{ fontSize: 12, color: '#8C8070' }}>{h.date}</div>
+              <div key={h.id || i} style={{ padding: '14px 0', borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{h.type} → {h.tenant}</div>
+                  <div style={{ fontSize: 12, color: T.inkMuted }}>{h.date}</div>
                 </div>
-                <div style={{ fontSize: 12, color: '#8C8070', marginBottom: 4 }}>{h.preview}</div>
+                <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 4 }}>{h.preview}</div>
                 {h.channels.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
                     {h.channels.map(c => (
-                      <span key={c} style={{ background: '#D8EDDF', color: '#2D6A4F', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                      <span key={c} style={{ background: T.tealLight, color: T.tealDark, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                         {c === 'email' ? '✉️ email' : '📱 sms'}
                       </span>
                     ))}
