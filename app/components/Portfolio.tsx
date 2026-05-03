@@ -145,6 +145,11 @@ export default function Portfolio() {
   const [unitAddressSelected, setUnitAddressSelected] = useState(false);
   const [plan, setPlan] = useState<{ canAddUnit: boolean; canAddBuilding: boolean; unitCount: number; maxUnits: number; buildingCount: number; maxBuildings: number } | null>(null);
   const [showUpgrade, setShowUpgrade] = useState<'unit' | 'building' | null>(null);
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
+  const [featuresUnit, setFeaturesUnit] = useState<Unit | null>(null);
+  const [featuresSelected, setFeaturesSelected] = useState<string[]>([]);
+  const [featuresCustom, setFeaturesCustom] = useState('');
+  const [featuresSaving, setFeaturesSaving] = useState(false);
 
   const emptyBuilding = {
     address: '', name: '', type: 'Duplex', year_built: '',
@@ -715,6 +720,31 @@ export default function Portfolio() {
                           </div>
                         )}
 
+                        {/* Property Features */}
+                        <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 10, paddingTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <span style={{ fontWeight: 700, color: T.navy, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Features</span>
+                            <button onClick={() => { setFeaturesUnit(unit); setFeaturesSelected((unit as any).differentiators ? (unit as any).differentiators.split(',').map((s: string) => s.trim()).filter(Boolean) : []); setFeaturesCustom(''); setShowFeaturesModal(true); }}
+                              style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                              ✏️ Edit
+                            </button>
+                          </div>
+                          {(unit as any).differentiators ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {(unit as any).differentiators.split(',').slice(0, 5).map((f: string, i: number) => (
+                                <span key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: '2px 8px', fontSize: 10, color: T.inkMid, fontWeight: 500 }}>
+                                  {f.trim()}
+                                </span>
+                              ))}
+                              {(unit as any).differentiators.split(',').length > 5 && (
+                                <span style={{ fontSize: 10, color: T.inkMuted, padding: '2px 4px' }}>+{(unit as any).differentiators.split(',').length - 5} more</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11, color: T.inkMuted, fontStyle: 'italic' }}>Add features to improve FMV accuracy →</div>
+                          )}
+                        </div>
+
                         {isMobile && (
                           <div style={{ display: 'flex', gap: 8, marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
                             <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
@@ -1007,6 +1037,86 @@ export default function Portfolio() {
           reason={showUpgrade}
           onClose={() => setShowUpgrade(null)}
         />
+      )}
+
+      {/* Features Modal */}
+      {showFeaturesModal && featuresUnit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => setShowFeaturesModal(false)}>
+          <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 24 : 32, maxWidth: 700, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(15,52,96,0.25)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 20, color: T.navy }}>Property Features</div>
+              <button onClick={() => setShowFeaturesModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: T.inkMuted, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+              Select features for <strong>{featuresUnit.unit_number ? 'Unit ' + featuresUnit.unit_number : featuresUnit.address}</strong> to improve FMV accuracy.
+            </div>
+            <div style={{ background: T.tealLight, borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: T.tealDark }}>
+              💡 Premium features like private yards, garages, and renovations can add $50-200/mo to fair market value.
+            </div>
+
+            {([
+              ['Outdoor & Parking', ['Attached garage', 'Detached garage', 'Carport', 'Private backyard', 'Shared backyard', 'Patio/deck', 'Balcony', 'Pool access', 'Fenced yard', 'EV charging']],
+              ['Laundry & Climate', ['In-unit washer/dryer', 'In-unit hookups only', 'Shared laundry', 'Central AC', 'Central heat', 'Fireplace', 'Ceiling fans']],
+              ['Kitchen & Bath', ['New appliances', 'Stainless steel appliances', 'Dishwasher', 'Granite/quartz counters', 'Updated bathroom', 'Walk-in shower', 'Double vanity']],
+              ['Layout & Floors', ['Walk-in closet', 'Open floor plan', 'High ceilings', 'Hardwood floors', 'New carpet', 'Built-in storage']],
+              ['Smart & Security', ['Smart thermostat', 'Smart locks', 'Security system', 'Doorbell camera', 'Gated community']],
+              ['Views & Setting', ['Mountain views', 'Ocean views', 'City views', 'Quiet street', 'Corner unit', 'Top floor', 'Recently renovated']],
+              ['Location', ['Walk to beach', 'Walk to downtown', 'Near transit', 'Near schools', 'Near grocery', 'Quiet neighborhood']],
+              ['Pets & Utilities', ['Pet friendly', 'Dogs allowed', 'Cats allowed', 'Water included', 'Trash included', 'Internet included']],
+            ] as [string, string[]][]).map(([cat, features]) => (
+              <div key={cat} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>{cat}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {features.map(f => {
+                    const active = featuresSelected.includes(f);
+                    return (
+                      <button key={f} onClick={() => setFeaturesSelected(prev => active ? prev.filter(x => x !== f) : [...prev, f])}
+                        style={{ background: active ? T.teal : T.surface, color: active ? T.navy : T.inkMuted, border: `1px solid ${active ? T.teal : T.border}`, borderRadius: 14, padding: '5px 11px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.12s' }}>
+                        {active ? '✓ ' : ''}{f}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Custom Features</div>
+              <textarea value={featuresCustom} onChange={e => setFeaturesCustom(e.target.value)}
+                placeholder="e.g. Custom built-ins, oversized lot, new roof 2025 (comma separated)"
+                style={{ ...input, minHeight: 50, resize: 'vertical' as const }} />
+            </div>
+
+            <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 4 }}>Selected: {featuresSelected.length} features</div>
+              {featuresSelected.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  {featuresSelected.map(f => (
+                    <span key={f} style={{ background: T.teal, color: T.navy, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>{f}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowFeaturesModal(false)} style={{ ...btn.ghost, flex: 1 }}>Cancel</button>
+              <button onClick={async () => {
+                setFeaturesSaving(true);
+                const all = [...featuresSelected, ...featuresCustom.split(',').map(s => s.trim()).filter(Boolean)];
+                const str = all.join(', ');
+                await supabase.from('properties').update({ differentiators: str }).eq('id', featuresUnit.id);
+                setShowFeaturesModal(false);
+                setFeaturesSaving(false);
+                await fetchAll();
+              }} disabled={featuresSaving}
+                style={{ ...btn.primary, flex: 1, opacity: featuresSaving ? 0.6 : 1 }}>
+                {featuresSaving ? 'Saving...' : 'Save Features'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
