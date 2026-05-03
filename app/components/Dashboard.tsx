@@ -566,6 +566,119 @@ function ActiveLeasesTable({ leases, onNavigate, isMobile }: { leases: any[]; on
 }
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
+// ── MARKET INSIGHTS ──────────────────────────────────────────────────────────
+function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean }) {
+  const [analyses, setAnalyses] = useState<Record<string, any>>({});
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  // Load cached analyses
+  useEffect(() => {
+    const cached = sessionStorage.getItem('kw_market_analyses');
+    if (cached) try { setAnalyses(JSON.parse(cached)); } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(analyses).length > 0) {
+      sessionStorage.setItem('kw_market_analyses', JSON.stringify(analyses));
+    }
+  }, [analyses]);
+
+  const runAnalysis = async (lease: any) => {
+    setAnalyzing(lease.id);
+    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const res = await fetch('/api/market-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user?.id,
+          property: lease.property,
+          current_rent: lease.rent,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.error) setAnalyses(prev => ({ ...prev, [lease.id]: data }));
+      }
+    } catch {}
+    setAnalyzing(null);
+  };
+
+  const activeLeases = leases.filter(l => l.rent && l.property);
+  if (activeLeases.length === 0) return null;
+
+  const displayLeases = expanded ? activeLeases : activeLeases.slice(0, 3);
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>📊</span>
+          <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Rent Market Analysis</div>
+        </div>
+        {activeLeases.length > 3 && (
+          <button onClick={() => setExpanded(!expanded)} style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {expanded ? 'Show less' : `Show all ${activeLeases.length}`}
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {displayLeases.map(lease => {
+          const a = analyses[lease.id];
+          return (
+            <div key={lease.id} style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: a ? 10 : 0 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{lease.property?.split(',')[0]}</div>
+                  <div style={{ fontSize: 12, color: T.inkMuted }}>Current: ${(lease.rent || 0).toLocaleString()}/mo · {lease.tenant_name}</div>
+                </div>
+                {!a && (
+                  <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id}
+                    style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: analyzing === lease.id ? 0.6 : 1, whiteSpace: 'nowrap' as const }}>
+                    {analyzing === lease.id ? '✦ Analyzing...' : '✦ Analyze Rent'}
+                  </button>
+                )}
+              </div>
+
+              {a && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Market Rent</div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: T.tealDark }}>${(a.estimated_market_rent || 0).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Range</div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>${(a.market_rent_low || 0).toLocaleString()}–${(a.market_rent_high || 0).toLocaleString()}</div>
+                    </div>
+                    {!isMobile && (
+                      <div>
+                        <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Difference</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: (a.rent_difference || 0) > 0 ? T.greenDark : (a.rent_difference || 0) < 0 ? T.coral : T.navy }}>
+                          {(a.rent_difference || 0) > 0 ? '+' : ''}{(a.rent_difference ?? a.estimated_market_rent - lease.rent)?.toLocaleString()}/mo
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {a.recommendations && (
+                    <div style={{ fontSize: 12, color: T.inkMid, fontStyle: 'italic' }}>💡 {a.recommendations}</div>
+                  )}
+                  <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id}
+                    style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginTop: 6, padding: 0, fontFamily: 'inherit' }}>
+                    ↻ Refresh
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [leases, setLeases] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -603,8 +716,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
   // ── Derived data ──
   const now = new Date();
   const thisMonth = now.getMonth(), thisYear = now.getFullYear();
+  const nonArchivedLeases = leases.filter(l => !l.archived);
 
-  const totalRent = leases.reduce((s, l) => s + (l.rent || 0), 0);
+  const totalRent = nonArchivedLeases.reduce((s, l) => s + (l.rent || 0), 0);
   const collectedThisMonth = payments
     .filter(p => p.status === 'paid' && (() => { const d = new Date(p.due_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; })())
     .reduce((s, p) => s + (p.amount || 0), 0);
@@ -699,6 +813,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
 
       {/* ── ROW 2: SMART ACTIONS (proactive AI) ── */}
       <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
+
+      {/* ── MARKET INSIGHTS ── */}
+      <MarketInsights leases={leases.filter(l => !l.archived)} isMobile={isMobile} />
 
       {/* ── ROW 3: AI DAILY DIGEST (full width) ── */}
       <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
