@@ -288,7 +288,10 @@ export default function Home() {
       window.history.replaceState({}, '', window.location.pathname + initialSearch);
     }
 
+    let authResolved = false;
     const resolveAuth = async (session: any) => {
+      if (authResolved) return; // Prevent double-resolve
+      authResolved = true;
       try {
       setSession(session);
       if (!session) { setLoading(false); return; }
@@ -313,7 +316,7 @@ export default function Home() {
 
       // Fetch profile — role is the source of truth
       const { data: profile } = await supabase
-        .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
+        .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).maybeSingle();
 
       if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
       if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
@@ -349,19 +352,25 @@ export default function Home() {
       if (session) {
         await resolveAuth(session);
       } else if (initialHash && initialHash.includes('access_token')) {
-        // No session yet but hash contains token — wait for auth state change
         console.error('[auth] Waiting for session from hash token...');
-        // Timeout: if auth state change doesn't fire within 8s, stop loading
-        setTimeout(() => setLoading(prev => { if (prev) console.error('[auth] Hash token timeout — forcing load'); return false; }), 8000);
+        setTimeout(() => {
+          if (!authResolved) { console.error('[auth] Hash token timeout'); setLoading(false); }
+        }, 8000);
       } else {
         setLoading(false);
       }
+    }).catch(err => {
+      console.error('[auth] getSession error:', err);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.error('[auth] Auth state change:', _event, session?.user?.email || 'none');
-      if (_event === 'SIGNED_IN' && session) {
+      if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && session) {
         await resolveAuth(session);
+      } else if (_event === 'SIGNED_OUT') {
+        setSession(null);
+        setUserRole(null);
       } else {
         setSession(session);
       }
