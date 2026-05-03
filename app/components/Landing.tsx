@@ -487,9 +487,8 @@ export default function Landing() {
         <div className="landing-nav-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <Logo size={30} />
           <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
-            <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 8 }}>
-              Blog
-            </a>
+            <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Blog</a>
+            <a href="/tenant" style={{ color: INK_MUTED, fontSize: 13, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Tenant Login</a>
             <button onClick={openLogin} className="landing-btn-ghost"
               style={{ background: 'transparent', color: INK_MID, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
               Log In
@@ -955,6 +954,19 @@ export default function Landing() {
                   { label: 'Late Rent Notice Template', href: '/blog/late-rent-notice' },
                   { label: 'Move-In Inspection Checklist', href: '/blog/move-in-inspection-checklist' },
                 ].map(link => (
+                  <a key={link.label} href={link.href}
+                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>For Tenants</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[{ label: 'Tenant Login', href: '/tenant' }, { label: 'Pay Rent Online', href: '/tenant' }].map(link => (
                   <a key={link.label} href={link.href}
                     style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
                     onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}

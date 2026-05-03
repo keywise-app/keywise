@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/blog/free-lease-agreement-template`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/security-deposit-laws`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/property-management-software-comparison`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/tenant`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/contact`, lastModified, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${base}/privacy`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${base}/terms`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
