@@ -570,6 +570,7 @@ function ActiveLeasesTable({ leases, onNavigate, isMobile }: { leases: any[]; on
 function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean }) {
   const [analyses, setAnalyses] = useState<Record<string, any>>({});
   const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // Load cached analyses
@@ -599,10 +600,22 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
       });
       if (res.ok) {
         const data = await res.json();
-        if (!data.error) setAnalyses(prev => ({ ...prev, [lease.id]: data }));
+        if (!data.error) {
+          setAnalyses(prev => ({ ...prev, [lease.id]: data }));
+          await supabase.from('leases').update({
+            estimated_market_rent: data.estimated_market_rent,
+            market_value_updated_at: new Date().toISOString(),
+          }).eq('id', lease.id);
+        }
       }
     } catch {}
     setAnalyzing(null);
+  };
+
+  const refreshAll = async () => {
+    setRefreshingAll(true);
+    for (const lease of activeLeases) { await runAnalysis(lease); }
+    setRefreshingAll(false);
   };
 
   const activeLeases = leases.filter(l => l.rent && l.property);
@@ -610,12 +623,63 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
 
   const displayLeases = expanded ? activeLeases : activeLeases.slice(0, 3);
 
+  const analyzedCount = activeLeases.filter(l => analyses[l.id]).length;
+  const totalCurrent = activeLeases.reduce((s, l) => s + (l.rent || 0), 0);
+  const totalMarket = activeLeases.reduce((s, l) => s + (analyses[l.id]?.estimated_market_rent || l.estimated_market_rent || l.rent || 0), 0);
+  const opportunity = totalMarket - totalCurrent;
+  const belowMarket = activeLeases.filter(l => analyses[l.id] && (analyses[l.id].estimated_market_rent || 0) > (l.rent || 0)).length;
+
   return (
-    <div style={{ ...card }}>
+    <div>
+      {/* FMV Summary Banner */}
+      <div style={{ background: 'linear-gradient(135deg, #0F3460 0%, #1B4F8C 100%)', borderRadius: T.radiusLg, padding: isMobile ? 20 : 24, marginBottom: 16, color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', right: -40, top: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%)' }} />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div style={{ color: T.teal, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 4 }}>📊 Market Intelligence</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>Fair Market Rent Analysis</div>
+            </div>
+            <button onClick={refreshAll} disabled={refreshingAll}
+              style={{ background: T.teal, color: T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: refreshingAll ? 0.7 : 1, whiteSpace: 'nowrap' as const }}>
+              {refreshingAll ? '⟳ Analyzing...' : '🔄 Refresh All'}
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>CURRENT RENT</div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>${totalCurrent.toLocaleString()}<span style={{ fontSize: 12, opacity: 0.5 }}>/mo</span></div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>FAIR MARKET</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: T.teal }}>${totalMarket.toLocaleString()}<span style={{ fontSize: 12, opacity: 0.5 }}>/mo</span></div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>OPPORTUNITY</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: opportunity > 0 ? '#FFB347' : '#fff' }}>{opportunity > 0 ? '+' : ''}${opportunity.toLocaleString()}<span style={{ fontSize: 12, opacity: 0.5 }}>/mo</span></div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>ANNUAL POTENTIAL</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: opportunity > 0 ? '#FFB347' : '#fff' }}>${(opportunity * 12).toLocaleString()}</div>
+            </div>
+          </div>
+          {belowMarket > 0 && (
+            <div style={{ marginTop: 14, fontSize: 12, background: 'rgba(255,179,71,0.15)', borderRadius: 8, padding: '10px 14px' }}>
+              💡 <strong>{belowMarket}</strong> of your {activeLeases.length} units are below market rate. Consider increases at next renewal.
+            </div>
+          )}
+          {analyzedCount === 0 && (
+            <div style={{ marginTop: 14, fontSize: 12, opacity: 0.7 }}>Click "Refresh All" to analyze fair market rent for all your units.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Per-lease details */}
+      <div style={{ ...card }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>📊</span>
-          <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Rent Market Analysis</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Per-Unit Analysis</div>
+          <span style={{ fontSize: 11, color: T.inkMuted }}>{analyzedCount}/{activeLeases.length} analyzed</span>
         </div>
         {activeLeases.length > 3 && (
           <button onClick={() => setExpanded(!expanded)} style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -665,16 +729,28 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
                   {a.recommendations && (
                     <div style={{ fontSize: 12, color: T.inkMid, fontStyle: 'italic' }}>💡 {a.recommendations}</div>
                   )}
-                  <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id}
-                    style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', marginTop: 6, padding: 0, fontFamily: 'inherit' }}>
-                    ↻ Refresh
-                  </button>
+                  {a.neighborhood_trends && (
+                    <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>{a.neighborhood_trends}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, alignItems: 'center' }}>
+                    <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id || refreshingAll}
+                      style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      ↻ Refresh
+                    </button>
+                    {a.demand_indicator && (
+                      <span style={{ fontSize: 10, color: T.inkMuted }}>Demand: <strong style={{ color: a.demand_indicator === 'high' ? T.greenDark : a.demand_indicator === 'low' ? T.coral : T.navy, textTransform: 'capitalize' }}>{a.demand_indicator}</strong></span>
+                    )}
+                    {a.data_confidence && (
+                      <span style={{ fontSize: 10, color: T.inkMuted }}>Confidence: {a.data_confidence}</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+    </div>
     </div>
   );
 }

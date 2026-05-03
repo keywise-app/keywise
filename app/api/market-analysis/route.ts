@@ -3,7 +3,7 @@ import { checkAiLimit } from '../../lib/aiRateLimit';
 
 export async function POST(req: Request) {
   try {
-    const { user_id, property, current_rent, beds, baths, sqft } = await req.json();
+    const { user_id, property, current_rent, beds, baths, sqft, differentiators } = await req.json();
     if (!property) return NextResponse.json({ error: 'property required' }, { status: 400 });
 
     if (user_id) {
@@ -23,15 +23,16 @@ export async function POST(req: Request) {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `You are a rental market analyst. Estimate fair market rent for this property based on typical US rental rates for the property type, location, and size.
+          content: `You are a rental market analyst. Estimate fair market rent for this property.
 
 Property: ${property}
 Current Rent: $${current_rent || 0}/month
 Bedrooms: ${beds || 'Unknown'}
 Bathrooms: ${baths || 'Unknown'}
 Square Feet: ${sqft || 'Unknown'}
+${differentiators ? `\nUnique Features: ${differentiators}` : ''}
 
-Using your knowledge of US rental markets, estimate the fair market rent. Consider the city, neighborhood, property size, and current market conditions.
+Consider the city, neighborhood, property size, current 2026 market conditions, and any unique features listed. Features like private yards, in-unit laundry, renovations, views, or garage access add premium value.
 
 Return ONLY valid JSON (no markdown):
 {
@@ -42,13 +43,17 @@ Return ONLY valid JSON (no markdown):
   "recommended_rent": 2400,
   "rent_difference": 200,
   "rent_difference_pct": 9,
-  "neighborhood_trends": "Brief 2-sentence summary of rental trends in this area",
-  "recommendations": "Brief recommendation for the landlord",
-  "data_confidence": "medium"
+  "differentiator_premium": 150,
+  "neighborhood_trends": "2-sentence summary of rental trends in this area",
+  "demand_indicator": "high",
+  "recommendations": "Specific recommendation for the landlord including reasoning",
+  "data_confidence": "medium",
+  "analysis_date": "${new Date().toISOString().split('T')[0]}"
 }
 
-current_rent_position should be "below_market", "at_market", or "above_market".
-Be realistic. If you lack specific data for the location, note that in data_confidence.`,
+current_rent_position: "below_market", "at_market", or "above_market".
+demand_indicator: "high", "medium", or "low".
+Be realistic — don't inflate values.`,
         }],
       }),
     });
