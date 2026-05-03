@@ -107,17 +107,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       supabase.from('buildings').select('id,address,name').order('address'),
       supabase.from('properties').select('id,building_id,unit_number,address,beds,baths,current_rent').eq('is_unit', true).order('unit_number'),
     ]);
-    // Fall back to properties table if no buildings table rows exist
-    if (bRes.data && bRes.data.length > 0) {
-      setBuildings(bRes.data);
-    } else {
-      const { data: fallback } = await supabase
-        .from('properties')
-        .select('id,address,name')
-        .eq('is_unit', false)
-        .order('address');
-      if (fallback) setBuildings(fallback);
-    }
+    setBuildings(bRes.data || []);
     if (uRes.data) setUnits(uRes.data);
   };
 
@@ -230,11 +220,11 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       const building = buildings.find(b => b.id === form.building_id);
       propertyAddress = (building?.address || '') + (form.unit_number ? ', Unit ' + form.unit_number : '');
     } else if (form.address) {
-      // Create new building record
-      const { data: bld } = await supabase.from('properties').insert({
+      // Create building in buildings table
+      const { data: bld } = await supabase.from('buildings').insert({
         user_id: user.id,
         address: form.address,
-        is_unit: false,
+        name: form.address.split(',')[0],
         type: 'Single Family',
         num_units: 1,
         mortgage: +form.mortgage || 0,
@@ -242,6 +232,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       }).select('id').single();
 
       if (bld) {
+        // Create unit in properties table
         await supabase.from('properties').insert({
           user_id: user.id,
           building_id: bld.id,

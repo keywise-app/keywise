@@ -290,8 +290,12 @@ export default function Portfolio() {
 
   const deleteBuilding = async (id: string) => {
     if (!confirm('Delete this building? Units inside will also be removed.')) return;
+    // Delete units linked to this building
     await supabase.from('properties').delete().eq('building_id', id);
+    // Delete the building itself
     await supabase.from('buildings').delete().eq('id', id);
+    // Clean up orphaned properties records (legacy: wizard used to create buildings in properties table)
+    await supabase.from('properties').delete().eq('id', id).eq('is_unit', false);
     await fetchAll();
   };
 
