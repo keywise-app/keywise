@@ -56,6 +56,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [showUpgradedBanner, setShowUpgradedBanner] = useState(false);
@@ -86,6 +87,13 @@ export default function Home() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Loading timeout — show error state if stuck
+  useEffect(() => {
+    if (!loading) { setLoadingTimeout(false); return; }
+    const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 12000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Allow child components to navigate via custom event
   useEffect(() => {
@@ -281,6 +289,7 @@ export default function Home() {
     }
 
     const resolveAuth = async (session: any) => {
+      try {
       setSession(session);
       if (!session) { setLoading(false); return; }
 
@@ -328,7 +337,11 @@ export default function Home() {
         setUserRole('landlord');
         if (!profile?.full_name) setShowOnboarding(true);
       }
-      setLoading(false);
+      } catch (err) {
+        console.error('[auth] resolveAuth error:', err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     // Try existing session first
@@ -338,7 +351,8 @@ export default function Home() {
       } else if (initialHash && initialHash.includes('access_token')) {
         // No session yet but hash contains token — wait for auth state change
         console.error('[auth] Waiting for session from hash token...');
-        // Supabase will process the hash and fire SIGNED_IN
+        // Timeout: if auth state change doesn't fire within 8s, stop loading
+        setTimeout(() => setLoading(prev => { if (prev) console.error('[auth] Hash token timeout — forcing load'); return false; }), 8000);
       } else {
         setLoading(false);
       }
@@ -410,10 +424,21 @@ export default function Home() {
   };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: T.bg }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: T.bg, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ textAlign: 'center' }}>
         <KeywiseLogo size={40} />
-        <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 16 }}>Loading…</p>
+        {loadingTimeout ? (
+          <>
+            <p style={{ color: T.coral, fontSize: 14, fontWeight: 600, marginTop: 16 }}>Something went wrong</p>
+            <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 4, maxWidth: 300 }}>The page took too long to load. This usually means a network issue.</p>
+            <button onClick={() => window.location.reload()}
+              style={{ marginTop: 16, background: T.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Reload Page
+            </button>
+          </>
+        ) : (
+          <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 16 }}>Loading…</p>
+        )}
       </div>
     </div>
   );

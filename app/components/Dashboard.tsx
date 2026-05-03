@@ -774,19 +774,24 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
 
   const fetchAll = async () => {
     setLoading(true);
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
-    const [lRes, pRes, mRes, eRes] = await Promise.all([
-      supabase.from('leases').select('*').order('end_date', { ascending: true }),
-      supabase.from('payments').select('*').gte('due_date', sixMonthsAgo).order('due_date', { ascending: false }),
-      supabase.from('maintenance').select('*').order('created_at', { ascending: false }).limit(30),
-      supabase.from('expenses').select('*').gte('date', sixMonthsAgo).order('date', { ascending: false }),
-    ]);
-    if (lRes.data) setLeases(lRes.data);
-    if (pRes.data) setPayments(pRes.data);
-    if (mRes.data) setMaintenance(mRes.data);
-    if (eRes.data) setExpenses(eRes.data);
-    setLoading(false);
+    try {
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
+      const [lRes, pRes, mRes, eRes] = await Promise.all([
+        supabase.from('leases').select('*').order('end_date', { ascending: true }),
+        supabase.from('payments').select('*').gte('due_date', sixMonthsAgo).order('due_date', { ascending: false }),
+        supabase.from('maintenance').select('*').order('created_at', { ascending: false }).limit(30),
+        supabase.from('expenses').select('*').gte('date', sixMonthsAgo).order('date', { ascending: false }),
+      ]);
+      if (lRes.data) setLeases(lRes.data);
+      if (pRes.data) setPayments(pRes.data);
+      if (mRes.data) setMaintenance(mRes.data);
+      if (eRes.data) setExpenses(eRes.data);
+    } catch (err) {
+      console.error('[dashboard] fetchAll error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Derived data ──
