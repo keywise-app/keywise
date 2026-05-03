@@ -506,10 +506,10 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
             <div>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>
-                  {!useNewProperty ? 'Which property is this for?' : 'Property details'}
+                  {!useNewProperty ? 'Which property is this for?' : buildings.length === 0 ? "Let's set up your first property" : 'New property details'}
                 </div>
                 <div style={{ fontSize: 13, color: T.inkMuted }}>
-                  {method === 'pdf' ? 'Extracted from your lease — confirm or edit.' : !useNewProperty ? 'Select a unit for this tenant.' : "We'll use this to track the lease."}
+                  {method === 'pdf' ? 'Extracted from your lease — confirm or edit.' : !useNewProperty ? 'Select a building and unit for this tenant.' : buildings.length === 0 ? "We'll create the building, unit, and tenant all in one go." : "We'll add this to your portfolio."}
                 </div>
               </div>
 
@@ -583,9 +583,19 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                     <label style={label}>Property address *</label>
                     <AddressInput value={form.address} onChange={(v: string) => upd({ address: v })} placeholder="42 Maple St, Dana Point, CA 92629" />
                   </div>
+                  {buildings.length === 0 && (
+                    <div>
+                      <label style={label}>Property type</label>
+                      <select style={input} value={form.unit_number ? 'multi' : 'single'}
+                        onChange={e => { if (e.target.value === 'single') upd({ unit_number: '' }); }}>
+                        <option value="single">Single home / one unit</option>
+                        <option value="multi">Multi-unit (duplex, triplex, etc.)</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
-                    <label style={label}>Unit number (optional)</label>
-                    <input style={input} value={form.unit_number} placeholder="2B" onChange={e => upd({ unit_number: e.target.value })} />
+                    <label style={label}>Unit number {buildings.length === 0 ? '' : '(optional)'}</label>
+                    <input style={input} value={form.unit_number} placeholder="e.g. A, 101, 1B" onChange={e => upd({ unit_number: e.target.value })} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                     <div>
