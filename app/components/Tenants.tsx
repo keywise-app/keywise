@@ -270,6 +270,11 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   ];
 
   const [templateFields, setTemplateFields] = useState<Record<string, string>>({});
+  const [renewalMarket, setRenewalMarket] = useState<any>(null);
+  const [renewalLoading, setRenewalLoading] = useState(false);
+  const [proposedRent, setProposedRent] = useState('');
+  const [renewalTerm, setRenewalTerm] = useState('12');
+  const [responseDate, setResponseDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
 
   const currentTemplate = TEMPLATES.flatMap(c => c.items).find(t => t.id === msgType);
 
@@ -318,9 +323,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
       'late-rent': `${baseContext} Draft a late rent notice. Request payment within 3 days.${sig} ${context}`,
       'payment-reminder': `${baseContext} Draft a friendly payment reminder. Rent is due soon. Mention they can pay online via Keywise.${sig}`,
       'entry-notice': `${baseContext} Draft a 24-hour entry notice. ${fieldsInfo ? 'Details: ' + fieldsInfo + '.' : 'Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.'}${sig}`,
-      'lease-renewal': `${baseContext} Draft a lease renewal offer. ${fieldsInfo ? 'New terms: ' + fieldsInfo + '.' : (context || 'Offer 12-month renewal at 3% increase, 30-day response window.')} Explain briefly why — market conditions, property improvements, great tenant relationship.${sig}`,
+      'lease-renewal': `${baseContext} Draft a lease renewal offer.${proposedRent ? ' Proposed new rent: $' + proposedRent + '/mo.' : ''} Renewal term: ${renewalTerm === 'month-to-month' ? 'month-to-month' : renewalTerm + ' months'}. Response deadline: ${responseDate}.${renewalMarket ? ' Market context: FMV is $' + renewalMarket.estimated_market_rent + '/mo, range $' + (renewalMarket.market_rent_low || '?') + '-$' + (renewalMarket.market_rent_high || '?') + '.' : ''} ${proposedRent && +proposedRent > (selected?.rent || 0) ? 'Justify the increase briefly — market conditions and property value.' : proposedRent && +proposedRent === (selected?.rent || 0) ? 'Mention you are holding rent steady below market as a courtesy.' : ''} Explain briefly, be warm, include next steps and response deadline.${sig} ${context}`,
       'non-renewal': `${baseContext} Draft a non-renewal notice. ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include move-out instructions and security deposit return timeline (21 days). Be professional and respectful.${sig}`,
-      'rent-increase': `${baseContext} Draft a rent increase notice. ${fieldsInfo ? 'New rent: $' + templateFields.new_rent + ', effective: ' + templateFields.effective_date + '.' : (context || '5% increase effective in 60 days.')} Explain reasoning briefly — market rate, property improvements. Include required notice period.${sig}`,
+      'rent-increase': `${baseContext} Draft a rent increase notice.${proposedRent ? ' New rent: $' + proposedRent + '/mo.' : fieldsInfo ? ' New rent: $' + templateFields.new_rent + '.' : ''} Effective: ${templateFields.effective_date || 'in 60 days'}.${renewalMarket ? ' Market context: FMV is $' + renewalMarket.estimated_market_rent + '/mo.' : ''} Explain reasoning briefly — market rate, property value. Include required 60-day notice period.${sig} ${context}`,
       'maintenance-update': `${baseContext} Draft a maintenance status update. ${fieldsInfo ? 'Issue: ' + (templateFields.issue || '') + '. Status: ' + (templateFields.status || '') + '.' : ''} ${context || ''}${sig}`,
       'inspection': `${baseContext} Draft an inspection notice. ${fieldsInfo ? 'Date: ' + templateFields.inspection_date + '.' : ''} Will take approximately 30-45 minutes. Tenant should be present or arrange access.${sig}`,
       'move-out': `${baseContext} Draft move-out instructions. ${fieldsInfo ? 'Move-out date: ' + templateFields.move_out_date + '.' : ''} Include cleaning expectations, key return, deposit return timeline (21 days).${sig} ${context}`,
@@ -1439,92 +1444,213 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             {/* COMMUNICATIONS */}
             {tab === 'communications' && (
               <div>
-                {/* Template categories */}
-                {TEMPLATES.map(cat => (
-                  <div key={cat.cat} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>{cat.cat}</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {cat.items.map(t => (
-                        <button key={t.id} onClick={() => { setMsgType(t.id); setDraft(''); setTemplateFields({}); }}
-                          style={{
-                            padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                            background: msgType === t.id ? T.navy : T.bg,
-                            color: msgType === t.id ? 'white' : T.inkMid,
-                            border: `1px solid ${msgType === t.id ? T.navy : T.border}`,
-                          }}
-                          title={t.desc}>
-                          {t.label}
+                {/* Template selector dropdown */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={label}>Message Type</label>
+                  <select value={msgType} onChange={e => { setMsgType(e.target.value); setDraft(''); setTemplateFields({}); setRenewalMarket(null); setProposedRent(''); }}
+                    style={{ ...input, fontSize: 14, cursor: 'pointer' }}>
+                    <option value="">Select a template...</option>
+                    <optgroup label="Lease & Renewals">
+                      <option value="lease-renewal">🔄 Lease Renewal Offer</option>
+                      <option value="non-renewal">📅 Non-Renewal Notice</option>
+                      <option value="rent-increase">📈 Rent Increase Notice (60-day)</option>
+                    </optgroup>
+                    <optgroup label="Payments">
+                      <option value="late-rent">⚠️ Late Rent Reminder</option>
+                      <option value="payment-reminder">🔔 Upcoming Payment Reminder</option>
+                    </optgroup>
+                    <optgroup label="Property & Maintenance">
+                      <option value="entry-notice">🔑 Notice of Entry</option>
+                      <option value="maintenance-update">🔧 Maintenance Update</option>
+                      <option value="inspection">🔍 Inspection Notice</option>
+                    </optgroup>
+                    <optgroup label="Move In/Out">
+                      <option value="welcome">🏠 Move-In Welcome</option>
+                      <option value="move-out">📦 Move-Out Instructions</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="violation">⚠️ Lease Violation</option>
+                      <option value="check-in">💬 Friendly Check-In</option>
+                      <option value="listing">🏠 Property Listing</option>
+                      <option value="general">✉️ Custom Message</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                {msgType && (
+                  <>
+                    {/* RENEWAL OFFER — FMV integration */}
+                    {(msgType === 'lease-renewal' || msgType === 'rent-increase') && (
+                      <div style={{ marginBottom: 16 }}>
+                        {/* FMV Banner */}
+                        <div style={{ background: 'linear-gradient(135deg, #0F3460 0%, #1B4F8C 100%)', borderRadius: 12, padding: 18, marginBottom: 14, color: '#fff' }}>
+                          <div style={{ color: T.teal, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>📊 Market Analysis</div>
+                          {renewalLoading ? (
+                            <div style={{ fontSize: 13, opacity: 0.7 }}>Analyzing market rent...</div>
+                          ) : renewalMarket ? (
+                            <>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                                <div>
+                                  <div style={{ fontSize: 10, opacity: 0.6 }}>CURRENT</div>
+                                  <div style={{ fontSize: 18, fontWeight: 800 }}>${(selected.rent || 0).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 10, opacity: 0.6 }}>FAIR MARKET</div>
+                                  <div style={{ fontSize: 18, fontWeight: 800, color: T.teal }}>${(renewalMarket.estimated_market_rent || 0).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 10, opacity: 0.6 }}>OPPORTUNITY</div>
+                                  <div style={{ fontSize: 18, fontWeight: 800, color: '#FFB347' }}>+${((renewalMarket.estimated_market_rent || 0) - (selected.rent || 0)).toLocaleString()}</div>
+                                </div>
+                              </div>
+                              {renewalMarket.recommendations && (
+                                <div style={{ fontSize: 11, opacity: 0.8, fontStyle: 'italic' }}>💡 {renewalMarket.recommendations}</div>
+                              )}
+                            </>
+                          ) : (
+                            <button onClick={async () => {
+                              setRenewalLoading(true);
+                              const { data: { user } } = await supabase.auth.getUser();
+                              try {
+                                const res = await fetch('/api/market-analysis', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ user_id: user?.id, property: selected.property, current_rent: selected.rent }),
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  if (!data.error) {
+                                    setRenewalMarket(data);
+                                    setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent));
+                                  }
+                                }
+                              } catch {}
+                              setRenewalLoading(false);
+                            }} style={{ background: T.teal, color: T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              🔍 Run Market Analysis
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Renewal settings */}
+                        <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, border: `1px solid ${T.border}` }}>
+                          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 12, fontSize: 13 }}>
+                            {msgType === 'lease-renewal' ? 'Renewal Terms' : 'Rent Increase Details'}
+                          </div>
+                          <div style={{ marginBottom: 10 }}>
+                            <label style={label}>New Monthly Rent ($)</label>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input type="number" value={proposedRent || templateFields.new_rent || ''} placeholder={String(selected.rent || '')}
+                                onChange={e => { setProposedRent(e.target.value); setTemplateFields(prev => ({ ...prev, new_rent: e.target.value })); }}
+                                style={{ ...input, flex: 1, fontSize: 16, fontWeight: 700 }} />
+                              {renewalMarket && (
+                                <button onClick={() => { const v = String(renewalMarket.estimated_market_rent); setProposedRent(v); setTemplateFields(prev => ({ ...prev, new_rent: v })); }}
+                                  style={{ ...btn.primary, fontSize: 11, padding: '6px 10px', whiteSpace: 'nowrap' as const }}>Use FMV</button>
+                              )}
+                            </div>
+                            {proposedRent && +proposedRent !== selected.rent && (
+                              <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600, color: +proposedRent > selected.rent ? T.greenDark : T.coral }}>
+                                {+proposedRent > selected.rent ? '+' : ''}${(+proposedRent - selected.rent).toLocaleString()}/mo ({(((+proposedRent - selected.rent) / selected.rent) * 100).toFixed(1)}%)
+                              </div>
+                            )}
+                          </div>
+                          {msgType === 'lease-renewal' && (
+                            <>
+                              <div style={{ marginBottom: 10 }}>
+                                <label style={label}>Renewal Term</label>
+                                <select value={renewalTerm} onChange={e => { setRenewalTerm(e.target.value); setTemplateFields(prev => ({ ...prev, term_months: e.target.value })); }} style={input}>
+                                  <option value="6">6 months</option>
+                                  <option value="12">12 months</option>
+                                  <option value="18">18 months</option>
+                                  <option value="24">24 months</option>
+                                  <option value="month-to-month">Month-to-month</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label style={label}>Response Needed By</label>
+                                <input type="date" value={responseDate} onChange={e => setResponseDate(e.target.value)} style={input} />
+                              </div>
+                            </>
+                          )}
+                          {msgType === 'rent-increase' && (
+                            <div>
+                              <label style={label}>Effective Date</label>
+                              <input type="date" value={templateFields.effective_date || ''} onChange={e => setTemplateFields(prev => ({ ...prev, effective_date: e.target.value }))} style={input} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Generic template fields for non-renewal templates */}
+                    {msgType !== 'lease-renewal' && msgType !== 'rent-increase' && currentTemplate && currentTemplate.fields.length > 0 && (
+                      <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 12, border: `1px solid ${T.border}` }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>{currentTemplate.desc}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: currentTemplate.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                          {currentTemplate.fields.map(f => (
+                            <div key={f}>
+                              <label style={label}>{f.replace(/_/g, ' ')}</label>
+                              <input type={f.includes('date') ? 'date' : f.includes('rent') || f.includes('fee') ? 'number' : f.includes('time') ? 'time' : 'text'}
+                                value={templateFields[f] || ''} onChange={e => setTemplateFields(prev => ({ ...prev, [f]: e.target.value }))}
+                                placeholder={f.includes('rent') ? 'e.g. 2500' : f.includes('reason') ? 'e.g. plumbing repair' : ''} style={input} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tone + context */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted }}>Tone:</div>
+                      {([['professional', 'Professional'], ['friendly', 'Friendly'], ['firm', 'Firm']] as const).map(([val, lbl]) => (
+                        <button key={val} onClick={() => setTone(val)}
+                          style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${tone === val ? T.navy : T.border}`, background: tone === val ? T.navy : T.surface, color: tone === val ? '#fff' : T.inkMid, fontFamily: 'inherit' }}>
+                          {lbl}
                         </button>
                       ))}
                     </div>
-                  </div>
-                ))}
 
-                {/* Template-specific fields */}
-                {currentTemplate && currentTemplate.fields.length > 0 && (
-                  <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>{currentTemplate.desc}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: currentTemplate.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 10 }}>
-                      {currentTemplate.fields.map(f => (
-                        <div key={f}>
-                          <label style={label}>{f.replace(/_/g, ' ')}</label>
-                          <input
-                            type={f.includes('date') ? 'date' : f.includes('rent') || f.includes('fee') ? 'number' : f.includes('time') ? 'time' : 'text'}
-                            value={templateFields[f] || ''}
-                            onChange={e => setTemplateFields(prev => ({ ...prev, [f]: e.target.value }))}
-                            placeholder={f.includes('rent') ? 'e.g. 2500' : f.includes('reason') ? 'e.g. plumbing repair' : ''}
-                            style={input}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                    {msgType === 'general' && (
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={label}>Your message</label>
+                        <textarea value={context} onChange={e => setContext(e.target.value)}
+                          placeholder="What would you like to say?"
+                          style={{ ...input, minHeight: 80, resize: 'vertical' as const }} />
+                      </div>
+                    )}
+                    {msgType !== 'general' && (
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={label}>Additional notes (optional)</label>
+                        <textarea value={context} onChange={e => setContext(e.target.value)}
+                          placeholder="Extra details, dates, or special instructions…"
+                          style={{ ...input, minHeight: 50, resize: 'vertical' as const }} />
+                      </div>
+                    )}
+
+                    <button onClick={draftMessage} disabled={drafting} style={{ ...btn.primary, width: '100%', marginBottom: 16 }}>
+                      {drafting ? '✦ Drafting…' : '✦ Generate Message'}
+                    </button>
+                  </>
                 )}
 
-                {/* Tone + context */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginRight: 4 }}>Tone:</div>
-                  {([['professional', 'Professional'], ['friendly', 'Friendly'], ['firm', 'Firm']] as const).map(([val, lbl]) => (
-                    <button key={val} onClick={() => setTone(val)}
-                      style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${tone === val ? T.navy : T.border}`, background: tone === val ? T.navy : T.surface, color: tone === val ? '#fff' : T.inkMid, fontFamily: 'inherit' }}>
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ marginBottom: 12 }}>
-                  <label style={label}>Additional context (optional)</label>
-                  <textarea value={context} onChange={e => setContext(e.target.value)}
-                    placeholder="Add specific details, dates, amounts, or special instructions…"
-                    style={{ ...input, minHeight: 60, resize: 'vertical' as const }} />
-                </div>
-
-                <button onClick={draftMessage} disabled={drafting} style={{ ...btn.primary, marginBottom: 16 }}>
-                  {drafting ? '✦ Drafting…' : '✦ Draft Message'}
-                </button>
-
+                {/* Generated draft */}
                 {draft && (
                   <div>
-                    {/* AI Transparency */}
-                    <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span style={{ fontSize: 14, flexShrink: 0 }}>✦</span>
-                      <div style={{ fontSize: 11, color: T.tealDark, lineHeight: 1.5 }}>
-                        <strong>AI used:</strong> {selected.tenant_name}'s lease data (rent ${selected.rent ? '$' + selected.rent.toLocaleString() : 'N/A'}, {selected.property?.split(',')[0]}{selected.late_fee_percent ? ', ' + selected.late_fee_percent + '% late fee' : ''}{selected.end_date ? ', ends ' + selected.end_date : ''}) · Tone: {tone} · {profile?.full_name ? 'Signed as ' + profile.full_name : 'No signature'}
-                      </div>
+                    <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '8px 12px', marginBottom: 10, fontSize: 11, color: T.tealDark }}>
+                      ✦ AI-drafted using {selected.tenant_name}'s lease data · Tone: {tone} · {profile?.full_name ? 'Signed as ' + profile.full_name : 'No signature'}
                     </div>
-
-                    <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 4, maxHeight: 300, overflowY: 'auto', color: T.ink }}>
+                    <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', marginBottom: 4, maxHeight: 300, overflowY: 'auto', color: T.ink, border: `1px solid ${T.border}` }}>
                       {draft}
                     </div>
                     <div style={{ fontSize: 11, color: T.inkMuted, marginBottom: 10, textAlign: 'right' }}>{draft.split(/\s+/).filter(Boolean).length} words</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button onClick={() => { navigator.clipboard.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
-                        {copied ? '✓ Copied!' : '📋 Copy'}
+                      <button onClick={() => window.open('mailto:' + (selected.email || '') + '?subject=' + encodeURIComponent((MSG_TYPES.find(m => m.id === msgType)?.label || 'Message') + ' — ' + selected.property) + '&body=' + encodeURIComponent(draft))}
+                        style={{ ...btn.teal, fontSize: 12, padding: '8px 16px' }}>
+                        ✉️ Send Email
                       </button>
-                      <button onClick={() => window.open('mailto:' + (selected.email || '') + '?subject=' + encodeURIComponent(MSG_TYPES.find(m => m.id === msgType)?.label + ' — ' + selected.property) + '&body=' + encodeURIComponent(draft))}
-                        style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>
-                        ✉️ Open in Email
+                      <button onClick={() => { navigator.clipboard.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                        style={{ ...btn.ghost, fontSize: 12, padding: '8px 16px' }}>
+                        {copied ? '✓ Copied!' : '📋 Copy'}
                       </button>
                       <button onClick={async () => {
                         setTranslating(true);
@@ -1532,14 +1658,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                         setDraft(translated);
                         setTranslating(false);
                       }} disabled={translating}
-                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px', opacity: translating ? 0.7 : 1 }}>
+                        style={{ ...btn.ghost, fontSize: 12, padding: '8px 16px', opacity: translating ? 0.7 : 1 }}>
                         {translating ? 'Translating...' : '🌐 Spanish'}
                       </button>
-                      <button onClick={draftMessage} disabled={drafting}
-                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
-                        ↻ Regenerate
-                      </button>
-                      <button onClick={() => setDraft('')} style={{ ...btn.danger, fontSize: 12, padding: '6px 14px' }}>Dismiss</button>
+                      <button onClick={draftMessage} disabled={drafting} style={{ ...btn.ghost, fontSize: 12, padding: '8px 16px' }}>↻ Regenerate</button>
+                      <button onClick={() => setDraft('')} style={{ ...btn.danger, fontSize: 12, padding: '8px 16px' }}>Dismiss</button>
                     </div>
                   </div>
                 )}
