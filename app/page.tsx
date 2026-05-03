@@ -264,66 +264,93 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Capture URL params BEFORE any cleanup
+    // Capture URL params BEFORE any cleanup — these get lost after hash processing
     const initialSearch = window.location.search;
     const initialHash = window.location.hash;
     const initialParams = new URLSearchParams(initialSearch);
     const isTenantFlow = initialParams.get('tenant') === 'true' || initialHash.includes('tenant=true');
+    const isWelcome = initialParams.get('welcome') === 'true';
     const isRecovery = initialHash.includes('type=recovery') || initialHash.includes('type=signup');
 
+    console.error('[auth] Init — search:', initialSearch, 'tenant:', isTenantFlow, 'recovery:', isRecovery);
+
     // Clean auth hash fragments from URL (left by Supabase redirects)
-    if (initialHash && initialHash.includes('access_token')) {
-      window.history.replaceState({}, '', window.location.pathname + (isTenantFlow ? '' : initialSearch));
+    // Do NOT clean yet if we need to wait for session from the hash
+    if (initialHash && initialHash.includes('access_token') && !isTenantFlow) {
+      window.history.replaceState({}, '', window.location.pathname + initialSearch);
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const resolveAuth = async (session: any) => {
       setSession(session);
-      if (session) {
+      if (!session) { setLoading(false); return; }
 
-        // If this is a password recovery flow, skip all tenant detection
-        if (isRecovery) {
-          setUserRole('landlord');
-          setLoading(false);
-          return;
-        }
+      console.error('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 
-        if (isTenantFlow) window.history.replaceState({}, '', '/');
-        const linkLeaseByEmail = async () => {
-          // Use server-side API to bypass RLS (lease belongs to landlord, not tenant)
-          const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
-          const { lease } = await res.json();
-          console.error('[tenant] Lease from API:', lease?.id, lease?.tenant_name || 'NOT FOUND');
-        };
+      // Clean URL now that session is established
+      if (isTenantFlow || isWelcome) window.history.replaceState({}, '', '/');
 
-        // Always fetch profile first — role is the source of truth
-        const { data: profile } = await supabase
-          .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
+      // Password recovery — skip tenant detection
+      if (isRecovery) {
+        setUserRole('landlord');
+        setLoading(false);
+        return;
+      }
 
-        if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
-        if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
+      const linkLeaseByEmail = async () => {
+        const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
+        const { lease } = await res.json();
+        console.error('[tenant] Lease from API:', lease?.id, lease?.tenant_name || 'NOT FOUND');
+      };
 
-        if (isTenantFlow && profile?.role !== 'landlord') {
-          // First-time tenant login via magic link — set role permanently
-          await supabase.from('profiles').upsert(
-            { id: session.user.id, email: session.user.email, role: 'tenant' },
-            { onConflict: 'id' }
-          );
-          await linkLeaseByEmail();
-          setUserRole('tenant');
-        } else if (profile?.role === 'tenant') {
-          // Returning tenant — ALWAYS show tenant portal (role is saved in DB)
-          await linkLeaseByEmail();
-          setUserRole('tenant');
-        } else {
-          // Landlord, null role, or recovery flow
-          setUserRole('landlord');
-          if (!profile?.full_name) setShowOnboarding(true);
-        }
+      // Fetch profile — role is the source of truth
+      const { data: profile } = await supabase
+        .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).single();
+
+      if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
+      if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
+
+      if (isTenantFlow && profile?.role !== 'landlord') {
+        // First-time tenant login via magic link — set role permanently
+        console.error('[auth] Setting role to tenant for:', session.user.email);
+        await supabase.from('profiles').upsert(
+          { id: session.user.id, email: session.user.email, role: 'tenant' },
+          { onConflict: 'id' }
+        );
+        await linkLeaseByEmail();
+        setUserRole('tenant');
+      } else if (profile?.role === 'tenant') {
+        // Returning tenant — ALWAYS show tenant portal
+        console.error('[auth] Returning tenant:', session.user.email);
+        await linkLeaseByEmail();
+        setUserRole('tenant');
+      } else {
+        // Landlord, null role, or recovery flow
+        setUserRole('landlord');
+        if (!profile?.full_name) setShowOnboarding(true);
       }
       setLoading(false);
+    };
+
+    // Try existing session first
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        await resolveAuth(session);
+      } else if (initialHash && initialHash.includes('access_token')) {
+        // No session yet but hash contains token — wait for auth state change
+        console.error('[auth] Waiting for session from hash token...');
+        // Supabase will process the hash and fire SIGNED_IN
+      } else {
+        setLoading(false);
+      }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.error('[auth] Auth state change:', _event, session?.user?.email || 'none');
+      if (_event === 'SIGNED_IN' && session) {
+        await resolveAuth(session);
+      } else {
+        setSession(session);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
