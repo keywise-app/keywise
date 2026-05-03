@@ -5,6 +5,7 @@ import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import AddTenantWizard from './AddTenantWizard';
 import Inspections from './Inspections';
+import RentalApplications from './RentalApplications';
 
 export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWizard?: boolean; onWizardOpen?: () => void } = {}) {
   const [showWizard, setShowWizard] = useState(false);
@@ -61,6 +62,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [tone, setTone] = useState<'professional' | 'friendly' | 'firm'>('professional');
   const [translating, setTranslating] = useState(false);
+  const [topView, setTopView] = useState<'tenants' | 'applications'>('tenants');
 
   useEffect(() => {
     if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
@@ -352,20 +354,48 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
   if (leases.length === 0) return (
     <>
       {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 60, textAlign: 'center', boxShadow: T.shadow }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-        <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 8 }}>No tenants yet</div>
-        <div style={{ color: T.inkMuted, fontSize: 14, marginBottom: 28 }}>Add your first tenant to start tracking leases, payments, and communications.</div>
-        <button onClick={() => setShowWizard(true)}
-          style={{ ...btn.primary, fontSize: 15, padding: '12px 28px', background: T.teal, color: T.navy, fontWeight: 700 }}>
-          + Add Your First Tenant
-        </button>
+      {/* Top-level view toggle */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 4, width: 'fit-content', boxShadow: T.shadow }}>
+        {[{ id: 'tenants', label: '👥 Tenants' }, { id: 'applications', label: '📋 Applications' }].map(v => (
+          <button key={v.id} onClick={() => setTopView(v.id as any)}
+            style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: topView === v.id ? T.navy : 'transparent', color: topView === v.id ? '#fff' : T.inkMuted, transition: 'all 0.12s', fontFamily: 'inherit' }}>
+            {v.label}
+          </button>
+        ))}
       </div>
+
+      {topView === 'applications' ? (
+        <RentalApplications />
+      ) : (
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 60, textAlign: 'center', boxShadow: T.shadow }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+          <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 8 }}>No tenants yet</div>
+          <div style={{ color: T.inkMuted, fontSize: 14, marginBottom: 28 }}>Add your first tenant to start tracking leases, payments, and communications.</div>
+          <button onClick={() => setShowWizard(true)}
+            style={{ ...btn.primary, fontSize: 15, padding: '12px 28px', background: T.teal, color: T.navy, fontWeight: 700 }}>
+            + Add Your First Tenant
+          </button>
+        </div>
+      )}
     </>
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 140px)' }}>
+    <div>
+      {/* Top-level view toggle */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 4, width: 'fit-content', boxShadow: T.shadow }}>
+        {[{ id: 'tenants', label: '👥 Tenants' }, { id: 'applications', label: '📋 Applications' }].map(v => (
+          <button key={v.id} onClick={() => setTopView(v.id as any)}
+            style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: topView === v.id ? T.navy : 'transparent', color: topView === v.id ? '#fff' : T.inkMuted, transition: 'all 0.12s', fontFamily: 'inherit' }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {topView === 'applications' ? (
+        <RentalApplications />
+      ) : (
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 180px)' }}>
       {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
 
       {/* Receipt sent toast */}
@@ -1499,6 +1529,8 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
             <p style={{ color: T.inkMuted, fontSize: 11, marginTop: 12 }}>No commitment · Cancel anytime</p>
           </div>
         </div>
+      )}
+    </div>
       )}
     </div>
   );
