@@ -289,6 +289,8 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const propertyShort = unitPart ? parts[0].trim() + ', ' + unitPart.trim() : parts[0]?.trim() || lease.property;
   const progress = leaseProgress();
 
+  const isLeaseEnded = lease.archived || (lease.end_date && new Date(lease.end_date) < new Date());
+
   return (
     <div style={{ maxWidth: isMobile ? '100%' : 800, margin: '0 auto', padding: isMobile ? '0 0 40px' : '0 24px 40px' }}>
 
@@ -310,6 +312,24 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       {previewLeaseId && (
         <div style={{ background: T.amberLight, border: `1px solid ${T.amber}44`, borderRadius: T.radiusSm, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: T.amberDark, fontWeight: 600 }}>
           👁 Preview mode — this is what {lease.tenant_name} will see
+        </div>
+      )}
+
+      {/* Lease ended banner */}
+      {isLeaseEnded && (
+        <div style={{ background: 'linear-gradient(135deg, #FFB347 0%, #FF8C42 100%)', borderRadius: T.radius, padding: 20, marginBottom: 16, color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 22 }}>📋</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>{lease.archived ? 'Lease Ended' : 'Lease Expired'}</span>
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>
+            {lease.archived
+              ? `Your tenancy at ${propertyShort} was ended on ${lease.archived_at ? new Date(lease.archived_at).toLocaleDateString() : 'a recent date'}.`
+              : `Your lease at ${propertyShort} expired on ${new Date(lease.end_date).toLocaleDateString()}.`}
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 12, fontSize: 12 }}>
+            <strong>Read-Only Mode:</strong> You can view your payment history and documents but cannot make new payments or changes. Contact your landlord if you have questions.
+          </div>
         </div>
       )}
 
@@ -348,8 +368,8 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
-      {/* Payment Setup */}
-      {!paymentMethodSaved && lease && (
+      {/* Payment Setup — hide for ended leases */}
+      {!isLeaseEnded && !paymentMethodSaved && lease && (
         <div style={{ background: '#fff', borderRadius: T.radius, padding: 24, marginBottom: 16, border: `2px solid ${T.teal}`, boxShadow: T.shadow }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 12 }}>💳 Payment Setup</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -381,7 +401,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
-      {paymentMethodSaved && autopayEnabled && (
+      {!isLeaseEnded && paymentMethodSaved && autopayEnabled && (
         <div style={{ background: T.tealLight, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${T.teal}33` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <div>
@@ -401,7 +421,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           </div>
         </div>
       )}
-      {paymentMethodSaved && !autopayEnabled && (
+      {!isLeaseEnded && paymentMethodSaved && !autopayEnabled && (
         <div style={{ background: T.bg, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${T.border}` }}>
           <div style={{ fontWeight: 600, color: T.navy, fontSize: 13, marginBottom: 8 }}>💳 Card Saved</div>
           <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
@@ -424,6 +444,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       <div>
 
       {/* Outstanding Payments */}
+      {!isLeaseEnded && (
       <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Outstanding Payments</div>
         <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Payments due or upcoming</div>
@@ -494,6 +515,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           </div>
         )}
       </div>
+      )}
 
       {/* Payment History */}
       {history.length > 0 && (
@@ -532,6 +554,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: T.navy }}>Documents</div>
+            {!isLeaseEnded && (
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.teal, color: '#fff', padding: '7px 14px', borderRadius: 8, cursor: uploading ? 'default' : 'pointer', fontWeight: 600, fontSize: 12, opacity: uploading ? 0.7 : 1 }}>
               {uploading ? 'Uploading...' : '📎 Upload'}
               <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
@@ -557,9 +580,10 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                   e.target.value = '';
                 }} />
             </label>
+            )}
           </div>
           {/* Pending document requests */}
-          {docRequests.map(r => (
+          {!isLeaseEnded && docRequests.map(r => (
             <div key={r.id} style={{ background: T.amberLight, border: `1px solid ${T.amberDark}33`, borderRadius: T.radiusSm, padding: '12px 14px', marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.amberDark }}>
                 ⚠ Your landlord requested: {(r.document_type || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
@@ -647,7 +671,21 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
 
       {/* Message Landlord */}
       <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, marginBottom: 16, boxShadow: T.shadow }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>Message Your Landlord</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: T.navy, marginBottom: 4 }}>{isLeaseEnded ? 'Contact Your Former Landlord' : 'Message Your Landlord'}</div>
+
+        {isLeaseEnded ? (
+          <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 13, color: T.inkMuted, lineHeight: 1.6 }}>
+            Your lease has ended. To contact your former landlord directly:
+            {landlord && (
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {landlord.full_name && <span style={{ fontWeight: 600, color: T.navy }}>{landlord.full_name}</span>}
+                {landlord.email && <a href={'mailto:' + landlord.email} style={{ color: T.tealDark, textDecoration: 'none' }}>✉ {landlord.email}</a>}
+                {landlord.phone && <a href={'tel:' + landlord.phone} style={{ color: T.tealDark, textDecoration: 'none' }}>📞 {landlord.phone}</a>}
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
           {landlord?.email && landlord?.phone ? 'Sends via SMS and email' : landlord?.email ? 'Sends via email' : landlord?.phone ? 'Sends via SMS' : 'No contact info on file'}
         </div>
@@ -682,7 +720,28 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
             )}
           </>
         )}
+        </>
+        )}
       </div>
+
+      {/* Download Records — for ended leases */}
+      {isLeaseEnded && (
+        <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 20, marginBottom: 16, boxShadow: T.shadow, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 10 }}>Need records for taxes or a rental application?</div>
+          <button onClick={() => {
+            const rows = [['Date', 'Amount', 'Status', 'Method']];
+            payments.filter(p => p.status === 'paid').forEach(p => rows.push([p.paid_date || p.due_date, '$' + (p.amount || 0), 'Paid', p.method || '—']));
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `keywise-payment-history-${lease.tenant_name?.replace(/\s/g, '-')}.csv`; a.click();
+            URL.revokeObjectURL(url);
+          }} style={{ ...btn.ghost, fontSize: 13 }}>
+            📥 Download Payment History (CSV)
+          </button>
+        </div>
+      )}
 
       </div>{/* END RIGHT COLUMN */}
       </div>{/* END GRID */}
