@@ -63,6 +63,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [tone, setTone] = useState<'professional' | 'friendly' | 'firm'>('professional');
   const [translating, setTranslating] = useState(false);
   const [topView, setTopView] = useState<'tenants' | 'applications'>('tenants');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     if (autoOpenWizard) { setShowWizard(true); onWizardOpen?.(); }
@@ -80,7 +83,9 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     ]);
     if (lRes.data) {
       setLeases(lRes.data);
-      if (lRes.data.length > 0 && !selected) setSelected(lRes.data[0]);
+      const active = lRes.data.filter((l: any) => !l.archived);
+      if (active.length > 0 && !selected) setSelected(active[0]);
+      else if (active.length === 0) setSelected(null);
     }
     if (pRes.data) setPayments(pRes.data);
     if (profRes.data) {
@@ -145,44 +150,78 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     setSaving(false);
   };
 
-  const removeTenant = async () => {
-    if (!selected) return;
-    if (!confirm('Remove ' + selected.tenant_name + '? This will delete all their records.')) return;
+  const archiveTenant = async (tenant: any) => {
+    setArchiving(true);
+    try {
+      // 1. Mark lease as archived
+      await supabase.from('leases').update({ archived: true, archived_at: new Date().toISOString(), status: 'archived' }).eq('id', tenant.id);
 
-    // 1. Get all inspection IDs for this lease
-    const { data: inspectionRows } = await supabase.from('inspections').select('id').eq('lease_id', selected.id);
-    const inspectionIds = inspectionRows?.map(i => i.id) || [];
+      // 2. Cancel future pending payments
+      const today = new Date().toISOString().split('T')[0];
+      await supabase.from('payments').delete().eq('lease_id', tenant.id).eq('status', 'pending').gte('due_date', today);
 
-    // 2. Delete signing tokens for inspections
-    if (inspectionIds.length > 0) {
-      await supabase.from('signing_tokens').delete().in('inspection_id', inspectionIds);
+      // 3. Disable autopay if tenant has a user account
+      if (tenant.tenant_user_id) {
+        await supabase.from('profiles').update({ autopay_enabled: false }).eq('id', tenant.tenant_user_id);
+      }
+
+      // 4. Notify tenant
+      if (tenant.email) {
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: tenant.email,
+            subject: 'Your tenancy at ' + (tenant.property?.split(',')[0] || 'your property') + ' has ended',
+            from_name: profile?.full_name || 'Your Landlord',
+            html: '<div style="font-family:Arial;max-width:500px;margin:0 auto"><div style="background:#0F3460;padding:20px 28px;border-radius:12px 12px 0 0"><div style="color:#00D4AA;font-size:20px;font-weight:700">keywise</div></div><div style="background:white;padding:28px;border-radius:0 0 12px 12px;border:1px solid #E0E6F0"><h2 style="color:#0F3460;font-size:18px;margin:0 0 12px">Tenancy Update</h2><p style="color:#4A5068;line-height:1.6">Your tenancy at <strong>' + (tenant.property || '') + '</strong> has been marked as ended.</p><p style="color:#4A5068;line-height:1.6">Auto-pay has been cancelled and future payments have been removed. Your payment history is preserved.</p><p style="color:#8892A4;font-size:13px;margin-top:20px">If this was done in error, please contact your landlord.</p></div></div>',
+          }),
+        }).catch(() => {});
+      }
+
+      setShowDeleteModal(false);
+      setSelected(null);
+      await fetchAll();
+    } catch (err: any) {
+      alert('Error archiving: ' + err.message);
     }
+    setArchiving(false);
+  };
 
-    // 3. Delete signing tokens for documents/lease
-    await supabase.from('signing_tokens').delete().eq('lease_id', selected.id);
-
-    // 4. Delete inspection photos
-    if (inspectionIds.length > 0) {
-      await supabase.from('inspection_photos').delete().in('inspection_id', inspectionIds);
-    }
-
-    // 5. Delete inspections
-    await supabase.from('inspections').delete().eq('lease_id', selected.id);
-
-    // 6. Delete payments
-    await supabase.from('payments').delete().eq('lease_id', selected.id);
-
-    // 7. Delete documents
-    await supabase.from('documents').delete().eq('lease_id', selected.id);
-
-    // 8. Delete lease
-    const { error } = await supabase.from('leases').delete().eq('id', selected.id);
-    if (error) { alert('Error deleting: ' + error.message); return; }
-
-    const remaining = leases.filter(l => l.id !== selected.id);
-    setLeases(remaining);
-    setSelected(remaining.length > 0 ? remaining[0] : null);
+  const restoreTenant = async (tenant: any) => {
+    await supabase.from('leases').update({ archived: false, archived_at: null, status: 'active' }).eq('id', tenant.id);
     await fetchAll();
+  };
+
+  const deleteTenantPermanently = async (tenant: any) => {
+    if (!confirm('Permanently delete ' + tenant.tenant_name + ' and ALL their records? This cannot be undone.')) return;
+    setArchiving(true);
+    try {
+      // Disable autopay
+      if (tenant.tenant_user_id) {
+        await supabase.from('profiles').update({ autopay_enabled: false }).eq('id', tenant.tenant_user_id);
+      }
+
+      // Clean up all related records
+      const { data: inspRows } = await supabase.from('inspections').select('id').eq('lease_id', tenant.id);
+      const inspIds = inspRows?.map(i => i.id) || [];
+      if (inspIds.length > 0) {
+        await supabase.from('signing_tokens').delete().in('inspection_id', inspIds);
+        await supabase.from('inspection_photos').delete().in('inspection_id', inspIds);
+      }
+      await supabase.from('signing_tokens').delete().eq('lease_id', tenant.id);
+      await supabase.from('inspections').delete().eq('lease_id', tenant.id);
+      await supabase.from('payments').delete().eq('lease_id', tenant.id);
+      await supabase.from('documents').delete().eq('lease_id', tenant.id);
+      await supabase.from('leases').delete().eq('id', tenant.id);
+
+      setShowDeleteModal(false);
+      setSelected(null);
+      await fetchAll();
+    } catch (err: any) {
+      alert('Error deleting: ' + err.message);
+    }
+    setArchiving(false);
   };
 
   const getDaysLeft = (endDate: string) =>
@@ -351,7 +390,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
     <div style={{ textAlign: 'center', padding: 60, color: T.inkMuted }}>Loading tenants…</div>
   );
 
-  if (leases.length === 0) return (
+  if (leases.filter(l => !l.archived).length === 0 && leases.filter(l => l.archived).length === 0) return (
     <>
       {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
       {/* Top-level view toggle */}
@@ -410,7 +449,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
       <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: isMobile ? 'auto' : undefined }}>
         <div style={{ padding: '10px 12px 10px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {leases.length} Tenant{leases.length !== 1 ? 's' : ''}
+            {leases.filter(l => !l.archived).length} Tenant{leases.filter(l => !l.archived).length !== 1 ? 's' : ''}
           </span>
           <button onClick={() => setShowWizard(true)}
             style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -418,7 +457,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
           </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {leases.map(lease => {
+          {leases.filter(l => !l.archived).map(lease => {
             const status = getStatusBadge(lease);
             const isSelected = selected?.id === lease.id;
             const hasOverdue = payments.some(p => (p.lease_id === lease.id || p.tenant_name === lease.tenant_name) && p.status === 'overdue');
@@ -448,6 +487,29 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
               </div>
             );
           })}
+
+          {/* Archived tenants */}
+          {leases.filter(l => l.archived).length > 0 && (
+            <div style={{ borderTop: `1px solid ${T.border}` }}>
+              <button onClick={() => setShowArchived(!showArchived)}
+                style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📦 Archived ({leases.filter(l => l.archived).length})
+                </span>
+                <span style={{ fontSize: 12, color: T.inkMuted }}>{showArchived ? '▲' : '▼'}</span>
+              </button>
+              {showArchived && leases.filter(l => l.archived).map(lease => (
+                <div key={lease.id} style={{ padding: '10px 16px', borderBottom: `1px solid ${T.border}`, opacity: 0.6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{lease.tenant_name}</div>
+                  <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{lease.property?.split(',')[0]}</div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <button onClick={() => restoreTenant(lease)} style={{ background: 'none', border: `1px solid ${T.border}`, borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 600, color: T.navy, cursor: 'pointer', fontFamily: 'inherit' }}>Restore</button>
+                    <button onClick={() => deleteTenantPermanently(lease)} style={{ background: 'none', border: `1px solid ${T.coral}44`, borderRadius: 6, padding: '3px 8px', fontSize: 10, fontWeight: 600, color: T.coral, cursor: 'pointer', fontFamily: 'inherit' }}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       )}
@@ -546,7 +608,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                     style={{ ...btn.ghost, fontSize: isMobile ? 11 : 12, padding: isMobile ? '5px 10px' : '6px 14px' }}>
                     ✏️ Edit
                   </button>
-                  <button onClick={removeTenant}
+                  <button onClick={() => setShowDeleteModal(true)}
                     style={{ ...btn.danger, fontSize: isMobile ? 11 : 12, padding: isMobile ? '5px 10px' : '6px 14px' }}>
                     Remove
                   </button>
@@ -1531,6 +1593,53 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
         </div>
       )}
     </div>
+      )}
+
+      {/* Archive / Delete Modal */}
+      {showDeleteModal && selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => setShowDeleteModal(false)}>
+          <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 24 : 32, maxWidth: 500, width: '100%', boxShadow: '0 20px 60px rgba(15,52,96,0.25)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 8 }}>End tenancy?</div>
+            <div style={{ color: T.inkMuted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              Choose what to do with <strong>{selected.tenant_name}</strong>&apos;s record:
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ border: `2px solid ${T.teal}`, borderRadius: 12, padding: 16, background: T.tealLight }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>📦 Archive Tenant</div>
+                  <span style={{ background: T.teal, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>RECOMMENDED</span>
+                </div>
+                <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.6, marginBottom: 12 }}>
+                  Keeps lease history and payment records for taxes. Cancels future payments and auto-pay. Removes from active list.
+                </div>
+                <button onClick={() => archiveTenant(selected)} disabled={archiving}
+                  style={{ ...btn.primary, width: '100%', fontSize: 13, opacity: archiving ? 0.6 : 1 }}>
+                  {archiving ? 'Archiving...' : 'Archive Tenant →'}
+                </button>
+              </div>
+
+              <div style={{ border: `1px solid ${T.coral}44`, borderRadius: 12, padding: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.coral, marginBottom: 8 }}>🗑️ Permanently Delete</div>
+                <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.6, marginBottom: 12 }}>
+                  Removes tenant and all data permanently — payment history, documents, inspections. Cannot be undone.
+                </div>
+                <button onClick={() => deleteTenantPermanently(selected)} disabled={archiving}
+                  style={{ width: '100%', background: 'none', border: `1px solid ${T.coral}`, color: T.coral, borderRadius: T.radiusSm, padding: '10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: archiving ? 0.6 : 1 }}>
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+
+            <button onClick={() => setShowDeleteModal(false)}
+              style={{ ...btn.ghost, width: '100%', fontSize: 13, marginTop: 16 }}>
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
