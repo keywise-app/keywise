@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import AnimatedDemo from './AnimatedDemo';
+import DemoLeaseExtractor from './DemoLeaseExtractor';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -305,6 +306,43 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+function StickyBottomCTA({ onSignupClick }: { onSignupClick: () => void }) {
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setVisible(window.scrollY > 400 && !dismissed);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [dismissed]);
+
+  if (!visible || dismissed) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, background: N,
+      padding: '12px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center',
+      gap: 16, zIndex: 900, boxShadow: '0 -4px 20px rgba(15,52,96,0.2)',
+      animation: 'kw-slideUp 0.3s',
+    }}>
+      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
+        Free for 1-2 units · No credit card required
+      </div>
+      <button onClick={onSignupClick}
+        style={{ background: TEAL, color: N, border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
+        Start Free →
+      </button>
+      <button onClick={() => setDismissed(true)}
+        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>
+        ×
+      </button>
+      <style>{`@keyframes kw-slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+    </div>
+  );
+}
+
 export default function Landing() {
   const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -586,8 +624,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* BUILT BY A LANDLORD */}
+      {/* TRY LEASE EXTRACTOR */}
       <section className="landing-section" style={{ padding: '80px 40px', background: BG }}>
+        <DemoLeaseExtractor onSignupClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+      </section>
+
+      {/* BUILT BY A LANDLORD */}
+      <section className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
             <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -940,6 +983,9 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* STICKY BOTTOM CTA */}
+      <StickyBottomCTA onSignupClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
 
       {/* EXIT INTENT POPUP */}
       {showExitIntent && (
