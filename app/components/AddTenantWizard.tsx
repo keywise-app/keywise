@@ -523,22 +523,47 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                       {buildings.map(b => <option key={b.id} value={b.id}>{b.name || b.address}</option>)}
                     </select>
                   </div>
-                  {form.building_id && (
-                    <div>
-                      <label style={label}>Unit</label>
-                      <select style={input} value={form.property_id}
-                        onChange={e => upd({ property_id: e.target.value })}>
-                        <option value="">— Select a unit (optional) —</option>
-                        {units.filter(u => u.building_id === form.building_id).map(u => (
-                          <option key={u.id} value={u.id}>
-                            {u.unit_number ? 'Unit ' + u.unit_number + (u.beds ? ' · ' + u.beds + 'bd' : '') : u.address}
-                            {(u.beds || u.baths) ? ` — ${u.beds || '?'}bd/${u.baths || '?'}ba` : ''}
-                            {u.current_rent ? ` · $${u.current_rent}/mo` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {form.building_id && (() => {
+                    const buildingUnits = units.filter(u => u.building_id === form.building_id);
+                    return buildingUnits.length > 0 ? (
+                      <div>
+                        <label style={label}>Unit</label>
+                        <select style={input} value={form.property_id}
+                          onChange={e => upd({ property_id: e.target.value })}>
+                          <option value="">— Select a unit —</option>
+                          {buildingUnits.map(u => (
+                            <option key={u.id} value={u.id}>
+                              Unit {u.unit_number || '—'}{u.beds ? ` · ${u.beds}bd/${u.baths || '1'}ba` : ''}{u.current_rent ? ` · $${u.current_rent}/mo` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div style={{ background: T.amberLight, border: `1px solid ${T.amber}55`, borderRadius: T.radiusSm, padding: 14 }}>
+                        <div style={{ fontWeight: 700, color: T.amberDark, fontSize: 13, marginBottom: 4 }}>No units in this building yet</div>
+                        <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 10 }}>Add a unit now, or go to Portfolio to set up your building first.</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button onClick={async () => {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) return;
+                            const bld = buildings.find(b => b.id === form.building_id);
+                            const { data: newUnit } = await supabase.from('properties').insert({
+                              user_id: user.id, building_id: form.building_id,
+                              address: (bld?.address || '') + ', Unit A',
+                              unit_number: 'A', is_unit: true, beds: 1, baths: 1,
+                            }).select('id').single();
+                            if (newUnit) { await fetchProperties(); upd({ property_id: newUnit.id }); }
+                          }} style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>
+                            + Add Unit A
+                          </button>
+                          <button onClick={() => window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'portfolio' }))}
+                            style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                            Go to Portfolio →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
                     <button onClick={() => setAddingNewProperty(true)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.navy, fontSize: 13, fontWeight: 600, padding: 0 }}>
