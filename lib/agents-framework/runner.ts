@@ -1,0 +1,322 @@
+// src/framework/runner.ts
+import Anthropic from "@anthropic-ai/sdk";
+import type {
+  AgentContext,
+  AgentRole,
+  AgentTask,
+  AgentTool,
+  Authority,
+} from "./types";
+import { createMemoryStore } from "./memory";
+import { queueApproval, escalate } from "./approvals";
+
+// Pricing as of May 2026 — used for cost tracking. Update if rates change.
+const COST_PER_MTOK: Record<string, { input: number; output: number }> = {
+  "claude-haiku-4-5-20251001": { input: 1.0, output: 5.0 },
+  "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
+  "claude-opus-4-7": { input: 15.0, output: 75.0 },
+};
+
+export interface RunOptions {
+  trigger: "cron" | "manual" | "webhook";
+  /** Optional override of the task's prompt (for ad-hoc admin runs) */
+  promptOverride?: string;
+  /** Optional metadata stored on the run row */
+  metadata?: Record<string, unknown>;
+}
+
+export interface RunResult {
+  runId: string;
+  status: "success" | "awaiting_approval" | "failed";
+  summary: string;
+  costUsd: number;
+}
+
+export async function runAgent(
+  role: AgentRole,
+  taskId: string,
+  supabase: any,
+  anthropic: Anthropic,
+  options: RunOptions
+): Promise<RunResult> {
+  const task = role.tasks[taskId];
+  if (!task) throw new Error(`Unknown task ${taskId} for role ${role.id}`);
+
+  const model =
+    task.tier === "strategic" ? role.models.strategic : role.models.routine;
+
+  // 1. Create the run row
+  const { data: runRow, error: runErr } = await supabase
+    .from("agent_runs")
+    .insert({
+      role: role.id,
+      task: taskId,
+      trigger: options.trigger,
+      model,
+      metadata: options.metadata ?? {},
+    })
+    .select("id")
+    .single();
+  if (runErr) throw runErr;
+
+  const ctx: AgentContext = {
+    runId: runRow.id,
+    role: role.id,
+    task: taskId,
+    trigger: options.trigger,
+    supabase,
+    anthropic,
+    memory: createMemoryStore(supabase, role.id),
+    note: async (msg) => {
+      await supabase.from("agent_actions").insert({
+        run_id: runRow.id,
+        role: role.id,
+        tool: "_note",
+        authority: "auto",
+        status: "executed",
+        reasoning: msg,
+        input: {},
+      });
+    },
+  };
+
+  // 2. Build the tool list visible to this task
+  const allowed = task.toolNames
+    ? role.tools.filter((t) => task.toolNames!.includes(t.name))
+    : role.tools;
+
+  const toolDefs: Anthropic.Tool[] = allowed.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.inputSchema,
+  }));
+
+  const initialPrompt =
+    options.promptOverride ??
+    (typeof task.prompt === "function" ? await task.prompt(ctx) : task.prompt);
+
+  const messages: Anthropic.MessageParam[] = [
+    { role: "user", content: initialPrompt },
+  ];
+
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let awaitingApproval = false;
+  const maxIter = task.maxIterations ?? 10;
+
+  // 3. Tool-use loop
+  try {
+    for (let i = 0; i < maxIter; i++) {
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: 4096,
+        system: role.systemPrompt,
+        tools: toolDefs,
+        messages,
+      });
+
+      inputTokens += response.usage.input_tokens;
+      outputTokens += response.usage.output_tokens;
+
+      // Append assistant message
+      messages.push({ role: "assistant", content: response.content });
+
+      if (response.stop_reason === "end_turn" || !hasToolUse(response)) {
+        // Done
+        const summary = extractText(response);
+        await finalize(supabase, ctx.runId, {
+          status: awaitingApproval ? "awaiting_approval" : "success",
+          summary,
+          inputTokens,
+          outputTokens,
+          model,
+        });
+        return {
+          runId: ctx.runId,
+          status: awaitingApproval ? "awaiting_approval" : "success",
+          summary,
+          costUsd: cost(model, inputTokens, outputTokens),
+        };
+      }
+
+      // Handle tool calls
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type !== "tool_use") continue;
+        const tool = allowed.find((t) => t.name === block.name);
+        if (!tool) {
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: `Tool ${block.name} not available for this task`,
+            is_error: true,
+          });
+          continue;
+        }
+
+        const input = block.input as any;
+        const reasoning = extractTextBeforeTool(response, block.id);
+        const authority = await resolveAuthority(tool, input, ctx);
+
+        try {
+          if (authority === "auto") {
+            const out = await tool.execute(input, ctx);
+            await logAction(supabase, ctx, tool, "auto", "executed", reasoning, input, out);
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: JSON.stringify(out).slice(0, 8000),
+            });
+          } else if (authority === "approve") {
+            const queued = await queueApproval(ctx, tool, input, reasoning);
+            awaitingApproval = true;
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: `QUEUED FOR APPROVAL (id=${queued.id}). Estimated impact: ${queued.estimatedImpact ?? "unknown"}. Continue planning other actions; this one will execute after Chris approves.`,
+            });
+          } else {
+            await escalate(ctx, tool, input, reasoning);
+            awaitingApproval = true;
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: `ESCALATED to Chris. He'll respond directly. Continue with other actions you can take now.`,
+            });
+          }
+        } catch (err: any) {
+          await logAction(
+            supabase,
+            ctx,
+            tool,
+            authority,
+            "failed",
+            reasoning,
+            input,
+            { error: String(err?.message ?? err) }
+          );
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: `Tool failed: ${err?.message ?? err}`,
+            is_error: true,
+          });
+        }
+      }
+
+      messages.push({ role: "user", content: toolResults });
+    }
+
+    // Hit iteration cap
+    await finalize(supabase, ctx.runId, {
+      status: "success",
+      summary: `Hit max iterations (${maxIter}); stopping.`,
+      inputTokens,
+      outputTokens,
+      model,
+    });
+    return {
+      runId: ctx.runId,
+      status: "success",
+      summary: "Hit iteration cap",
+      costUsd: cost(model, inputTokens, outputTokens),
+    };
+  } catch (err: any) {
+    await finalize(supabase, ctx.runId, {
+      status: "failed",
+      summary: "",
+      error: String(err?.message ?? err),
+      inputTokens,
+      outputTokens,
+      model,
+    });
+    throw err;
+  }
+}
+
+async function resolveAuthority<TInput>(
+  tool: AgentTool<TInput>,
+  input: TInput,
+  ctx: AgentContext
+): Promise<Authority> {
+  if (tool.resolveAuthority) {
+    return tool.resolveAuthority(input, ctx);
+  }
+  return tool.defaultAuthority;
+}
+
+function hasToolUse(r: Anthropic.Message): boolean {
+  return r.content.some((b) => b.type === "tool_use");
+}
+
+function extractText(r: Anthropic.Message): string {
+  return r.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}
+
+function extractTextBeforeTool(r: Anthropic.Message, toolId: string): string {
+  const out: string[] = [];
+  for (const b of r.content) {
+    if (b.type === "tool_use" && b.id === toolId) break;
+    if (b.type === "text") out.push(b.text);
+  }
+  return out.join("\n").trim();
+}
+
+function cost(model: string, input: number, output: number): number {
+  const p = COST_PER_MTOK[model];
+  if (!p) return 0;
+  return (input / 1_000_000) * p.input + (output / 1_000_000) * p.output;
+}
+
+async function logAction(
+  supabase: any,
+  ctx: AgentContext,
+  tool: AgentTool,
+  authority: Authority,
+  status: string,
+  reasoning: string,
+  input: any,
+  result: any
+) {
+  await supabase.from("agent_actions").insert({
+    run_id: ctx.runId,
+    role: ctx.role,
+    tool: tool.name,
+    authority,
+    status,
+    reasoning,
+    input,
+    result,
+    executed_at: status === "executed" ? new Date().toISOString() : null,
+  });
+}
+
+async function finalize(
+  supabase: any,
+  runId: string,
+  data: {
+    status: string;
+    summary: string;
+    error?: string;
+    inputTokens: number;
+    outputTokens: number;
+    model: string;
+  }
+) {
+  await supabase
+    .from("agent_runs")
+    .update({
+      status: data.status,
+      summary: data.summary,
+      error: data.error,
+      input_tokens: data.inputTokens,
+      output_tokens: data.outputTokens,
+      cost_usd: cost(data.model, data.inputTokens, data.outputTokens),
+      finished_at: new Date().toISOString(),
+    })
+    .eq("id", runId);
+}

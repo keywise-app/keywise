@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/agents-framework/*": ["./lib/agents-framework/*"],
+      "@/agents/*": ["./lib/agents/*"],
+      "@/agent-tools/*": ["./lib/agent-tools/*"]
     }
   },
   "include": [

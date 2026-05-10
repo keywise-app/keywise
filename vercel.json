@@ -11,6 +11,34 @@
     {
       "path": "/api/cron/competitive-intelligence",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/agents/cmo/daily_audit",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/agents/cmo/daily_forum_scan",
+      "schedule": "30 14 * * *"
+    },
+    {
+      "path": "/api/cron/agents/cmo/daily_social",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/agents/cmo/weekly_content",
+      "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/agents/cmo/weekly_budget_review",
+      "schedule": "0 15 * * 1"
+    },
+    {
+      "path": "/api/cron/agents/cmo/weekly_outreach",
+      "schedule": "0 16 * * 2"
+    },
+    {
+      "path": "/api/cron/agents/cmo/monthly_pseo",
+      "schedule": "0 14 1 * *"
     }
   ],
   "functions": {
@@ -23,6 +51,14 @@
       "memory": 1024
     },
     "app/api/cron/monthly-snapshot/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/agents/[role]/run/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/cron/agents/[role]/[task]/route.ts": {
       "maxDuration": 300,
       "memory": 1024
     }
