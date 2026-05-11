@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 
 export const metadata: Metadata = {
   title: 'Landlord Resources & Guides | Keywise Blog',
@@ -74,7 +75,39 @@ const POSTS = [
   },
 ];
 
-export default function BlogIndex() {
+export const dynamic = 'force-dynamic';
+
+async function getPublishedDrafts() {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data } = await supabase
+      .from('blog_drafts')
+      .select('slug, title, meta_description, target_keyword, published_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false });
+    return (data || []).map((d: any) => ({
+      slug: d.slug,
+      title: d.title,
+      description: d.meta_description || d.title,
+      date: d.published_at ? new Date(d.published_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
+      tag: d.target_keyword || 'Guide',
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function BlogIndex() {
+  const publishedDrafts = await getPublishedDrafts();
+
+  // Merge: published drafts first (newest), then hardcoded, deduplicate by slug
+  const hardcodedSlugs = new Set(POSTS.map(p => p.slug));
+  const dynamicPosts = publishedDrafts.filter(p => !hardcodedSlugs.has(p.slug));
+  const allPosts = [...dynamicPosts, ...POSTS];
+
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -100,7 +133,7 @@ export default function BlogIndex() {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {POSTS.map(post => (
+          {allPosts.map(post => (
             <Link key={post.slug} href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <article style={{ background: BG, borderRadius: 12, padding: 28, border: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>

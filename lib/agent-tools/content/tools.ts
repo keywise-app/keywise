@@ -41,6 +41,16 @@ export const draftBlogPostTool: AgentTool<{
   estimateImpact: (i) =>
     `Targeting "${i.targetKeyword}" (~${i.markdownContent.split(/\s+/).length} words)`,
   execute: async (i, ctx) => {
+    // Check for slug collision
+    const { data: existing } = await ctx.supabase
+      .from("blog_drafts")
+      .select("id, status")
+      .eq("slug", i.slug)
+      .maybeSingle();
+    if (existing) {
+      throw new Error(`Slug "${i.slug}" already exists (id=${existing.id}, status=${existing.status}). Use a different slug.`);
+    }
+
     const { data, error } = await ctx.supabase
       .from("blog_drafts")
       .insert({
@@ -57,7 +67,7 @@ export const draftBlogPostTool: AgentTool<{
       .select("id")
       .single();
     if (error) throw error;
-    return { draftId: data.id, previewUrl: `/admin/blog/preview/${data.id}` };
+    return { draftId: data.id, previewUrl: `/admin/agents` };
   },
 };
 
@@ -76,12 +86,21 @@ export const publishBlogPostTool: AgentTool<{ draftId: string; reason: string }>
   defaultAuthority: "approve",
   describeAction: (i) => `Publish blog draft ${i.draftId}`,
   execute: async (i, ctx) => {
+    // Verify draft exists and is in draft state
+    const { data: draft } = await ctx.supabase
+      .from("blog_drafts")
+      .select("id, status, slug")
+      .eq("id", i.draftId)
+      .maybeSingle();
+    if (!draft) throw new Error(`Draft ${i.draftId} not found.`);
+    if (draft.status === "published") throw new Error(`Draft ${i.draftId} is already published.`);
+
     const { error } = await ctx.supabase
       .from("blog_drafts")
       .update({ status: "published", published_at: new Date().toISOString() })
       .eq("id", i.draftId);
     if (error) throw error;
-    return { ok: true };
+    return { ok: true, slug: draft.slug, url: `/blog/${draft.slug}` };
   },
 };
 

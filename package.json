@@ -15,7 +15,9 @@
     "pdf-parse": "^2.4.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "resend": "^6.10.0",
     "stripe": "^21.0.1",
     "twilio": "^5.13.1"
