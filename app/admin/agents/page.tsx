@@ -1,6 +1,7 @@
 // app/admin/agents/page.tsx
 import { createClient } from "@supabase/supabase-js";
 import { roles } from "@/agents-framework/registry";
+import { getBudgetStatus, type BudgetStatus } from "@/agents-framework/budget";
 import Link from "next/link";
 import RunButton from "./RunButton";
 import ApprovalCard from "./ApprovalCard";
@@ -13,7 +14,7 @@ async function getData() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const [{ data: runs }, { data: approvals }, { data: actions }] =
+  const [{ data: runs }, { data: approvals }, { data: actions }, budget] =
     await Promise.all([
       supabase
         .from("agent_runs")
@@ -31,17 +32,21 @@ async function getData() {
         .eq("status", "executed")
         .order("created_at", { ascending: false })
         .limit(20),
+      getBudgetStatus(supabase),
     ]);
 
   return {
     runs: runs ?? [],
     approvals: approvals ?? [],
     actions: actions ?? [],
+    budget,
   };
 }
 
 export default async function AgentsPage() {
-  const { runs, approvals, actions } = await getData();
+  const { runs, approvals, actions, budget } = await getData();
+
+  const budgetBarColor = budget.pctUsed >= 100 ? "#EF4444" : budget.pctUsed >= 75 ? "#F59E0B" : "#22C55E";
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8 space-y-10">
@@ -66,6 +71,45 @@ export default async function AgentsPage() {
           </Link>
         </nav>
       </header>
+
+      {/* Budget status */}
+      <section className="rounded-xl border p-5" style={{ borderColor: budget.capHit ? "#EF4444" : "#E5E7EB" }}>
+        <div className="flex items-baseline justify-between mb-2">
+          <div>
+            <span className="text-sm font-medium text-gray-500">This week&apos;s spend</span>
+            <span className="ml-2 text-2xl font-bold" style={{ color: budget.capHit ? "#EF4444" : "#111" }}>
+              ${budget.total.toFixed(2)}
+            </span>
+            <span className="text-sm text-gray-400"> / ${budget.cap}</span>
+          </div>
+          <span className="text-xs text-gray-400">
+            Week of {budget.weekStart} · resets Monday 00:00 UTC
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${Math.min(budget.pctUsed, 100)}%`, backgroundColor: budgetBarColor }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>
+            Anthropic: ${budget.anthropicSpend.toFixed(2)} &nbsp;·&nbsp;
+            Twitter/X: ${budget.twitterSpend.toFixed(3)} &nbsp;·&nbsp;
+            Ad increases: ${budget.adIncreaseSpend.toFixed(2)}
+          </span>
+          <span className="font-medium">{budget.pctUsed}% used · ${budget.remaining.toFixed(2)} remaining</span>
+        </div>
+
+        {budget.capHit && (
+          <div className="mt-3 rounded-lg px-4 py-2.5 text-sm font-semibold" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+            ⚠️ Cap reached — all new actions escalate to you for the rest of the week
+          </div>
+        )}
+      </section>
 
       {/* Pending approvals — most important */}
       {approvals.length > 0 && (

@@ -111,7 +111,13 @@ export const setBudgetTool: AgentTool<{
     const delta = i.newDailyUsd - c.dailyBudgetUsd;
     return `${delta >= 0 ? "+" : ""}$${(delta * 30).toFixed(0)}/mo spend change`;
   },
-  execute: async (i) => ads.setCampaignBudget(i.campaignId, i.newDailyUsd),
+  execute: async (i) => {
+    const all = await ads.listCampaigns();
+    const campaign = all.find((x) => x.id === i.campaignId);
+    const dailyDelta = campaign ? i.newDailyUsd - campaign.dailyBudgetUsd : 0;
+    const result = await ads.setCampaignBudget(i.campaignId, i.newDailyUsd);
+    return { ...result, weekly_delta_usd: dailyDelta * 7 };
+  },
 };
 
 export const addNegativeKeywordTool: AgentTool<{

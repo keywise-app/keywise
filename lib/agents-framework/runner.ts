@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { createMemoryStore } from "./memory";
 import { queueApproval, escalate } from "./approvals";
+import { getBudgetStatus } from "./budget";
 
 // Pricing as of May 2026 — used for cost tracking. Update if rates change.
 const COST_PER_MTOK: Record<string, { input: number; output: number }> = {
@@ -80,7 +81,14 @@ export async function runAgent(
     },
   };
 
-  // 2. Build the tool list visible to this task
+  // 2. Check budget status
+  const budget = await getBudgetStatus(supabase);
+  const budgetContext = budget.capHit
+    ? `\n\n⚠️ WEEKLY BUDGET CAP REACHED ($${budget.total}/$${budget.cap}). ALL actions will be force-escalated to Chris for approval regardless of normal authority levels. Do not attempt auto-execute actions — they will be escalated. Focus on analysis and recommendations only.`
+    : `\n\n📊 Weekly budget: $${budget.total} of $${budget.cap} used ($${budget.remaining} remaining). Breakdown: Anthropic $${budget.anthropicSpend}, Twitter $${budget.twitterSpend}, Ad increases $${budget.adIncreaseSpend}.`;
+  const systemPrompt = role.systemPrompt + budgetContext;
+
+  // 3. Build the tool list visible to this task
   const allowed = task.toolNames
     ? role.tools.filter((t) => task.toolNames!.includes(t.name))
     : role.tools;
@@ -110,7 +118,7 @@ export async function runAgent(
       const response = await anthropic.messages.create({
         model,
         max_tokens: 4096,
-        system: role.systemPrompt,
+        system: systemPrompt,
         tools: toolDefs,
         messages,
       });
@@ -156,7 +164,12 @@ export async function runAgent(
 
         const input = block.input as any;
         const reasoning = extractTextBeforeTool(response, block.id);
-        const authority = await resolveAuthority(tool, input, ctx);
+        let authority = await resolveAuthority(tool, input, ctx);
+
+        // Budget cap override — force escalate everything when cap is hit
+        if (budget.capHit && authority !== "escalate") {
+          authority = "escalate";
+        }
 
         try {
           if (authority === "auto") {
