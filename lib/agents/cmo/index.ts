@@ -6,7 +6,8 @@ import { allContentTools } from "@/agent-tools/content/tools";
 import { allKwTools } from "@/agent-tools/supabase/tools";
 import { allRankTrackerTools } from "@/agent-tools/rank-tracker/tools";
 import { allForumTools } from "@/agent-tools/forums/tools";
-import { allSocialTools } from "@/agent-tools/social/tools";
+// Social tools disabled for now — re-enable when accounts are wired
+// import { allSocialTools } from "@/agent-tools/social/tools";
 import { allOutreachTools } from "@/agent-tools/outreach/tools";
 import { allPseoTools } from "@/agent-tools/programmatic-seo/tools";
 import { cmoConfig } from "./config";
@@ -20,19 +21,18 @@ Drive qualified signups and paid conversions across the full marketing surface:
 2. SEO — opportunity discovery, blog content, programmatic pages, rank tracking
 3. Search visibility — daily monitoring of where Keywise ranks; alert on drops
 4. Forum/community engagement — monitor Reddit, BiggerPockets, IH, HN; draft responses for Chris to post
-5. Social media — auto-post on owned channels (Twitter/X, Bluesky); draft for LinkedIn
-6. Backlink building — find prospects, draft outreach emails for Chris to send
-7. Funnel analysis — surface drop-offs, propose fixes
+5. Backlink building — find prospects, draft outreach emails for Chris to send
+6. Funnel analysis — surface drop-offs, propose fixes
 
 YOUR DECISION AUTHORITY
 Chris's profile is "aggressive":
 - AUTO-EXECUTE: pause dead ads (≥$${cmoConfig.pauseDeadAdSpendThreshold} spend, 0 conv),
   bid adjustments ±${cmoConfig.bidAdjustmentMaxPct}%, budget tweaks ±${cmoConfig.budgetChangeAutoMaxPct}%,
   add negative keywords, draft ad copy and blog posts (drafts only),
-  rank snapshots, forum scans, social drafts, post to Twitter/X and Bluesky,
+  rank snapshots, forum scans,
   draft forum responses, draft outreach emails, generate pSEO page drafts.
 - DRAFT + APPROVE: new ad creative going live, budget changes ${cmoConfig.budgetChangeAutoMaxPct}–${cmoConfig.budgetChangeApproveMaxPct}%,
-  publish blog to prod, publish pSEO pages, post on LinkedIn.
+  publish blog to prod, publish pSEO pages.
 - ESCALATE: budget increases >${cmoConfig.budgetChangeApproveMaxPct}%, new platforms, anything strategic.
 
 When a tool returns "QUEUED FOR APPROVAL" or "ESCALATED", continue with other
@@ -55,17 +55,11 @@ CRITICAL RULES — FORUMS AND SOCIAL
    If ratio < 9:1 over 30 days, draft only HELPFUL (non-promotional) responses.
    The framework will refuse to save promotional drafts when out of compliance.
 
-3. Twitter/X cost discipline. Posts with URLs cost $0.20 each (vs $0.015 plain text).
-   Post URLs only for genuinely shareable content (new blog posts, big launches).
-   Daily tips and threads should be plain text.
-
-4. Bluesky has 300-grapheme limit. Twitter 280. LinkedIn 3000. Threads ~500. Check before drafting.
-
-5. Programmatic SEO must have real data. Never generate templated city/state pages
+3. Programmatic SEO must have real data. Never generate templated city/state pages
    filled with generic content. ≥800 words of substantive local context per page.
    Google penalizes thin AI-generated doorway pages aggressively.
 
-6. Brand voice: write like a founder who actually understands landlords.
+4. Brand voice: write like a founder who actually understands landlords.
    Specific > generic. Conversational > corporate. No "leverage", "synergy",
    "revolutionize", "game-changer". When in doubt, sound like Chris.
 
@@ -159,33 +153,7 @@ REMINDER: never call a tool that posts to Reddit. Drafts only.`,
   ],
 };
 
-const dailySocialTask: AgentTask = {
-  id: "daily_social",
-  description: "Daily: post on Twitter/X and Bluesky; draft for LinkedIn.",
-  tier: "strategic",
-  maxIterations: 8,
-  prompt: async (ctx) => {
-    const recentWinners = await ctx.memory.list("social:winner:");
-    return `Daily social pulse.
-
-1. Review recent posts (social_recent_performance, 14d) — what's been posted?
-2. Avoid repeating recent topics; aim for 1 post today.
-3. Draft a single post that fits the Keywise voice:
-   - "tip" (no link — $0.015 on X): a specific landlord insight (legal, financial, ops)
-   - "blog_announce" (URL — $0.20 on X): only if there's a fresh blog post worth pushing
-   - "milestone" (no link): a real number we hit (signups, units managed, $ collected)
-4. Cross-post to Twitter/X and Bluesky. Adapt for length per platform.
-5. Optionally draft a longer LinkedIn version (gets queued for your manual posting).
-6. Store the topic + angle in memory under "social:winner:YYYY-MM-DD" if it performs later.
-
-Recent winners in memory: ${recentWinners.length} entries.`;
-  },
-  toolNames: [
-    "social_recent_performance",
-    "social_draft_post",
-    "social_publish_post",
-  ],
-};
+// daily_social task disabled — re-enable when social accounts are wired
 
 const reviewBudgetTask: AgentTask = {
   id: "weekly_budget_review",
@@ -253,14 +221,14 @@ export const cmoRole: AgentRole = {
     ...allKwTools,
     ...allRankTrackerTools,
     ...allForumTools,
-    ...allSocialTools,
+    // ...allSocialTools, // disabled — re-enable when social accounts are wired
     ...allOutreachTools,
     ...allPseoTools,
   ],
   tasks: {
     daily_audit: dailyAuditTask,
     daily_forum_scan: dailyForumScanTask,
-    daily_social: dailySocialTask,
+    // daily_social: disabled — re-enable when social accounts are wired
     weekly_content: weeklyContentTask,
     weekly_budget_review: reviewBudgetTask,
     weekly_outreach: weeklyOutreachTask,
