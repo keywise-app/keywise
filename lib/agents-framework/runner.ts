@@ -86,7 +86,9 @@ export async function runAgent(
   const budgetContext = budget.capHit
     ? `\n\n⚠️ WEEKLY BUDGET CAP REACHED ($${budget.total}/$${budget.cap}). ALL actions will be force-escalated to Chris for approval regardless of normal authority levels. Do not attempt auto-execute actions — they will be escalated. Focus on analysis and recommendations only.`
     : `\n\n📊 Weekly budget: $${budget.total} of $${budget.cap} used ($${budget.remaining} remaining). Breakdown: Anthropic $${budget.anthropicSpend}, Twitter $${budget.twitterSpend}, Ad increases $${budget.adIncreaseSpend}.`;
-  const systemPrompt = role.systemPrompt + budgetContext;
+  const today = new Date();
+  const dateContext = `\n\nTODAY IS ${today.toISOString().slice(0, 10)} (${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' })} Pacific Time). Always use the current year in any content you produce; never write content referencing 2025 or earlier as "current" unless explicitly historical.`;
+  const systemPrompt = role.systemPrompt + budgetContext + dateContext;
 
   // 3. Build the tool list visible to this task
   const allowed = task.toolNames
