@@ -26,11 +26,19 @@ export async function POST(
   );
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-  const role = getRole(roleId);
-  const result = await runAgent(role, task, supabase, anthropic, {
-    trigger: "manual",
-    promptOverride,
-  });
+  try {
+    const role = getRole(roleId);
+    const result = await runAgent(role, task, supabase, anthropic, {
+      trigger: "manual",
+      promptOverride,
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (err: any) {
+    console.error("[agent-run] Error:", err?.message || err);
+    return NextResponse.json(
+      { error: err?.message || "Agent run failed", status: "failed" },
+      { status: 500 }
+    );
+  }
 }
