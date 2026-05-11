@@ -1,6 +1,7 @@
 // lib/agents-framework/budget.ts — weekly spend tracking across all agent cost sources
 
-export const WEEKLY_BUDGET_USD = 20;
+// TODO: revert to 20 on Monday (2026-05-12)
+export const WEEKLY_BUDGET_USD = 40;
 
 export interface BudgetStatus {
   weekStart: string;   // ISO date, Monday 00:00 UTC
