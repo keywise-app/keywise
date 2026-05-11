@@ -176,17 +176,17 @@ alter table outreach_drafts enable row level security;
 alter table pseo_templates enable row level security;
 alter table pseo_pages enable row level security;
 
-create policy "admin all" on keyword_targets for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on rank_snapshots for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on forum_threads for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on forum_response_drafts for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on reddit_activity_log for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on social_accounts for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on social_posts for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on backlink_prospects for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on outreach_drafts for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on pseo_templates for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
-create policy "admin all" on pseo_pages for all using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+create policy "admin all" on keyword_targets for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on rank_snapshots for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on forum_threads for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on forum_response_drafts for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on reddit_activity_log for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on social_accounts for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on social_posts for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on backlink_prospects for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on outreach_drafts for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on pseo_templates for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
+create policy "admin all" on pseo_pages for all using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
 
 -- Public read of pseo_pages (so they actually show on the site)
 create policy "public reads published pseo" on pseo_pages for select

@@ -93,12 +93,12 @@ alter table agent_briefings enable row level security;
 
 -- Replace 'YOUR_ADMIN_USER_ID' with your auth.users id, or scope by email claim
 create policy "admin reads runs" on agent_runs for select
-  using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+  using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
 create policy "admin reads actions" on agent_actions for select
-  using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+  using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
 create policy "admin reads approvals" on agent_approvals for select
-  using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+  using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
 create policy "admin updates approvals" on agent_approvals for update
-  using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+  using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
 create policy "admin reads briefings" on agent_briefings for select
-  using (auth.jwt() ->> 'email' = 'chris@keywise.app');
+  using (auth.jwt() ->> 'email' = 'cccolwell@gmail.com');
