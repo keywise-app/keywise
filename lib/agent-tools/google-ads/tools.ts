@@ -116,6 +116,8 @@ export const setBudgetTool: AgentTool<{
     const campaign = all.find((x) => x.id === i.campaignId);
     const dailyDelta = campaign ? i.newDailyUsd - campaign.dailyBudgetUsd : 0;
     const result = await ads.setCampaignBudget(i.campaignId, i.newDailyUsd);
+    // Only track real ad-spend changes in the budget — skip when running on mock data
+    if (result.mock) return { ...result };
     return { ...result, weekly_delta_usd: dailyDelta * 7 };
   },
 };

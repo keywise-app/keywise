@@ -66,27 +66,27 @@ export async function listSearchTerms(
 // WRITE operations (called by tools that pass authority check)
 // ─────────────────────────────────────────────────────────────────
 
-export async function pauseAd(adId: string): Promise<{ ok: true }> {
+export async function pauseAd(adId: string): Promise<{ ok: true; mock?: true }> {
   // TODO real call: customer.adGroupAds.update([{resource_name, status:'PAUSED'}])
   console.log(`[google-ads] would pause ad ${adId}`);
-  return { ok: true };
+  return { ok: true, mock: true };
 }
 
 export async function setCampaignBudget(
   campaignId: string,
   newDailyUsd: number
-): Promise<{ ok: true }> {
+): Promise<{ ok: true; mock?: true }> {
   console.log(`[google-ads] would set campaign ${campaignId} budget to $${newDailyUsd}/day`);
-  return { ok: true };
+  return { ok: true, mock: true };
 }
 
 export async function addNegativeKeyword(
   campaignId: string,
   keyword: string,
   matchType: "EXACT" | "PHRASE" | "BROAD"
-): Promise<{ ok: true }> {
+): Promise<{ ok: true; mock?: true }> {
   console.log(`[google-ads] would add neg keyword "${keyword}" (${matchType}) to ${campaignId}`);
-  return { ok: true };
+  return { ok: true, mock: true };
 }
 
 export async function createResponsiveSearchAd(
@@ -95,9 +95,9 @@ export async function createResponsiveSearchAd(
   headlines: string[],
   descriptions: string[],
   finalUrls: string[]
-): Promise<{ ok: true; adId: string }> {
+): Promise<{ ok: true; adId: string; mock?: true }> {
   console.log(`[google-ads] would create RSA in ${adGroupId}`);
-  return { ok: true, adId: `mock-${Date.now()}` };
+  return { ok: true, adId: `mock-${Date.now()}`, mock: true };
 }
 
 // ─────────────────────────────────────────────────────────────────
