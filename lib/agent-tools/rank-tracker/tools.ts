@@ -2,29 +2,7 @@
 // Daily snapshot of how Keywise ranks for target keywords + alerting.
 
 import type { AgentTool } from "@/agents-framework/types";
-
-interface RankRow {
-  keyword: string;
-  position: number | null;
-  impressions: number;
-  clicks: number;
-  ctr: number;
-  url: string | null;
-}
-
-// In production: query Search Console for these keywords. Stub returns plausible data.
-async function fetchRanksForKeywords(keywords: string[]): Promise<RankRow[]> {
-  // TODO: real Search Console searchanalytics.query with dimensions=['query','page']
-  // and filter to keywords list.
-  return keywords.map((k, i) => ({
-    keyword: k,
-    position: 8 + (i % 12) + Math.random() * 3,
-    impressions: 100 + Math.floor(Math.random() * 500),
-    clicks: Math.floor(Math.random() * 30),
-    ctr: 0.01 + Math.random() * 0.05,
-    url: i % 3 === 0 ? "/" : `/blog/${k.replace(/\s+/g, "-")}`,
-  }));
-}
+import { fetchRanksForKeywords } from "@/agent-tools/search-console/client";
 
 export const snapshotRanksTool: AgentTool<{}> = {
   name: "rank_snapshot_today",
