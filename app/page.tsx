@@ -315,8 +315,22 @@ export default function Home() {
       };
 
       // Fetch profile — role is the source of truth
-      const { data: profile } = await supabase
+      let { data: profile } = await supabase
         .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).maybeSingle();
+
+      // Safety net: create profile if trigger missed (handles orphaned auth.users)
+      if (!profile) {
+        console.error('[auth] No profile found for', session.user.email, '— creating one');
+        try {
+          const { data: created } = await supabase.from('profiles').upsert(
+            { id: session.user.id, email: session.user.email, role: 'landlord' },
+            { onConflict: 'id' }
+          ).select('full_name, role, subscription_status, trial_ends_at').maybeSingle();
+          if (created) profile = created;
+        } catch (err) {
+          console.error('[auth] Profile creation failed:', err);
+        }
+      }
 
       if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
       if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
