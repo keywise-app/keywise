@@ -10,6 +10,13 @@ import twilio from 'twilio';
 
 const STOP_WORDS  = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'QUIT', 'END', 'OPTOUT', 'OPT-OUT'];
 const START_WORDS = ['START', 'UNSTOP', 'YES', 'OPTIN', 'OPT-IN'];
+const HELP_WORDS  = ['HELP', 'INFO'];
+
+// CTIA-compliant confirmation replies. Sent directly from the webhook so they work
+// regardless of A2P campaign approval state.
+const STOP_REPLY  = 'You have been unsubscribed from Keywise messages. No more messages will be sent. Reply START to resubscribe.';
+const START_REPLY = 'You have been resubscribed to Keywise messages. Reply HELP for help, STOP to unsubscribe. Msg & data rates may apply.';
+const HELP_REPLY  = 'Keywise: For support, email support@keywise.app or visit keywise.app/contact. Reply STOP to unsubscribe. Msg & data rates may apply.';
 
 function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -54,7 +61,11 @@ export async function POST(req: Request) {
 
     const isStop  = STOP_WORDS.includes(body);
     const isStart = START_WORDS.includes(body);
-    if (!isStop && !isStart) return twiml();  // Twilio sends Delivery receipts, etc.
+    const isHelp  = HELP_WORDS.includes(body);
+    if (!isStop && !isStart && !isHelp) return twiml();  // Twilio sends Delivery receipts, etc.
+
+    // HELP doesn't change consent state — just reply with support info.
+    if (isHelp) return twiml(HELP_REPLY);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +80,10 @@ export async function POST(req: Request) {
 
     const matched = (leases || []).filter(l => normalizePhone(l.phone) === from);
     if (matched.length === 0) {
+      // Still reply to STOP so the user gets confirmation even if their number isn't in our DB.
       console.error('[sms-webhook] no lease matched phone:', from);
+      if (isStop)  return twiml(STOP_REPLY);
+      if (isStart) return twiml(START_REPLY);
       return twiml();
     }
 
@@ -88,8 +102,7 @@ export async function POST(req: Request) {
         consent_text: `Inbound STOP keyword: "${params.Body}"`,
       })));
 
-      // Twilio auto-replies to STOP itself (carrier requirement). No body needed.
-      return twiml();
+      return twiml(STOP_REPLY);
     }
 
     if (isStart) {
@@ -107,7 +120,7 @@ export async function POST(req: Request) {
         consent_text: `Inbound START keyword: "${params.Body}"`,
       })));
 
-      return twiml();
+      return twiml(START_REPLY);
     }
 
     return twiml();
