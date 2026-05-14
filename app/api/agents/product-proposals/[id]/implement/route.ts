@@ -143,6 +143,23 @@ export async function POST(
         .eq("id", implementationId);
     }
 
+    // Fire the screenshot capture in the background. We don't await the
+    // response here — the agent's already done, and the screenshot endpoint
+    // has its own maxDuration. If this fetch returns before the screenshot
+    // completes, the dashboard still picks up the row update via reload.
+    const baseUrl =
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000";
+    if (current?.status === "pr_open" || current?.status === "agent_running") {
+      // Status will be pr_open if the agent called submit_implementation.
+      // Don't await — let it run in the background.
+      void fetch(
+        `${baseUrl}/api/agents/implementations/${implementationId}/screenshot`,
+        { method: "POST" }
+      ).catch((e) => console.error("[implement] screenshot kick failed:", e));
+    }
+
     return NextResponse.json({
       implementationId,
       runId: result.runId,

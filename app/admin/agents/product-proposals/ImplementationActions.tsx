@@ -15,7 +15,7 @@ type Status =
   | "reverted"
   | "failed";
 
-type Action = "merge" | "retry" | "revert";
+type Action = "merge" | "retry" | "revert" | "screenshot";
 
 export default function ImplementationActions({
   implementation,
@@ -46,7 +46,10 @@ export default function ImplementationActions({
           headers: { "Content-Type": "application/json" },
         }
       );
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
       router.refresh();
     } catch (err) {
       alert(`Failed: ${err}`);
@@ -60,13 +63,35 @@ export default function ImplementationActions({
   // Only render action buttons when the implementation is at a decision point
   if (implementation.status === "preview_ready") {
     return (
-      <div className="flex gap-2 mt-3">
+      <div className="flex gap-2 mt-3 flex-wrap">
         <button
           onClick={() => act("merge")}
           disabled={busy}
           className={`${btn} bg-emerald-600 text-white`}
         >
           {busy ? "Merging…" : "Merge to main →"}
+        </button>
+        <button
+          onClick={() => act("screenshot")}
+          disabled={busy}
+          className={`${btn} bg-white border text-gray-700`}
+          title="Recapture the preview screenshot"
+        >
+          Re-screenshot
+        </button>
+      </div>
+    );
+  }
+
+  if (implementation.status === "pr_open") {
+    return (
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => act("screenshot")}
+          disabled={busy}
+          className={`${btn} bg-indigo-600 text-white`}
+        >
+          {busy ? "Capturing…" : "Capture preview screenshot"}
         </button>
       </div>
     );
