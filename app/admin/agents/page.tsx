@@ -75,6 +75,12 @@ export default async function AgentsPage() {
           >
             Search ranks →
           </Link>
+          <Link
+            href="/admin/agents/product-proposals"
+            className="px-3 py-1.5 border rounded hover:bg-gray-50"
+          >
+            Product proposals →
+          </Link>
         </nav>
       </header>
 

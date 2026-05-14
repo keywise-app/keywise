@@ -37,6 +37,22 @@
       "schedule": "0 14 1 * *"
     },
     {
+      "path": "/api/cron/agents/cpo/daily_flow_audit",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/agents/cpo/weekly_friction_synthesis",
+      "schedule": "0 16 * * 1"
+    },
+    {
+      "path": "/api/cron/agents/cpo/weekly_ai_human_balance_review",
+      "schedule": "0 16 * * 2"
+    },
+    {
+      "path": "/api/cron/agents/cpo/monthly_competitive_ux_audit",
+      "schedule": "0 16 1 * *"
+    },
+    {
       "path": "/api/cron/agents/notifications/daily_digest",
       "schedule": "0 14 * * *"
     }
