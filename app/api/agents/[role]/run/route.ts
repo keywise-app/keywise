@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { getRole } from "@/agents-framework/registry";
 import { runAgent } from "@/agents-framework/runner";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const maxDuration = 300;
 
@@ -11,14 +12,15 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ role: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { role: roleId } = await params;
   const body = await req.json();
   const { task, promptOverride } = body as {
     task: string;
     promptOverride?: string;
   };
-
-  // TODO: gate on admin auth (check Supabase session, ensure email = chris@keywise.app)
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

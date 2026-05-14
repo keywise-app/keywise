@@ -16,13 +16,17 @@ import {
 } from "@/agent-tools/screenshot/tools";
 import { devConfig } from "@/agents/dev/config";
 import { isAutoMergeEligible } from "@/agents/cpo/config";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const maxDuration = 300;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id: implementationId } = await params;
 
   const supabase = createClient(
@@ -138,7 +142,12 @@ export async function POST(
         : "http://localhost:3000";
       void fetch(
         `${baseUrl}/api/agents/implementations/${implementationId}/merge`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+          },
+        }
       ).catch((e) => console.error("[screenshot] auto-merge kick failed:", e));
     }
 

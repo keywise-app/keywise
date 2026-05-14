@@ -3,18 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { executeApproval } from "@/agents-framework/execute-approval";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id } = await params;
   const { decision, note } = (await req.json()) as {
     decision: "approved" | "rejected";
     note?: string;
   };
-
-  // TODO: gate on admin auth
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

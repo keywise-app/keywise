@@ -5,11 +5,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id } = await params;
 
   const supabase = createClient(
@@ -39,14 +43,16 @@ export async function POST(
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
-  void fetch(
+  // Forward the caller's auth — they were already verified as admin above,
+  // so the downstream call is authorized too.
+  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+  const res = await fetch(
     `${baseUrl}/api/agents/product-proposals/${impl.proposal_id}/implement`,
-    { method: "POST" }
-  ).catch((e) => console.error("[retry] implement kick failed:", e));
-
-  return NextResponse.json({
-    queued: true,
-    proposalId: impl.proposal_id,
-    note: "Retry dispatched. A new implementation row will appear within a few seconds. Refresh the page to see progress.",
-  });
+    {
+      method: "POST",
+      headers: authHeader ? { Authorization: authHeader } : undefined,
+    }
+  );
+  const data = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
 }

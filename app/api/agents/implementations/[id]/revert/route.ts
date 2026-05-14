@@ -13,11 +13,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { devConfig } from "@/agents/dev/config";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id } = await params;
 
   const supabase = createClient(

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { agentFetch } from "./lib/agentFetch";
 
 export default function ApprovalCard({ approval }: { approval: any }) {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function ApprovalCard({ approval }: { approval: any }) {
   async function decide(decision: "approved" | "rejected") {
     setBusy(true);
     try {
-      const res = await fetch(`/api/agents/approvals/${approval.id}`, {
+      const res = await agentFetch(`/api/agents/approvals/${approval.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision, note: note || undefined }),

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { agentFetch } from "./lib/agentFetch";
 
 export default function RunButton({
   role,
@@ -17,7 +18,7 @@ export default function RunButton({
   async function run() {
     setBusy(true);
     try {
-      const res = await fetch(`/api/agents/${role}/run`, {
+      const res = await agentFetch(`/api/agents/${role}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task }),

@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getRole } from "@/agents-framework/registry";
 import { runAgent } from "@/agents-framework/runner";
 import { devConfig } from "@/agents/dev/config";
+import { requireAdminApi } from "@/lib/admin-auth";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -63,6 +64,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id: proposalId } = await params;
 
   // Mode: "implement" (default — edit existing route) or "scaffold" (create
@@ -239,7 +243,12 @@ export async function POST(
       if (current?.status === "pr_open" || current?.status === "agent_running") {
         void fetch(
           `${baseUrl}/api/agents/implementations/${implementationId}/screenshot`,
-          { method: "POST" }
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+            },
+          }
         ).catch((e) => console.error("[implement] screenshot kick failed:", e));
       }
     } catch (err: any) {

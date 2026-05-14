@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { agentFetch } from "../lib/agentFetch";
 
 type Status =
   | "queued"
@@ -45,7 +46,7 @@ export default function ImplementationActions({
     }
     setBusy(true);
     try {
-      const res = await fetch(
+      const res = await agentFetch(
         `/api/agents/implementations/${implementation.id}/${action}`,
         {
           method: "POST",
