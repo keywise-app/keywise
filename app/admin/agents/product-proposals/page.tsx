@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import ProposalActions from "./ProposalActions";
+import ImplementationPanel, { type Implementation } from "./ImplementationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +20,35 @@ type Proposal = {
   decision_note: string | null;
 };
 
-async function getData(): Promise<Proposal[]> {
+async function getData(): Promise<{
+  proposals: Proposal[];
+  implementationsByProposal: Record<string, Implementation>;
+}> {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-  const { data } = await supabase
-    .from("product_proposals")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return (data as Proposal[] | null) ?? [];
+  const [{ data: proposals }, { data: implementations }] = await Promise.all([
+    supabase
+      .from("product_proposals")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("proposal_implementations")
+      .select("*")
+      .order("started_at", { ascending: false }),
+  ]);
+
+  // Map most-recent implementation per proposal
+  const byProposal: Record<string, Implementation> = {};
+  for (const impl of (implementations as Implementation[] | null) ?? []) {
+    if (!byProposal[impl.proposal_id]) byProposal[impl.proposal_id] = impl;
+  }
+
+  return {
+    proposals: (proposals as Proposal[] | null) ?? [],
+    implementationsByProposal: byProposal,
+  };
 }
 
 const severityColors: Record<Proposal["severity"], string> = {
@@ -50,7 +70,13 @@ function severityRank(s: Proposal["severity"]): number {
   return { critical: 0, high: 1, medium: 2, low: 3 }[s];
 }
 
-function ProposalCard({ proposal }: { proposal: Proposal }) {
+function ProposalCard({
+  proposal,
+  implementation,
+}: {
+  proposal: Proposal;
+  implementation?: Implementation;
+}) {
   const preview = (proposal.description || "").slice(0, 280).trim();
 
   return (
@@ -115,12 +141,14 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
       <ProposalActions
         proposal={{ id: proposal.id, status: proposal.status }}
       />
+
+      {implementation && <ImplementationPanel implementation={implementation} />}
     </div>
   );
 }
 
 export default async function ProductProposalsPage() {
-  const proposals = await getData();
+  const { proposals, implementationsByProposal } = await getData();
 
   // Group open (proposed/approved/in_progress) by severity, decided collapsed
   const open = proposals
@@ -173,7 +201,11 @@ export default async function ProductProposalsPage() {
             </h2>
             <div className="space-y-3">
               {items.map((p) => (
-                <ProposalCard key={p.id} proposal={p} />
+                <ProposalCard
+                  key={p.id}
+                  proposal={p}
+                  implementation={implementationsByProposal[p.id]}
+                />
               ))}
             </div>
           </section>
