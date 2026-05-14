@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { agentFetch } from "../lib/agentFetch";
 
 export default function BlogDraftActions({
   draft,
@@ -14,7 +15,7 @@ export default function BlogDraftActions({
   async function act(action: "publish" | "unpublish" | "archive") {
     setBusy(true);
     try {
-      const res = await fetch(`/api/agents/blog-drafts/${draft.id}`, {
+      const res = await agentFetch(`/api/agents/blog-drafts/${draft.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),

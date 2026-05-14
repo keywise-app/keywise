@@ -11,13 +11,17 @@ import { createClient } from "@supabase/supabase-js";
 import { getRole } from "@/agents-framework/registry";
 import { runAgent } from "@/agents-framework/runner";
 import { devConfig } from "@/agents/dev/config";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const maxDuration = 300; // 5 minutes — enough for most Dev agent runs
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id: proposalId } = await params;
 
   const supabase = createClient(
@@ -156,7 +160,12 @@ export async function POST(
       // Don't await — let it run in the background.
       void fetch(
         `${baseUrl}/api/agents/implementations/${implementationId}/screenshot`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+          },
+        }
       ).catch((e) => console.error("[implement] screenshot kick failed:", e));
     }
 

@@ -13,6 +13,7 @@ import {
   resolveVercelPreviewUrl,
 } from "@/agent-tools/screenshot/tools";
 import { devConfig } from "@/agents/dev/config";
+import { requireAdminApi } from "@/lib/admin-auth";
 
 export const maxDuration = 300;
 
@@ -39,9 +40,12 @@ async function gh<T = any>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminApi(req);
+  if (denied) return denied;
+
   const { id: implementationId } = await params;
 
   const supabase = createClient(

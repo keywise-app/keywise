@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { agentFetch } from "../lib/agentFetch";
 
 type Status =
   | "proposed"
@@ -46,12 +47,12 @@ export default function ProposalActions({
     try {
       let res: Response;
       if (action === "approve_and_implement") {
-        res = await fetch(
+        res = await agentFetch(
           `/api/agents/product-proposals/${proposal.id}/implement`,
           { method: "POST" }
         );
       } else {
-        res = await fetch(`/api/agents/product-proposals/${proposal.id}`, {
+        res = await agentFetch(`/api/agents/product-proposals/${proposal.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action, note }),
