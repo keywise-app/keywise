@@ -28,8 +28,10 @@ function normalizePhone(raw: string | null | undefined): string | null {
 }
 
 function twiml(reply: string | null = null) {
+  // Wrap the message body in CDATA so ampersands and other XML-special characters
+  // in our reply text don't trigger schema validation warnings (Twilio error 12200).
   const body = reply
-    ? `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${reply}</Message></Response>`
+    ? `<?xml version="1.0" encoding="UTF-8"?><Response><Message><![CDATA[${reply}]]></Message></Response>`
     : `<?xml version="1.0" encoding="UTF-8"?><Response/>`;
   return new NextResponse(body, { status: 200, headers: { 'Content-Type': 'text/xml' } });
 }
