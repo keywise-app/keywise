@@ -105,11 +105,23 @@ export async function runAgent(
     options.promptOverride ??
     (typeof task.prompt === "function" ? await task.prompt(ctx) : task.prompt);
 
-  // If context_read tool is available, remind the agent to call it first
-  const hasContextTool = allowed.some((t) => t.name === "context_read");
-  const initialPrompt = hasContextTool
-    ? `IMPORTANT: Before doing anything else, call the context_read tool to load the Keywise positioning context. Then proceed with:\n\n${rawPrompt}`
-    : rawPrompt;
+  // If context_read tool is available, pre-read the file and inject into system prompt
+  // (don't rely on the model calling the tool — it may parallelize past it)
+  const contextTool = allowed.find((t) => t.name === "context_read");
+  let contextAppendix = "";
+  if (contextTool) {
+    try {
+      const result = await contextTool.execute({}, ctx);
+      const content = (result as any)?.content;
+      if (content && typeof content === "string" && content.length > 50) {
+        contextAppendix = `\n\n--- KEYWISE CONTEXT DOCUMENT (authoritative — your drafts must comply) ---\n${content}\n--- END CONTEXT ---`;
+      }
+    } catch {
+      // Non-fatal — context file missing or unreadable
+    }
+  }
+  const fullSystemPrompt = systemPrompt + contextAppendix;
+  const initialPrompt = rawPrompt;
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: initialPrompt },
@@ -126,7 +138,7 @@ export async function runAgent(
       const response = await anthropic.messages.create({
         model,
         max_tokens: 4096,
-        system: systemPrompt,
+        system: fullSystemPrompt,
         tools: toolDefs,
         messages,
       });
