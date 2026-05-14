@@ -168,7 +168,7 @@ export async function POST(req: Request) {
         const smsRes = await fetch(`${baseUrl}/api/send-sms`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: formattedPhone, message: smsBody }),
+          body: JSON.stringify({ to: formattedPhone, lease_id, message: smsBody }),
         });
         const smsResult = await smsRes.json();
         console.error('[invite-tenant] SMS response:', smsRes.status, JSON.stringify(smsResult));

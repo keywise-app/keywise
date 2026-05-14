@@ -11,6 +11,11 @@ const BATH_OPTIONS = ['1', '1.5', '2', '2.5', '3', '3.5', '4'];
 const PAYMENT_DAYS = ['1', '5', '10', '15', '20', '25', '28'];
 const STEPS_LABELS = ['Property', 'Tenant', 'Lease Terms', 'Payments', 'Invite'];
 
+// A2P 10DLC consent disclosure — stored verbatim on every opt-in event.
+// Exact text shown to the landlord at the point of consent capture.
+const SMS_CONSENT_TEXT = (tenantName: string, landlordName: string) =>
+  `I confirm that ${tenantName || 'this tenant'} has given consent to receive SMS messages from ${landlordName || 'their landlord'} via Keywise — including rent reminders, lease updates, and other transactional notices. They can reply STOP at any time to opt out. Msg & data rates may apply.`;
+
 const DAY_LABELS: Record<string, string> = { '1': '1st', '5': '5th', '10': '10th', '15': '15th', '20': '20th', '25': '25th', '28': '28th' };
 
 const emptyForm = {
@@ -40,6 +45,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   const [setupPayments, setSetupPayments] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('external');
   const [inviteMethod, setInviteMethod] = useState<'email' | 'sms' | 'both' | 'skip'>('both');
+  const [smsConsent, setSmsConsent] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [confetti, setConfetti] = useState<{ id: number; x: number; color: string; delay: number; dur: number; size: number }[]>([]);
   const [createdLease, setCreatedLease] = useState<any>(null);
@@ -84,15 +90,22 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     }
   }, [step, method, form]);
 
-  // Pick sensible invite default when arriving at step 5
+  // Pick sensible invite default when arriving at step 5.
+  // SMS / Both default to off until the landlord checks the consent box.
   useEffect(() => {
     if (step === 5) {
-      if (form.email && form.phone) setInviteMethod('both');
-      else if (form.email) setInviteMethod('email');
-      else if (form.phone) setInviteMethod('sms');
+      if (form.email) setInviteMethod('email');
+      else if (form.phone && smsConsent) setInviteMethod('sms');
       else setInviteMethod('skip');
     }
   }, [step]);
+
+  // If the landlord unchecks consent after picking an SMS-bearing option, fall back to email or skip.
+  useEffect(() => {
+    if (!smsConsent && (inviteMethod === 'sms' || inviteMethod === 'both')) {
+      setInviteMethod(form.email ? 'email' : 'skip');
+    }
+  }, [smsConsent]);
 
   // Pre-fill rent when unit is selected
   useEffect(() => {
@@ -248,6 +261,11 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       propertyAddress = form.address + (form.unit_number ? ', Unit ' + form.unit_number : '');
     }
 
+    // Capture SMS consent if the landlord checked the box. The actual disclosure
+    // text the landlord agreed to is stored verbatim on the consent_events row.
+    const consentGiven = !!form.phone && smsConsent;
+    const consentTimestamp = consentGiven ? new Date().toISOString() : null;
+
     const { data: lease, error } = await supabase.from('leases').insert({
       user_id: user.id,
       tenant_name: form.tenant_name,
@@ -264,9 +282,26 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       late_fee_days: +form.late_fee_days || 3,
       late_fee_type: form.late_fee_type || 'percent',
       lease_terms_raw: form.lease_terms_raw || '',
+      sms_consent: consentGiven,
+      sms_consent_at: consentTimestamp,
+      sms_consent_source: consentGiven ? 'wizard' : null,
+      sms_consent_user_agent: consentGiven && typeof navigator !== 'undefined' ? navigator.userAgent : null,
     }).select().single();
 
     if (error) { alert('Error saving lease: ' + error.message); setCompleting(false); return; }
+
+    // Audit row — one per opt-in event. RLS limits insert to the lease's owner (auth.uid()).
+    if (consentGiven && form.phone) {
+      const landlordName = (await supabase.from('profiles').select('full_name').eq('id', user.id).single()).data?.full_name || '';
+      await supabase.from('sms_consent_events').insert({
+        lease_id: lease.id,
+        phone: form.phone,
+        event_type: 'opt_in',
+        source: 'wizard',
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        consent_text: SMS_CONSENT_TEXT(form.tenant_name, landlordName),
+      });
+    }
 
     // Auto-generate payment schedule from today forward
     console.error('[wizard] Lease created:', lease.id, '| rent:', lease.rent, '| end_date:', lease.end_date, '| payment_day:', lease.payment_day);
@@ -309,10 +344,12 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
     if (inviteMethod !== 'skip' && form.email) {
       const { data: { session: invSession } } = await supabase.auth.getSession();
+      // SMS only ships when the landlord captured consent on this lease.
+      const wantsSms = (inviteMethod === 'sms' || inviteMethod === 'both') && consentGiven && !!form.phone;
       await fetch('/api/invite-tenant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${invSession?.access_token}` },
-        body: JSON.stringify({ lease_id: lease.id, tenant_email: form.email, tenant_name: form.tenant_name, tenant_phone: form.phone, sendEmail: true, sendSMS: !!form.phone }),
+        body: JSON.stringify({ lease_id: lease.id, tenant_email: form.email, tenant_name: form.tenant_name, tenant_phone: form.phone, sendEmail: true, sendSMS: wantsSms }),
       });
     }
 
@@ -801,20 +838,51 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                 <div style={{ fontSize: 13, color: T.inkMuted }}>They'll get a secure link to view their lease, pay rent, and message you.</div>
               </div>
 
+              {/* SMS consent — required to enable any SMS-bearing invite option (A2P 10DLC). */}
+              {form.phone && (
+                <label
+                  htmlFor="kw-sms-consent"
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '12px 14px', marginBottom: 14,
+                    borderRadius: 10,
+                    border: `2px solid ${smsConsent ? T.teal : T.border}`,
+                    background: smsConsent ? T.tealLight : T.bg,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  <input
+                    id="kw-sms-consent"
+                    type="checkbox"
+                    checked={smsConsent}
+                    onChange={e => setSmsConsent(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: T.teal, flexShrink: 0, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.55 }}>
+                    I confirm <strong>{form.tenant_name || 'this tenant'}</strong> consented to receive SMS from me via Keywise (rent reminders, lease updates, transactional notices). They can reply <strong>STOP</strong> to opt out at any time. Msg & data rates may apply.
+                  </span>
+                </label>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
                 {([
-                  { id: 'email', label: 'Send email invitation', icon: '📧', avail: !!form.email, missing: 'email' },
-                  { id: 'sms', label: 'Send SMS invitation', icon: '💬', avail: !!form.phone, missing: 'phone' },
-                  { id: 'both', label: 'Email + SMS', icon: '✦', avail: !!(form.email && form.phone), missing: '' },
-                  { id: 'skip', label: "Skip — I'll invite them later", icon: '→', avail: true, missing: '' },
-                ] as const).map(m => (
-                  <button key={m.id} onClick={() => m.avail && setInviteMethod(m.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: `2px solid ${inviteMethod === m.id ? T.navy : T.border}`, background: inviteMethod === m.id ? T.navy : T.surface, cursor: m.avail ? 'pointer' : 'not-allowed', textAlign: 'left', opacity: m.avail ? 1 : 0.4, transition: 'all 0.15s', fontFamily: 'inherit', width: '100%' }}>
-                    <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{m.icon}</span>
-                    <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: inviteMethod === m.id ? '#fff' : T.ink }}>{m.label}</span>
-                    {!m.avail && m.missing && <span style={{ fontSize: 10, color: T.inkMuted }}>no {m.missing}</span>}
-                  </button>
-                ))}
+                  { id: 'email', label: 'Send email invitation', icon: '📧', avail: !!form.email, missing: 'email', needsConsent: false },
+                  { id: 'sms',   label: 'Send SMS invitation',   icon: '💬', avail: !!form.phone, missing: 'phone', needsConsent: true },
+                  { id: 'both',  label: 'Email + SMS',           icon: '✦', avail: !!(form.email && form.phone), missing: '', needsConsent: true },
+                  { id: 'skip',  label: "Skip — I'll invite them later", icon: '→', avail: true, missing: '', needsConsent: false },
+                ] as const).map(m => {
+                  const consentBlocked = m.needsConsent && !smsConsent;
+                  const enabled = m.avail && !consentBlocked;
+                  return (
+                    <button key={m.id} onClick={() => enabled && setInviteMethod(m.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: `2px solid ${inviteMethod === m.id ? T.navy : T.border}`, background: inviteMethod === m.id ? T.navy : T.surface, cursor: enabled ? 'pointer' : 'not-allowed', textAlign: 'left', opacity: enabled ? 1 : 0.4, transition: 'all 0.15s', fontFamily: 'inherit', width: '100%' }}>
+                      <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: inviteMethod === m.id ? '#fff' : T.ink }}>{m.label}</span>
+                      {!m.avail && m.missing && <span style={{ fontSize: 10, color: T.inkMuted }}>no {m.missing}</span>}
+                      {m.avail && consentBlocked && <span style={{ fontSize: 10, color: T.inkMuted }}>consent required</span>}
+                    </button>
+                  );
+                })}
               </div>
 
               {inviteMethod !== 'skip' && (

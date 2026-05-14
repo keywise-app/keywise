@@ -25,6 +25,11 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const [docRequests, setDocRequests] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
 
+  // SMS consent state — null while loading, then { sms_consent, sms_opted_out_at, has_phone, ... }
+  const [smsState, setSmsState] = useState<any>(null);
+  const [smsToggling, setSmsToggling] = useState(false);
+  const [smsBannerDismissed, setSmsBannerDismissed] = useState(false);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -76,7 +81,75 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       setAutopayEnabled(tenantProfile.autopay_enabled || false);
     }
 
+    // Load SMS consent state.
+    try {
+      const sRes = await fetch(`/api/tenant/sms-opt-in?lease_id=${leaseData.id}&email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`);
+      const sData = await sRes.json();
+      if (!sData.error) setSmsState(sData);
+
+      // Auto-opt-in when arriving via the customer-notice email link (?action=sms_opt_in).
+      // Only fire when phone exists and they aren't already opted in.
+      const url = new URL(window.location.href);
+      if (
+        !previewLeaseId &&
+        url.searchParams.get('action') === 'sms_opt_in' &&
+        sData?.has_phone && !sData?.sms_consent
+      ) {
+        const oRes = await fetch('/api/tenant/sms-opt-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lease_id: leaseData.id,
+            email: user.email,
+            user_id: user.id,
+            opt_in: true,
+            source: 'email_link',
+          }),
+        });
+        const oData = await oRes.json();
+        if (oData.success) {
+          setSmsState((prev: any) => ({ ...(prev || {}), sms_consent: true, sms_opted_out_at: null }));
+        }
+        // Clean the URL so a refresh doesn't try again.
+        url.searchParams.delete('action');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch (err) {
+      console.error('[tenant-dashboard] sms consent fetch failed:', err);
+    }
+
     setLoading(false);
+  };
+
+  const toggleSms = async (optIn: boolean) => {
+    if (!lease || smsToggling) return;
+    setSmsToggling(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const res = await fetch('/api/tenant/sms-opt-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lease_id: lease.id,
+          email: user?.email,
+          user_id: user?.id,
+          opt_in: optIn,
+          source: 'tenant_portal',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSmsState((prev: any) => ({
+          ...(prev || {}),
+          sms_consent: optIn,
+          sms_opted_out_at: optIn ? null : new Date().toISOString(),
+        }));
+      } else {
+        alert(data.error || 'Could not update SMS preferences');
+      }
+    } finally {
+      setSmsToggling(false);
+    }
   };
 
   const openPayNow = async (p: any) => {
@@ -198,7 +271,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       promises.push(fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: landlord.phone, message: `${senderName}: ${msgText}` }),
+        body: JSON.stringify({
+          to: landlord.phone,
+          lease_id: lease?.id,
+          to_role: 'landlord',
+          message: `${senderName}: ${msgText}`,
+        }),
       }));
     }
     if (landlord?.email) {
@@ -343,6 +421,49 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
           <span style={{ fontSize: 13, color: T.tealDark, fontWeight: 600 }}>{propertyShort}</span>
         </div>
       </div>
+
+      {/* SMS opt-in prompt — shown when tenant has a phone on file but hasn't consented yet. */}
+      {!previewLeaseId && smsState?.has_phone && !smsState?.sms_consent && !smsBannerDismissed && (
+        <div style={{ background: '#fff', border: `2px solid ${T.teal}`, borderRadius: T.radius, padding: 18, marginBottom: 16, marginLeft: isMobile ? 16 : 0, marginRight: isMobile ? 16 : 0, boxShadow: T.shadow }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: T.navy, fontSize: 15, marginBottom: 4 }}>
+                Get rent reminders by text?
+              </div>
+              <div style={{ fontSize: 13, color: T.inkMid, lineHeight: 1.55, marginBottom: 12 }}>
+                We can send rent reminders, payment receipts, and lease updates by SMS to <strong>{smsState.phone}</strong>. Reply STOP to any message at any time to opt out. Msg & data rates may apply.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => toggleSms(true)}
+                  disabled={smsToggling}
+                  style={{ ...btn.primary, background: T.teal, color: T.navy, fontWeight: 700, padding: '8px 18px', fontSize: 13, opacity: smsToggling ? 0.6 : 1, cursor: smsToggling ? 'default' : 'pointer' }}>
+                  {smsToggling ? 'Saving...' : 'Yes, send me texts'}
+                </button>
+                <button
+                  onClick={() => setSmsBannerDismissed(true)}
+                  style={{ ...btn.ghost, fontSize: 13, padding: '8px 14px' }}>
+                  No thanks
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMS preferences toggle — shown once consent has been captured, so tenant can opt out without texting STOP. */}
+      {!previewLeaseId && smsState?.has_phone && smsState?.sms_consent && (
+        <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 16, marginLeft: isMobile ? 16 : 0, marginRight: isMobile ? 16 : 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 12, color: T.inkMuted }}>
+          <span>✓ SMS notifications are <strong style={{ color: T.tealDark }}>on</strong> for {smsState.phone}</span>
+          <button
+            onClick={() => toggleSms(false)}
+            disabled={smsToggling}
+            style={{ background: 'none', border: 'none', cursor: smsToggling ? 'default' : 'pointer', color: T.inkMuted, fontSize: 12, fontWeight: 600, textDecoration: 'underline', padding: 0, opacity: smsToggling ? 0.5 : 1 }}>
+            {smsToggling ? 'Saving...' : 'Turn off'}
+          </button>
+        </div>
+      )}
 
       {/* Lease Progress */}
       {progress && (

@@ -53,7 +53,7 @@ export default function TermsPage() {
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>Legal</div>
           <h1 style={{ fontSize: 40, fontWeight: 800, color: N, letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>Terms of Service</h1>
-          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: April 1, 2026</p>
+          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: May 13, 2026</p>
         </div>
 
         <div style={{ fontSize: 15, color: INK_MID, lineHeight: 1.8 }}>
@@ -73,6 +73,7 @@ export default function TermsPage() {
               <li>Ensuring all information you enter (tenant data, lease terms, property details) is accurate</li>
               <li>Complying with all applicable landlord-tenant laws in your jurisdiction</li>
               <li>Obtaining appropriate consent before submitting tenant personal information into the platform</li>
+              <li>Obtaining and maintaining valid consent from each tenant before sending them SMS messages through Keywise, and complying with applicable telecommunications regulations including the Telephone Consumer Protection Act (TCPA) and CTIA messaging guidelines</li>
               <li>All actions taken under your account</li>
             </ul>
             <p>You may not use Keywise for any unlawful purpose, to harass tenants, or to violate fair housing laws.</p>

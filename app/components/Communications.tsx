@@ -218,7 +218,7 @@ export default function Communications() {
       const res = await fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: t.phone, message: smsText }),
+        body: JSON.stringify({ to: t.phone, lease_id: t.id, message: smsText }),
       });
       const data = await res.json();
       if (data.error) statuses.push('✗ SMS failed: ' + data.error);
@@ -313,7 +313,7 @@ const sendAll = async () => {
       const res = await fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: tenant.phone, message: shortMessage }),
+        body: JSON.stringify({ to: tenant.phone, lease_id: tenant.id, message: shortMessage }),
       });
       const data = await res.json();
       if (data.error) {
@@ -404,7 +404,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: t.phone, message: smsResult }),
+      body: JSON.stringify({ to: t.phone, lease_id: t.id, message: smsResult }),
     });
     const data = await res.json();
     const status = data.error ? '✗ SMS failed: ' + data.error : '✓ SMS sent to ' + t.phone;

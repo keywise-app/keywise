@@ -55,7 +55,7 @@ export default function PrivacyPage() {
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>Legal</div>
           <h1 style={{ fontSize: 40, fontWeight: 800, color: N, letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>Privacy Policy</h1>
-          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: April 1, 2026</p>
+          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: May 13, 2026</p>
         </div>
 
         <div style={{ fontSize: 15, color: INK_MID, lineHeight: 1.8 }}>
@@ -68,6 +68,7 @@ export default function PrivacyPage() {
               <li><strong>Payment data:</strong> bank account and payment method information processed through Stripe. Keywise does not store raw payment card or bank account numbers — these are handled directly by Stripe.</li>
               <li><strong>Usage data:</strong> log data, browser type, IP address, and how you interact with the platform.</li>
               <li><strong>Documents:</strong> lease agreements and other files you upload for processing.</li>
+              <li><strong>SMS consent records:</strong> the timestamp, source, IP address, and device information of every opt-in or opt-out event tied to a phone number we send messages to.</li>
             </ul>
           </Section>
 
@@ -76,7 +77,7 @@ export default function PrivacyPage() {
             <ul>
               <li>Provide, operate, and improve the Keywise platform</li>
               <li>Process rent payments and send payment notifications</li>
-              <li>Send transactional communications (rent reminders, invite links, receipts)</li>
+              <li>Send transactional email and SMS notifications you've consented to receive (rent reminders, invite links, receipts, lease updates)</li>
               <li>Analyze lease documents using AI to auto-fill lease data</li>
               <li>Respond to support requests</li>
               <li>Comply with legal obligations</li>
@@ -89,7 +90,7 @@ export default function PrivacyPage() {
             <ul>
               <li><strong>Supabase</strong> — database, authentication, and file storage. <a href="https://supabase.com/privacy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>supabase.com/privacy</a></li>
               <li><strong>Stripe</strong> — payment processing and landlord payouts. <a href="https://stripe.com/privacy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>stripe.com/privacy</a></li>
-              <li><strong>Twilio</strong> — SMS notifications sent to tenants and landlords. <a href="https://www.twilio.com/legal/privacy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>twilio.com/legal/privacy</a></li>
+              <li><strong>Twilio</strong> — SMS delivery for transactional notifications, with consent tracked by Keywise per A2P 10DLC requirements. <a href="https://www.twilio.com/legal/privacy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>twilio.com/legal/privacy</a></li>
               <li><strong>Resend</strong> — transactional email delivery. <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>resend.com/legal/privacy-policy</a></li>
               <li><strong>Anthropic</strong> — AI processing of lease documents and communications. Documents you upload may be sent to Anthropic's API for analysis. <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener" style={{ color: TEAL_DARK }}>anthropic.com/privacy</a></li>
             </ul>
@@ -106,19 +107,34 @@ export default function PrivacyPage() {
             <p>No system is 100% secure. If you believe your account has been compromised, contact us immediately at <a href="mailto:privacy@keywise.app" style={{ color: TEAL_DARK }}>privacy@keywise.app</a>.</p>
           </Section>
 
-          <Section title="5. Data Retention">
+          <Section title="5. SMS Communications">
+            <p>When a landlord adds you as a tenant on Keywise, they have the option to enable SMS notifications to your phone number. We send SMS only when both of the following are true:</p>
+            <ul>
+              <li>The landlord has confirmed in writing that you consented to receive text messages from them through Keywise, or you have opted in directly through the tenant portal; and</li>
+              <li>You have not subsequently opted out by replying STOP.</li>
+            </ul>
+            <p><strong>Types of messages we send.</strong> Transactional only — rent reminders, payment receipts, lease invitations, maintenance updates, and direct messages from your landlord. We do not send marketing messages by SMS.</p>
+            <p><strong>Frequency.</strong> Message frequency varies and depends on your lease activity. Typical volume is one to four messages per month.</p>
+            <p><strong>Cost.</strong> Standard message and data rates from your carrier may apply. Keywise does not charge for SMS.</p>
+            <p><strong>Stopping messages.</strong> You can stop receiving SMS at any time by replying <strong>STOP</strong>, <strong>UNSUBSCRIBE</strong>, <strong>CANCEL</strong>, <strong>QUIT</strong>, or <strong>END</strong> to any message. We will mark your number as opted out within seconds and will not send further SMS to that number unless you opt back in. Reply <strong>START</strong> or <strong>UNSTOP</strong> to resume.</p>
+            <p><strong>Help.</strong> Reply <strong>HELP</strong> to any message for support contact information, or email us at <a href="mailto:privacy@keywise.app" style={{ color: TEAL_DARK }}>privacy@keywise.app</a>.</p>
+            <p><strong>Data sharing.</strong> We share your phone number with Twilio for the sole purpose of delivering the SMS you've consented to receive. We do not sell your phone number, and we do not share it with third parties for their own marketing purposes.</p>
+            <p><strong>Audit log.</strong> We keep a record of when consent was captured, the channel through which it was captured (landlord-confirmed, tenant portal, or inbound text), and any opt-out events. You may request a copy of your own consent record at <a href="mailto:privacy@keywise.app" style={{ color: TEAL_DARK }}>privacy@keywise.app</a>.</p>
+          </Section>
+
+          <Section title="6. Data Retention">
             <p>We retain your data for as long as your account is active. You may request deletion of your account and associated data at any time by contacting us. Some data may be retained as required by law or for legitimate business purposes (e.g., payment records).</p>
           </Section>
 
-          <Section title="6. Your Rights">
+          <Section title="7. Your Rights">
             <p>Depending on your location, you may have the right to access, correct, or delete your personal data. To exercise any of these rights, contact us at <a href="mailto:privacy@keywise.app" style={{ color: TEAL_DARK }}>privacy@keywise.app</a>.</p>
           </Section>
 
-          <Section title="7. Changes to This Policy">
+          <Section title="8. Changes to This Policy">
             <p>We may update this policy from time to time. We'll notify you of material changes via email or an in-app notice. Continued use of Keywise after changes constitutes acceptance of the updated policy.</p>
           </Section>
 
-          <Section title="8. Contact">
+          <Section title="9. Contact">
             <p>Questions about privacy? Contact us at <a href="mailto:privacy@keywise.app" style={{ color: TEAL_DARK }}>privacy@keywise.app</a>.</p>
           </Section>
         </div>

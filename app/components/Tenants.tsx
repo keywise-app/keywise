@@ -384,7 +384,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: lease.phone, message: smsResult }),
+      body: JSON.stringify({ to: lease.phone, lease_id: lease.id, message: smsResult }),
     });
     const data = await res.json();
     const status = data.error ? '✗ SMS failed: ' + data.error : '✓ SMS sent to ' + lease.phone;
@@ -912,6 +912,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
                                     to: selected.phone,
+                                    lease_id: selected.id,
                                     message: `Hi ${(selected.tenant_name || '').split(' ')[0]}! Reminder: $${amountNum.toLocaleString()} is due ${p.due_date}${p.description ? ' for ' + p.description : ''}. Pay here: ${p.payment_link_url}`,
                                   }),
                                 }));

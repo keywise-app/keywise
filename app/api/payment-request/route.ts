@@ -260,6 +260,7 @@ export async function POST(req: Request) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: tenant_phone,
+            lease_id,
             message: `Hi ${resolvedTenantName.split(' ')[0]}! A payment of $${amountNum.toLocaleString()} is due ${due_date}${description ? ' for ' + description : ''}. Pay here: ${paymentLink.url}`,
           }),
         });
