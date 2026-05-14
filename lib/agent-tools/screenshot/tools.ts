@@ -15,10 +15,8 @@ const STORAGE_BUCKET = "proposal-screenshots";
 // error fires if you try to screenshot without them.
 async function getBrowser(): Promise<any> {
   try {
-    // @ts-expect-error — optional dep, may not be installed yet
-    const chromiumMod = await import("@sparticuz/chromium");
-    // @ts-expect-error — optional dep, may not be installed yet
-    const puppeteerMod = await import("puppeteer-core");
+    const chromiumMod: any = await import("@sparticuz/chromium");
+    const puppeteerMod: any = await import("puppeteer-core");
     const chromium = chromiumMod.default ?? chromiumMod;
     const puppeteer = puppeteerMod.default ?? puppeteerMod;
 
