@@ -101,9 +101,15 @@ export async function runAgent(
     input_schema: t.inputSchema,
   }));
 
-  const initialPrompt =
+  const rawPrompt =
     options.promptOverride ??
     (typeof task.prompt === "function" ? await task.prompt(ctx) : task.prompt);
+
+  // If context_read tool is available, remind the agent to call it first
+  const hasContextTool = allowed.some((t) => t.name === "context_read");
+  const initialPrompt = hasContextTool
+    ? `IMPORTANT: Before doing anything else, call the context_read tool to load the Keywise positioning context. Then proceed with:\n\n${rawPrompt}`
+    : rawPrompt;
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: initialPrompt },

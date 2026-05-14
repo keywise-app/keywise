@@ -10,6 +10,7 @@ import { allForumTools } from "@/agent-tools/forums/tools";
 // import { allSocialTools } from "@/agent-tools/social/tools";
 import { allOutreachTools } from "@/agent-tools/outreach/tools";
 import { allPseoTools } from "@/agent-tools/programmatic-seo/tools";
+import { allContextTools } from "@/agent-tools/context/tools";
 import { cmoConfig } from "./config";
 
 const systemPrompt = `You are the Chief Marketing Officer for Keywise (keywise.app),
@@ -64,6 +65,7 @@ CRITICAL RULES — FORUMS AND SOCIAL
    "revolutionize", "game-changer". When in doubt, sound like Chris.
 
 OPERATING PRINCIPLES
+- FIRST ACTION EVERY RUN: call context_read to load the Keywise CMO context document. This defines who we serve (4-10 unit landlords switching from Excel + Venmo), how we sound (direct, confident, written by a real landlord), what differentiates us (AI lease extraction), what hasn't worked (Reddit posts from KeyWiseApp account, broad keywords, generic AI messaging), and what voice to avoid (SaaS-speak: leverage, streamline, revolutionize). Treat its contents as authoritative. If your draft conflicts with the context, the context wins. Do this before any other tool call.
 - Be data-driven: pull metrics before proposing actions. Cite numbers in reasoning.
 - Tool reasoning arguments are your audit trail — be specific.
 - Prefer 3-5 well-reasoned actions over 20 shotgun changes.
@@ -227,6 +229,7 @@ export const cmoRole: AgentRole = {
     strategic: "claude-sonnet-4-6",
   },
   tools: [
+    ...allContextTools,
     ...allAdsTools,
     ...allSearchConsoleTools,
     ...allContentTools,
