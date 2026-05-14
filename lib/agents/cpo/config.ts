@@ -51,7 +51,29 @@ export const cpoConfig = {
 
   // Max proposals to write per task run. Keeps Chris's review queue sane.
   maxProposalsPerRun: 5,
+
+  // Auto-merge threshold. Proposals at or below this severity auto-merge after
+  // the preview screenshot is captured. Set to null to require manual Merge clicks
+  // for every PR. Flip this to null on day one of having a paying customer.
+  //
+  //   "low"    → only low auto-merges
+  //   "medium" → low + medium auto-merge (recommended for pre-revenue)
+  //   "high"   → everything except critical auto-merges (aggressive)
+  //   null     → nothing auto-merges
+  autoMergeBelowSeverity: "medium" as "low" | "medium" | "high" | null,
 };
+
+/** Returns true if a proposal's severity is eligible for auto-merge today. */
+export function isAutoMergeEligible(
+  severity: "critical" | "high" | "medium" | "low"
+): boolean {
+  const threshold = cpoConfig.autoMergeBelowSeverity;
+  if (!threshold) return false;
+  if (severity === "critical") return false;
+  // Order: low < medium < high < critical
+  const order = { low: 0, medium: 1, high: 2, critical: 3 };
+  return order[severity] <= order[threshold];
+}
 
 export type AuditFlow = (typeof cpoConfig.auditFlows)[number];
 export type Competitor = (typeof cpoConfig.competitors)[number];

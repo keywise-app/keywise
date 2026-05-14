@@ -15,6 +15,7 @@ import {
   captureAndUpload,
 } from "@/agent-tools/screenshot/tools";
 import { devConfig } from "@/agents/dev/config";
+import { isAutoMergeEligible } from "@/agents/cpo/config";
 
 export const maxDuration = 300;
 
@@ -53,10 +54,16 @@ export async function POST(
 
   const { data: proposal } = await supabase
     .from("product_proposals")
-    .select("affected_route")
+    .select("affected_route, severity")
     .eq("id", impl.proposal_id)
     .maybeSingle();
   const route = proposal?.affected_route || "/";
+  const severity = proposal?.severity as
+    | "critical"
+    | "high"
+    | "medium"
+    | "low"
+    | undefined;
   // Sanitize the route — Next.js dynamic segments like [id] can't be resolved
   // without a real value. We'll strip them and hit the prefix.
   const cleanRoute = route.replace(/\/\[[^\]]+\]/g, "");
@@ -121,11 +128,26 @@ export async function POST(
       })
       .eq("id", implementationId);
 
+    // 6. Auto-merge if severity is eligible. Fire-and-forget so this endpoint
+    //    returns to the caller promptly; the merge endpoint has its own 5-min budget.
+    const autoMerged =
+      severity != null && isAutoMergeEligible(severity);
+    if (autoMerged) {
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000";
+      void fetch(
+        `${baseUrl}/api/agents/implementations/${implementationId}/merge`,
+        { method: "POST" }
+      ).catch((e) => console.error("[screenshot] auto-merge kick failed:", e));
+    }
+
     return NextResponse.json({
       implementationId,
       previewUrl,
       screenshotUrl: publicUrl,
       route: cleanRoute,
+      autoMerged,
     });
   } catch (err: any) {
     const msg = err?.message || String(err);
