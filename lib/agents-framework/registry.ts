@@ -2,10 +2,12 @@
 import type { AgentRole } from "./types";
 import { cmoRole } from "@/agents/cmo";
 import { cpoRole } from "@/agents/cpo";
+import { devRole } from "@/agents/dev";
 
 export const roles: Record<string, AgentRole> = {
   cmo: cmoRole,
   cpo: cpoRole,
+  dev: devRole,
   // cro: croRole,           // ← add when built
   // success: successRole,
   // chief_of_staff: chiefOfStaffRole,
