@@ -41,85 +41,153 @@ export const cpoContextReadTool: AgentTool<{}> = {
 };
 
 // ─────────────────────────────────────────────────────────────────
-// ux_audit_flow — walk a specific flow and surface friction
-// Stub today; wire to a real route-walker (Playwright?) later.
+// list_real_routes — walk app/ and return ONLY routes that actually exist.
+// Replaces the old stub ux_audit_flow which hallucinated fake routes.
 // ─────────────────────────────────────────────────────────────────
-export const uxAuditFlowTool: AgentTool<{ flow_name: string }> = {
-  name: "ux_audit_flow",
+
+const APP_DIR = path.join(process.cwd(), "app");
+
+// Files Next.js treats as a route's entry point.
+const PAGE_FILES = ["page.tsx", "page.ts", "page.jsx", "page.js"];
+
+interface RouteEntry {
+  route: string;        // URL path, e.g. "/contact" or "/blog/[slug]"
+  page_file: string;    // repo-relative path to page.tsx
+  has_layout: boolean;  // whether a layout.tsx sits alongside
+  is_dynamic: boolean;  // contains [param] segment
+}
+
+/**
+ * Recursively walks app/ and returns every directory that contains a page file.
+ * Honors Next.js conventions:
+ *   - Folders wrapped in (parens) are route groups — stripped from URL
+ *   - Folders starting with _ are private — skipped
+ *   - Folders starting with @ are parallel route slots — skipped
+ *   - [param] folders stay verbatim in the route
+ */
+function walkAppRoutes(): RouteEntry[] {
+  const results: RouteEntry[] = [];
+
+  function recurse(absDir: string, urlSegments: string[]) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(absDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    // Does this directory have a page file?
+    const pageFile = PAGE_FILES.find((f) =>
+      entries.some((e) => e.isFile() && e.name === f)
+    );
+    const hasLayout = entries.some(
+      (e) => e.isFile() && /^layout\.(tsx?|jsx?)$/.test(e.name)
+    );
+    if (pageFile) {
+      const route = "/" + urlSegments.filter(Boolean).join("/");
+      const rel = path
+        .relative(process.cwd(), path.join(absDir, pageFile))
+        .replace(/\\/g, "/");
+      results.push({
+        route: route === "/" ? "/" : route.replace(/\/$/, ""),
+        page_file: rel,
+        has_layout: hasLayout,
+        is_dynamic: urlSegments.some((s) => s.includes("[")),
+      });
+    }
+    // Recurse into subdirectories
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const name = e.name;
+      if (name.startsWith("_")) continue;     // private
+      if (name.startsWith("@")) continue;     // parallel route slot
+      if (name === "api") continue;           // API routes, not pages
+      if (name === "node_modules") continue;
+      // (group) folders don't contribute to URL
+      const isRouteGroup = /^\(.+\)$/.test(name);
+      const nextSegments = isRouteGroup ? urlSegments : [...urlSegments, name];
+      recurse(path.join(absDir, name), nextSegments);
+    }
+  }
+
+  recurse(APP_DIR, []);
+  return results.sort((a, b) => a.route.localeCompare(b.route));
+}
+
+export const listRealRoutesTool: AgentTool<{}> = {
+  name: "list_real_routes",
   description:
-    "Audit one user-facing flow end-to-end. Returns the screens in the flow, the actions on each, friction hypotheses, and any drop-off data we have. Use this as the starting point for daily_flow_audit and monthly_competitive_ux_audit.",
+    "List every route that actually exists in the Keywise codebase by scanning app/ for page.tsx files. Always call this FIRST in any audit task. Routes returned here are the only routes you may propose changes against — proposing against a route not in this list will fail downstream because the Dev agent can't find files that don't exist.",
+  inputSchema: { type: "object", properties: {} },
+  defaultAuthority: "auto",
+  describeAction: () => "List real routes in app/",
+  execute: async () => {
+    const routes = walkAppRoutes();
+    return {
+      count: routes.length,
+      routes,
+      note:
+        "These are the ONLY valid affected_route values. If a flow you want to audit isn't here, the feature doesn't exist yet — skip it.",
+    };
+  },
+};
+
+export const readRouteFilesTool: AgentTool<{ route: string }> = {
+  name: "read_route_files",
+  description:
+    "Read the page.tsx (and any obviously related co-located files) for a given route. Use this AFTER list_real_routes to see what the UX actually looks like before filing a proposal. The route argument must be a route returned by list_real_routes verbatim, e.g. '/contact' or '/blog/[slug]'.",
   inputSchema: {
     type: "object",
     properties: {
-      flow_name: {
+      route: {
         type: "string",
-        description: `One of: ${cpoConfig.auditFlows.join(", ")}`,
+        description: "Route as returned by list_real_routes, e.g. '/contact'.",
       },
     },
-    required: ["flow_name"],
+    required: ["route"],
   },
   defaultAuthority: "auto",
-  describeAction: (i) => `UX audit: ${i.flow_name}`,
+  describeAction: (i) => `Read files for route ${i.route}`,
   execute: async (i) => {
-    // Stub: return a structured walkthrough. Replace with real route-walker.
-    const stubs: Record<string, any> = {
-      signup: {
-        screens: [
-          { route: "/signup", primary_action: "Create account", fields: 4 },
-          { route: "/signup/units", primary_action: "Pick unit count", fields: 1 },
-          { route: "/dashboard", primary_action: "Add first property", fields: 0 },
-        ],
-        friction_points: [
-          "44% activation rate — landlords sign up but don't add a property",
-          "No back button on /signup/units",
-          "Dashboard doesn't reflect what user signed up for (free vs Pro)",
-        ],
-        drop_off_estimate: "~56% between signup and first property",
-      },
-      add_property: {
-        screens: [
-          { route: "/properties/new", primary_action: "Save property", fields: 7 },
-        ],
-        friction_points: [
-          "7 required fields on one screen — RentRedi gets to value in 3",
-          "Address autocomplete is opt-in; should be default",
-          "No way to bulk-import properties from CSV",
-        ],
-        drop_off_estimate: "unknown — no telemetry on /properties/new yet",
-      },
-      fmv_calculation: {
-        screens: [
-          { route: "/properties/[id]/fmv", primary_action: "Calculate FMV", fields: 0 },
-        ],
-        friction_points: [
-          "AI returns a single number with no explanation of inputs",
-          "User cannot adjust property condition or sqft before recalculating",
-          "No 'override' field if user disagrees with AI",
-        ],
-        drop_off_estimate: "n/a — but 31% of users never run FMV after seeing it once",
-      },
-      rent_renewal: {
-        screens: [
-          { route: "/leases/[id]/renew", primary_action: "Send renewal", fields: 0 },
-        ],
-        friction_points: [
-          "AI suggests increase % but doesn't show the resulting rent in dollars until after Send",
-          "No recall after send — landlord stuck if increase was wrong",
-        ],
-        drop_off_estimate: "unknown",
-      },
-    };
-    const data = stubs[i.flow_name] ?? {
-      screens: [],
-      friction_points: [
-        `No audit data yet for "${i.flow_name}". Stub returns empty — wire a real route-walker.`,
-      ],
-      drop_off_estimate: "unknown",
-    };
+    const routes = walkAppRoutes();
+    const match = routes.find((r) => r.route === i.route);
+    if (!match) {
+      return {
+        error: `Route "${i.route}" does not exist in the app/. Call list_real_routes to see valid routes.`,
+        valid_routes: routes.map((r) => r.route),
+      };
+    }
+    const absPagePath = path.join(process.cwd(), match.page_file);
+    let pageContent = "";
+    try {
+      pageContent = fs.readFileSync(absPagePath, "utf-8");
+    } catch (err: any) {
+      return { error: `Could not read ${match.page_file}: ${err?.message || err}` };
+    }
+    // Also list peer files in the same directory (often co-located components)
+    const peerDir = path.dirname(absPagePath);
+    let peers: string[] = [];
+    try {
+      peers = fs
+        .readdirSync(peerDir, { withFileTypes: true })
+        .filter((e) => e.isFile() && !PAGE_FILES.includes(e.name))
+        .map((e) =>
+          path
+            .relative(process.cwd(), path.join(peerDir, e.name))
+            .replace(/\\/g, "/")
+        );
+    } catch {
+      // ignore
+    }
     return {
-      flow_name: i.flow_name,
-      ...data,
-      note: "stub data — wire real audit (Playwright + telemetry) before relying on this for shipping",
+      route: match.route,
+      page_file: match.page_file,
+      page_content: pageContent.length > 12000
+        ? pageContent.slice(0, 12000) + "\n\n... [truncated; file is " + pageContent.length + " chars total]"
+        : pageContent,
+      page_size: pageContent.length,
+      has_layout: match.has_layout,
+      is_dynamic: match.is_dynamic,
+      peer_files: peers,
     };
   },
 };
@@ -266,7 +334,7 @@ export const competitorUxScrapeTool: AgentTool<{
     type: "object",
     properties: {
       competitor: { type: "string", enum: ["rentredi", "buildium"] },
-      flow: { type: "string", description: `One of: ${cpoConfig.auditFlows.join(", ")}` },
+      flow: { type: "string", description: "A user-flow name to compare. Loose string — e.g. 'add_property', 'rent_renewal', 'contact'. Stub data only covers a handful." },
     },
     required: ["competitor", "flow"],
   },
@@ -370,7 +438,8 @@ export const readUserActionsTool: AgentTool<{ days?: number }> = {
 
 export const allProductTools = [
   cpoContextReadTool,
-  uxAuditFlowTool,
+  listRealRoutesTool,
+  readRouteFilesTool,
   productProposeTool,
   readSupportTicketsTool,
   competitorUxScrapeTool,

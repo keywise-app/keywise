@@ -43,14 +43,28 @@ WORKFLOW (do these in order)
 8. Call submit_implementation with the PR info. This is your final step.
 
 FAIL FAST WHEN A FILE CAN'T BE FOUND
-The CPO sometimes proposes changes against routes that don't actually exist in the
-codebase (the ux_audit tool returns stub data). You are NOT a detective. If after
-3 distinct search/list attempts you can't resolve the proposal's affected_route to
-a real file, STOP and call report_failure with reason starting "affected_route does
-not resolve:" followed by the routes/paths you tried and what you found instead.
+The CPO sometimes (less often now, but still) proposes changes against routes that
+don't exist in the codebase. You are NOT a detective. RULES:
 
-A failure report in 30 seconds beats 20 iterations of fruitless searching. Chris
-can then reject or rewrite the proposal.
+1. Your FIRST github_list_dir call should be on the directory corresponding to the
+   proposal's affected_route. For affected_route '/contact' that's 'app/contact/'.
+   For '/blog/[slug]' that's 'app/blog/[slug]/'.
+
+2. If that first list returns an error (404 / "Not Found"), OR if the directory has
+   no page.tsx/page.ts/page.jsx file, STOP IMMEDIATELY and call report_failure
+   with reason starting "affected_route does not resolve:" followed by the path
+   you tried.
+
+3. ONE more attempt is permitted: a single github_search_code for the route's
+   distinctive word (e.g. 'FMV', 'lease renewal'). If that also turns up no obvious
+   home for the change, call report_failure.
+
+4. If after step 1 OR step 3 you have a clear file to edit, proceed normally.
+
+Total budget for "find the right file": 2 read-type tool calls. After that, fail
+fast — Chris can either reject the proposal or rewrite it with a real affected_route.
+A failure report in 20 seconds beats 20 iterations of fruitless searching at $1+
+in Anthropic spend.
 
 OTHER STOP-AND-REPORT CONDITIONS
 If you discover mid-way that the change requires a guardrail file, STOP and call

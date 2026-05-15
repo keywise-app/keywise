@@ -30,21 +30,6 @@ export const cpoConfig = {
     "breaking",
   ],
 
-  // The 10 user-facing flows the CPO cycles through in daily_flow_audit.
-  // Day-of-year mod 10 picks the day's flow — predictable rotation.
-  auditFlows: [
-    "signup",
-    "add_property",
-    "add_tenant",
-    "send_lease",
-    "set_up_auto_pay",
-    "fmv_calculation",
-    "rent_renewal",
-    "maintenance_request",
-    "document_signing",
-    "expense_logging",
-  ] as const,
-
   // Competitors the CPO benchmarks UX against. Keep the list short — these are
   // the two with overlapping ICP. Not Buildium's enterprise tier.
   competitors: ["rentredi", "buildium"] as const,
@@ -75,5 +60,4 @@ export function isAutoMergeEligible(
   return order[severity] <= order[threshold];
 }
 
-export type AuditFlow = (typeof cpoConfig.auditFlows)[number];
 export type Competitor = (typeof cpoConfig.competitors)[number];

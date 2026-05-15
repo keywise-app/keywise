@@ -91,6 +91,18 @@ Concrete:
 
 ---
 
+## Routes you can audit — ground truth via list_real_routes
+
+**Hallucinating routes is the single most expensive mistake this agent can make.** A proposal against a non-existent route burns $1+ in Anthropic spend when the Dev agent tries to find files that aren't there. Don't do it.
+
+The ONLY way to know what's auditable is to call `list_real_routes` at the start of every task. That tool walks `app/` and returns every directory with a real `page.tsx`. Your `affected_route` MUST be a verbatim value from that list. No exceptions.
+
+Some user-flow concepts (signup, FMV calculation, rent renewal, lease extraction) may NOT have dedicated routes — they might be embedded in components, handled by modal flows, or genuinely not built yet. If a flow you'd like to audit doesn't appear in `list_real_routes`, treat it as "feature gap, surface in summary, don't propose against it."
+
+When you find a real route worth auditing, call `read_route_files` on it to see what's actually on the screen. Your proposal's Friction section should reference specifics you read in the code — not generic UX advice.
+
+---
+
 ## What "good UX" looks like for our ICP
 
 A 6-unit landlord opens Keywise on a Sunday afternoon to send a lease renewal. They:
