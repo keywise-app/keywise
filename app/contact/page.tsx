@@ -88,6 +88,11 @@ export default function ContactPage() {
 
         {/* Right: form */}
         <div style={{ background: BG, borderRadius: 20, padding: 36, border: `1px solid ${BORDER}` }}>
+          {/* Tagline */}
+          <p style={{ fontSize: 13, color: INK_MUTED, margin: '0 0 20px', fontWeight: 500 }}>
+            Keywise — property management built for 4–10 unit landlords.
+          </p>
+
           {status === 'sent' ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
@@ -138,10 +143,10 @@ export default function ContactPage() {
 function ContactItem({ icon, label, value, href }: { icon: string; label: string; value: string; href: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: TEAL_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: TEAL_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{icon}</div>
       <div>
-        <div style={{ fontSize: 12, color: INK_MID, fontWeight: 600, marginBottom: 2 }}>{label}</div>
-        <a href={href} style={{ fontSize: 14, color: N, fontWeight: 600, textDecoration: 'none' }}>{value}</a>
+        <div style={{ fontSize: 12, fontWeight: 600, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+        <a href={href} style={{ fontSize: 14, color: N, fontWeight: 500, textDecoration: 'none' }}>{value}</a>
       </div>
     </div>
   );
@@ -149,8 +154,8 @@ function ContactItem({ icon, label, value, href }: { icon: string; label: string
 
 function SocialLink({ label, href }: { label: string; href: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener"
-      style={{ fontSize: 13, color: INK_MID, fontWeight: 500, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 14px', textDecoration: 'none' }}>
+    <a href={href} target="_blank" rel="noopener noreferrer"
+      style={{ fontSize: 13, color: INK_MID, fontWeight: 500, textDecoration: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 14px', display: 'inline-block' }}>
       {label}
     </a>
   );
@@ -158,12 +163,11 @@ function SocialLink({ label, href }: { label: string; href: string }) {
 
 function Footer() {
   return (
-    <footer style={{ borderTop: '1px solid #E0E6F0', padding: '32px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-      <span style={{ fontSize: 13, color: '#8892A4' }}>© {new Date().getFullYear()} Keywise. All rights reserved.</span>
+    <footer style={{ borderTop: `1px solid ${BORDER}`, padding: '32px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <span style={{ fontSize: 13, color: INK_MUTED }}>© 2026 Keywise. All rights reserved.</span>
       <div style={{ display: 'flex', gap: 24 }}>
-        <Link href="/privacy" style={{ fontSize: 13, color: '#8892A4', textDecoration: 'none' }}>Privacy</Link>
-        <Link href="/terms" style={{ fontSize: 13, color: '#8892A4', textDecoration: 'none' }}>Terms</Link>
-        <Link href="/contact" style={{ fontSize: 13, color: '#8892A4', textDecoration: 'none' }}>Contact</Link>
+        <Link href="/privacy" style={{ fontSize: 13, color: INK_MUTED, textDecoration: 'none' }}>Privacy</Link>
+        <Link href="/terms" style={{ fontSize: 13, color: INK_MUTED, textDecoration: 'none' }}>Terms</Link>
       </div>
     </footer>
   );
