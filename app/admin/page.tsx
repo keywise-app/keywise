@@ -78,8 +78,19 @@ export default function AdminPage() {
     setLoading(false);
     if (data.error) { setError('Access denied'); return; }
     sessionStorage.setItem('kw_admin', password);
+    // Also drop a cookie so middleware can gate /admin/agents/* and /api/agents/*
+    // server-side (sessionStorage is browser-only and doesn't reach the server).
+    // 7-day expiry; SameSite=Lax so it flows on top-level navigations.
+    document.cookie = `kw_admin=${encodeURIComponent(password)}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax${typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; secure' : ''}`;
     setAuthed(true);
     setStats(data);
+
+    // If we got here from /admin/agents/* via the middleware redirect, bounce back.
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    if (next && next.startsWith('/admin/')) {
+      window.location.href = next;
+    }
   };
 
   const fetchStats = async () => {

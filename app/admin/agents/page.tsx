@@ -49,7 +49,7 @@ export default async function AgentsPage() {
   const budgetBarColor = budget.pctUsed >= 100 ? "#EF4444" : budget.pctUsed >= 75 ? "#F59E0B" : "#22C55E";
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8 space-y-10">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-10">
       <header>
         <h1 className="text-2xl font-semibold">Your virtual team</h1>
         <p className="text-sm text-gray-600 mt-1">
@@ -59,25 +59,25 @@ export default async function AgentsPage() {
         <nav className="mt-4 flex gap-3 text-sm">
           <Link
             href="/admin/agents/blog-drafts"
-            className="px-3 py-1.5 border rounded hover:bg-gray-50"
+            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >
             Blog drafts →
           </Link>
           <Link
             href="/admin/agents/forum-drafts"
-            className="px-3 py-1.5 border rounded hover:bg-gray-50"
+            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >
             Forum drafts →
           </Link>
           <Link
             href="/admin/agents/ranks"
-            className="px-3 py-1.5 border rounded hover:bg-gray-50"
+            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >
             Search ranks →
           </Link>
           <Link
             href="/admin/agents/product-proposals"
-            className="px-3 py-1.5 border rounded hover:bg-gray-50"
+            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >
             Product proposals →
           </Link>

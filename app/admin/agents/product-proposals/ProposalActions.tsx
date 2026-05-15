@@ -66,8 +66,9 @@ export default function ProposalActions({
     }
   }
 
+  // Mobile-first: 44x44 tap targets (Apple HIG minimum), full-width on narrow screens.
   const btn =
-    "px-3 py-1.5 rounded text-sm font-medium disabled:opacity-50";
+    "px-4 py-2.5 rounded text-sm font-semibold disabled:opacity-50 min-h-[44px] flex-grow sm:flex-grow-0";
 
   if (proposal.status === "proposed") {
     return (

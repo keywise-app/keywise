@@ -58,7 +58,8 @@ export default function ImplementationActions({
     }
   }
 
-  const btn = "px-3 py-1.5 rounded text-sm font-medium disabled:opacity-50";
+  const btn =
+    "px-4 py-2.5 rounded text-sm font-semibold disabled:opacity-50 min-h-[44px] flex-grow sm:flex-grow-0";
 
   // Only render action buttons when the implementation is at a decision point
   if (implementation.status === "preview_ready") {

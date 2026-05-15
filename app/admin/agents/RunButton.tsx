@@ -35,7 +35,7 @@ export default function RunButton({
     <button
       onClick={run}
       disabled={busy}
-      className="text-xs px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-50"
+      className="text-xs px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 min-h-[40px] flex-grow sm:flex-grow-0"
     >
       {busy ? "Running…" : `Run: ${task}`}
     </button>

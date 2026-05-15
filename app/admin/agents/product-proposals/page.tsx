@@ -81,7 +81,7 @@ function ProposalCard({
 
   return (
     <div className="border rounded-lg p-4 bg-white">
-      <div className="flex justify-between items-start gap-3">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span
@@ -170,7 +170,7 @@ export default async function ProductProposalsPage() {
   for (const p of open) bySeverity[p.severity].push(p);
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
       <header>
         <Link
           href="/admin/agents"
