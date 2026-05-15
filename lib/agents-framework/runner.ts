@@ -135,7 +135,7 @@ export async function runAgent(
   // 3. Tool-use loop
   try {
     for (let i = 0; i < maxIter; i++) {
-      const response = await anthropic.messages.create({
+      const response = await callWithRetry(anthropic, {
         model,
         max_tokens: 4096,
         system: fullSystemPrompt,
@@ -265,6 +265,45 @@ export async function runAgent(
     });
     throw err;
   }
+}
+
+/**
+ * Wraps anthropic.messages.create with exponential backoff for transient errors.
+ * Retries on:
+ *   529 (Overloaded) — Anthropic capacity is strained
+ *   429 (Rate limited) — too many requests
+ *   500-504 — generic server-side hiccups
+ * Other errors throw immediately (your prompt is malformed, etc.).
+ *
+ * Backoff: 2s, 4s, 8s, 16s with jitter. Up to 5 attempts (~30s total wait).
+ */
+async function callWithRetry(
+  anthropic: Anthropic,
+  args: Anthropic.MessageCreateParamsNonStreaming
+): Promise<Anthropic.Message> {
+  const maxAttempts = 5;
+  let lastErr: any;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await anthropic.messages.create(args);
+    } catch (err: any) {
+      const status = err?.status ?? err?.response?.status;
+      const retryable =
+        status === 529 || status === 429 || (status >= 500 && status < 600);
+      if (!retryable || attempt === maxAttempts - 1) {
+        throw err;
+      }
+      lastErr = err;
+      const backoffMs = 2000 * Math.pow(2, attempt) + Math.random() * 1000;
+      console.warn(
+        `[runner] Anthropic ${status} on attempt ${attempt + 1}/${maxAttempts} — ` +
+          `retrying in ${Math.round(backoffMs / 1000)}s`
+      );
+      await new Promise((r) => setTimeout(r, backoffMs));
+    }
+  }
+  // Unreachable, but TS wants a throw here
+  throw lastErr;
 }
 
 async function resolveAuthority<TInput>(
