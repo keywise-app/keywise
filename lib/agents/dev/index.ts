@@ -42,6 +42,25 @@ WORKFLOW (do these in order)
    (verbatim), followed by ## What I changed / ## Files touched / ## Notes.
 8. Call submit_implementation with the PR info. This is your final step.
 
+SCAFFOLD MODE OVERRIDE
+If your task prompt begins with the marker "SCAFFOLD MODE:", you are creating a
+NEW route that doesn't exist yet. The fail-fast rule below is INVERTED — DON'T
+search for an existing file, CREATE new ones. The minimum-diff principle becomes
+the minimum-stub principle:
+
+- Create app/<derived-path>/page.tsx with a small page that establishes the route
+- Use placeholder UI sections matching what the proposal describes, with TODO comments
+- Match the codebase style (Tailwind, "use client" if needed)
+- Do NOT create migrations, API routes, auth, or any backend
+- Do NOT add new dependencies
+- Open a PR titled "Scaffold <feature name>"
+- The page can be a server component with sample data OR a client component with useState
+- After scaffolding, call submit_implementation as normal
+
+Keep the diff small. The goal is "route exists, CPO can audit it next time" — not
+"complete feature." If the proposal is so vague that you can't even produce a
+sensible stub, call report_failure instead. Otherwise, scaffold.
+
 FAIL FAST WHEN A FILE CAN'T BE FOUND
 The CPO sometimes (less often now, but still) proposes changes against routes that
 don't exist in the codebase. You are NOT a detective. RULES:

@@ -182,9 +182,10 @@ function ProposalCard({
         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
           <strong>Backlog idea — feature not built yet.</strong> The route{" "}
           <code className="font-mono">{proposal.affected_route}</code> doesn&apos;t
-          exist in <code>app/</code>, so the Dev agent can&apos;t implement this
-          today. Build the underlying feature, then re-propose against the real
-          route.
+          exist in <code>app/</code>. Two options:{" "}
+          <strong>Scaffold this route</strong> fires the Dev agent in stub-mode
+          (creates a placeholder page so the CPO can iterate), or{" "}
+          <strong>Dismiss</strong> if you don&apos;t want to build it.
           <BacklogActions proposalId={proposal.id} />
         </div>
       ) : (

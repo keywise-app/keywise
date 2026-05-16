@@ -60,10 +60,20 @@ function realRoutes(): string[] {
 export const maxDuration = 300; // 5 minutes — enough for most Dev agent runs
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: proposalId } = await params;
+
+  // Mode: "implement" (default — edit existing route) or "scaffold" (create
+  // a new route stub at affected_route, which doesn't exist yet).
+  let mode: "implement" | "scaffold" = "implement";
+  try {
+    const body = await req.json().catch(() => ({}));
+    if (body?.mode === "scaffold") mode = "scaffold";
+  } catch {
+    // No body, default to implement
+  }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,8 +99,8 @@ export async function POST(
   // 2. Pre-flight: refuse before spending tokens if affected_route doesn't
   //    exist in app/. The Dev agent's own fail-fast catches this for ~$0.09 per
   //    attempt; the pre-flight catches it for $0 and skips the agent run entirely.
-  //    Bypassed only when there's no affected_route to check.
-  if (proposal.affected_route) {
+  //    Bypassed in scaffold mode — we EXPECT the route to not exist there.
+  if (proposal.affected_route && mode !== "scaffold") {
     const routes = realRoutes();
     if (!routes.includes(proposal.affected_route)) {
       // Create an implementation row that's pre-failed, so the dashboard reflects
@@ -163,14 +173,24 @@ export async function POST(
   }
 
   // 5. Build the agent prompt — proposal text + implementationId for submit/report tools
-  const promptOverride = buildDevPrompt({
-    implementationId,
-    proposalId,
-    title: proposal.title,
-    description: proposal.description,
-    severity: proposal.severity,
-    affectedRoute: proposal.affected_route,
-  });
+  const promptOverride =
+    mode === "scaffold"
+      ? buildScaffoldPrompt({
+          implementationId,
+          proposalId,
+          title: proposal.title,
+          description: proposal.description,
+          severity: proposal.severity,
+          affectedRoute: proposal.affected_route,
+        })
+      : buildDevPrompt({
+          implementationId,
+          proposalId,
+          title: proposal.title,
+          description: proposal.description,
+          severity: proposal.severity,
+          affectedRoute: proposal.affected_route,
+        });
 
   // 6. Fire the Dev agent
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -301,4 +321,68 @@ and a specific reason. Don't try to route around guardrails — they exist becau
 fix in those areas is a real customer incident.
 
 Now begin. Read the context document if you need a refresher on the minimum-diff principle.`;
+}
+
+function buildScaffoldPrompt(args: {
+  implementationId: string;
+  proposalId: string;
+  title: string;
+  description: string;
+  severity: string;
+  affectedRoute: string | null;
+}): string {
+  const stripped = (args.affectedRoute || "").replace(/^\//, "");
+  const dirPath = `app/${stripped}`;
+  return `SCAFFOLD MODE: You're creating a NEW route that doesn't exist yet in the codebase.
+
+**Implementation ID:** ${args.implementationId}
+(You MUST pass this exact value as \`implementationId\` to submit_implementation or report_failure at the end of your run.)
+
+**Proposal ID:** ${args.proposalId}
+**Severity:** ${args.severity}
+**Route to scaffold:** ${args.affectedRoute}
+
+**Proposal title (describes the desired feature):** ${args.title}
+
+**Proposal description:**
+
+${args.description}
+
+---
+
+GOAL
+Create the route \`${args.affectedRoute}\` as a minimum viable stub so:
+1. The route exists in app/ and shows up in list_real_routes
+2. The page renders a recognizable placeholder for the feature
+3. The CPO can audit this stub on its next run and propose iterations
+4. The Dev agent can then implement those iterations normally
+
+You are NOT implementing the full feature. You're creating a believable scaffold.
+
+WORKFLOW
+1. Create branch \`scaffold/proposal-${args.implementationId.slice(0, 8)}\` via github_create_branch.
+2. Write \`${dirPath}/page.tsx\` via github_write_file with content that:
+   - Exports a default React component for this route
+   - Uses Tailwind for styling, matching neighboring routes (read \`app/contact/page.tsx\` first to see the codebase style)
+   - Includes a page title matching the feature concept (e.g. "Fair Market Value" for /properties/[id]/fmv)
+   - Has placeholder UI sections sketching the main interactions described in the proposal — with \`{/* TODO: ... */}\` comments where real logic goes
+   - Uses hardcoded sample data OR useState placeholders to make the layout visible
+   - If the route has dynamic segments like [id], use the params prop signature from Next.js 16 (\`async function Page({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; ... }\`)
+3. If the proposal clearly implies a related component (e.g. an editor sub-component), you MAY create ONE additional file like \`${dirPath}/SomeComponent.tsx\` — but only one extra file, max.
+4. Open PR via github_create_pr:
+   - Title: "Scaffold ${args.title}"
+   - Body: explicitly say "This is a SCAFFOLD — UI stub only. No backend, no migrations, no data wiring. Feature implementation comes after this lands and the CPO re-audits."
+   - Then the proposal description quoted, then ## What I scaffolded / ## Files added / ## What's still TODO.
+5. Call submit_implementation with implementationId=${args.implementationId}.
+
+WHAT YOU MUST NOT DO
+- Do NOT create database migrations
+- Do NOT create API routes (no app/api/* files)
+- Do NOT modify auth, billing, Stripe, or any guardrail file
+- Do NOT add new dependencies (package.json is off-limits)
+- Do NOT try to make the stub functional with real data — that's a follow-up
+
+If the proposal is so vague you can't produce a sensible stub (e.g. it describes a vague vision, not a concrete UI), STOP and call report_failure with implementationId=${args.implementationId} explaining what's ambiguous. A no-stub is better than a confusing one.
+
+Now begin. Total budget: 8 tool calls (read codebase style, create branch, write file(s), open PR, submit). Stay tight.`;
 }
