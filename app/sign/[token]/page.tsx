@@ -25,6 +25,7 @@ export default function SignPage() {
     document_name: string;
     document_type: string;
     file_url: string;
+    landlord_email?: string;
     inspection?: any;
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -51,6 +52,10 @@ export default function SignPage() {
       .catch(() => { setErrorMsg('Network error.'); setState('error'); });
   }, [token]);
 
+  const landlordEmail = docData?.landlord_email || 'hello@keywise.app';
+  const documentName = docData?.document_name || 'my document';
+  const resendMailto = `mailto:${landlordEmail}?subject=${encodeURIComponent(`Please resend my signing link for ${documentName}`)}`;
+
   return (
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
       {/* Topbar */}
@@ -70,9 +75,15 @@ export default function SignPage() {
           <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Already Signed</div>
-            <div style={{ fontSize: 14, color: T.inkMuted }}>
+            <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 24 }}>
               This document has already been signed{signedAt ? ` on ${signedAt.slice(0, 10)}` : ''}.
             </div>
+            <a
+              href="/tenant"
+              style={{ fontSize: 14, color: T.teal, fontWeight: 600, textDecoration: 'none' }}
+            >
+              ← Go to tenant portal
+            </a>
           </div>
         )}
 
@@ -80,8 +91,32 @@ export default function SignPage() {
           <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>⏰</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Link Expired</div>
-            <div style={{ fontSize: 14, color: T.inkMuted }}>
-              This signing link has expired. Please contact your landlord to request a new link.
+            <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 24 }}>
+              This signing link has expired. Your landlord can send you a new one.
+            </div>
+            <a
+              href={resendMailto}
+              style={{
+                display: 'inline-block',
+                background: T.teal,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 14,
+                padding: '10px 22px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                marginBottom: 16,
+              }}
+            >
+              Request a new link
+            </a>
+            <div>
+              <a
+                href="/tenant"
+                style={{ fontSize: 14, color: T.teal, fontWeight: 600, textDecoration: 'none' }}
+              >
+                ← Go to tenant portal
+              </a>
             </div>
           </div>
         )}
@@ -89,8 +124,37 @@ export default function SignPage() {
         {state === 'error' && (
           <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>❌</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Invalid Link</div>
-            <div style={{ fontSize: 14, color: T.inkMuted }}>{errorMsg}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Something went wrong</div>
+            <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 6 }}>
+              There&apos;s a problem with this link.
+            </div>
+            {errorMsg && (
+              <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 24 }}>{errorMsg}</div>
+            )}
+            <a
+              href={resendMailto}
+              style={{
+                display: 'inline-block',
+                background: T.teal,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 14,
+                padding: '10px 22px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                marginBottom: 16,
+              }}
+            >
+              Request a new link
+            </a>
+            <div>
+              <a
+                href="/tenant"
+                style={{ fontSize: 14, color: T.teal, fontWeight: 600, textDecoration: 'none' }}
+              >
+                ← Go to tenant portal
+              </a>
+            </div>
           </div>
         )}
 
@@ -149,23 +213,11 @@ export default function SignPage() {
                 )}
 
                 {docData.inspection.report_text && (
-                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 6 }}>AI Report</div>
-                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
+                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 4 }}>Full Report</div>
+                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
                   </div>
                 )}
-
-                {docData.inspection.landlord_signature && (
-                  <div style={{ marginTop: 16, padding: 14, background: T.greenLight, borderRadius: 10, border: `1px solid ${T.greenDark}33` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Landlord Signature</div>
-                    <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{docData.inspection.landlord_signature}</div>
-                    <div style={{ fontSize: 11, color: T.greenDark, marginTop: 2 }}>{docData.inspection.landlord_signed_at ? new Date(docData.inspection.landlord_signed_at).toLocaleDateString() : ''}</div>
-                  </div>
-                )}
-
-                <div style={{ marginTop: 16, padding: 14, background: '#FFF8E0', borderRadius: 10, border: '1px solid #9A650033' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9A6500' }}>Please review the inspection report above, then sign below to confirm.</div>
-                </div>
               </div>
             )}
 
