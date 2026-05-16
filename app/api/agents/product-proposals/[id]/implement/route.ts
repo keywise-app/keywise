@@ -11,6 +11,51 @@ import { createClient } from "@supabase/supabase-js";
 import { getRole } from "@/agents-framework/registry";
 import { runAgent } from "@/agents-framework/runner";
 import { devConfig } from "@/agents/dev/config";
+import * as fs from "fs";
+import * as path from "path";
+
+const PAGE_FILES = ["page.tsx", "page.ts", "page.jsx", "page.js"];
+
+/**
+ * Walks app/ and returns every route that has a real page file.
+ * Mirrors the logic in lib/agent-tools/product/tools.ts. We duplicate it here
+ * so this route can pre-flight without instantiating an agent.
+ */
+function realRoutes(): string[] {
+  const APP_DIR = path.join(process.cwd(), "app");
+  const out: string[] = [];
+  function recurse(absDir: string, segs: string[]) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(absDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    if (
+      PAGE_FILES.some((f) =>
+        entries.some((e) => e.isFile() && e.name === f)
+      )
+    ) {
+      const r = "/" + segs.filter(Boolean).join("/");
+      out.push(r === "/" ? "/" : r.replace(/\/$/, ""));
+    }
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const n = e.name;
+      if (
+        n.startsWith("_") ||
+        n.startsWith("@") ||
+        n === "api" ||
+        n === "node_modules"
+      )
+        continue;
+      const isGroup = /^\(.+\)$/.test(n);
+      recurse(path.join(absDir, n), isGroup ? segs : [...segs, n]);
+    }
+  }
+  recurse(APP_DIR, []);
+  return out;
+}
 
 export const maxDuration = 300; // 5 minutes — enough for most Dev agent runs
 
@@ -41,7 +86,37 @@ export async function POST(
     return NextResponse.json({ error: "Already shipped" }, { status: 400 });
   }
 
-  // 2. Approve the proposal
+  // 2. Pre-flight: refuse before spending tokens if affected_route doesn't
+  //    exist in app/. The Dev agent's own fail-fast catches this for ~$0.09 per
+  //    attempt; the pre-flight catches it for $0 and skips the agent run entirely.
+  //    Bypassed only when there's no affected_route to check.
+  if (proposal.affected_route) {
+    const routes = realRoutes();
+    if (!routes.includes(proposal.affected_route)) {
+      // Create an implementation row that's pre-failed, so the dashboard reflects
+      // the attempt rather than silently swallowing the click.
+      const { data: deadImpl } = await supabase
+        .from("proposal_implementations")
+        .insert({
+          proposal_id: proposalId,
+          status: "agent_failed",
+          error: `Pre-flight refused: affected_route "${proposal.affected_route}" does not exist in app/. ${routes.length} real routes available; the feature this proposal targets likely hasn't been built yet. Edit the proposal's affected_route to a real route, or reject it as a feature-build idea.`,
+          cost_usd: 0,
+        })
+        .select("id")
+        .single();
+      return NextResponse.json(
+        {
+          implementationId: deadImpl?.id,
+          error: `affected_route "${proposal.affected_route}" does not exist in app/. Pre-flight refused at $0 cost.`,
+          realRoutes: routes,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  // 3. Approve the proposal
   const now = new Date().toISOString();
   await supabase
     .from("product_proposals")
@@ -53,7 +128,7 @@ export async function POST(
     })
     .eq("id", proposalId);
 
-  // 3. Create implementation row
+  // 4. Create implementation row
   const { data: impl, error: iErr } = await supabase
     .from("proposal_implementations")
     .insert({
