@@ -149,8 +149,8 @@ export async function GET(req: Request) {
   if (tokenRow.used_at) return NextResponse.json({ error: 'Already signed', signed_at: tokenRow.used_at }, { status: 409 });
 
   // Distinguish revoked (landlord explicitly cancelled) from naturally expired.
-  // `revoked` column is set to true when a landlord recalls a signing link.
-  // Falls back to "expired" if the column doesn't exist yet or is falsy.
+  // `revoked` is set to true when a landlord recalls a signing link.
+  // Falls back to "expired" if the column doesn't exist or is falsy.
   if (new Date(tokenRow.expires_at) < new Date()) {
     const reason: 'revoked' | 'expired' = tokenRow.revoked ? 'revoked' : 'expired';
     return NextResponse.json({ error: 'Token expired', reason }, { status: 410 });
@@ -163,4 +163,18 @@ export async function GET(req: Request) {
     file_url = urlData?.signedUrl || '';
   }
 
-  // If inspection signing, include inspection d
+  // If inspection signing, include inspection data
+  let inspection = null;
+  if (tokenRow.inspection_id) {
+    const { data: inspData } = await supabase.from('inspections').select('*').eq('id', tokenRow.inspection_id).single();
+    inspection = inspData || null;
+  }
+
+  return NextResponse.json({
+    tenant_name: tokenRow.tenant_name,
+    document_name: tokenRow.documents?.name || '',
+    document_type: tokenRow.documents?.type || '',
+    file_url,
+    inspection,
+  });
+}
