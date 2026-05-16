@@ -3,6 +3,7 @@ import type { AgentRole, AgentTask } from "@/agents-framework/types";
 import { allAdsTools } from "@/agent-tools/google-ads/tools";
 import { allSearchConsoleTools } from "@/agent-tools/search-console/tools";
 import { allContentTools } from "@/agent-tools/content/tools";
+import { allInternalLinkTools } from "@/agent-tools/content/internal-links";
 import { allKwTools } from "@/agent-tools/supabase/tools";
 import { allRankTrackerTools } from "@/agent-tools/rank-tracker/tools";
 import { allForumTools } from "@/agent-tools/forums/tools";
@@ -99,6 +100,7 @@ const dailyAuditTask: AgentTask = {
   prompt: async (ctx) => {
     const lessons = await ctx.memory.list("lesson:");
     const comp = await ctx.memory.list("competitor:");
+    const isMonday = new Date().getUTCDay() === 1;
     return `Daily CMO audit — ${new Date().toISOString().slice(0, 10)}.
 
 1. Snapshot today's keyword rankings (rank_snapshot_today).
@@ -107,8 +109,9 @@ const dailyAuditTask: AgentTask = {
 4. For underperforming campaigns, drill into ads and search terms.
 5. Take auto-actions: pause dead ads, add negative keywords, small budget tweaks.
 6. Draft new ad copy for any campaign with poor CTR.
-7. Pull this week's funnel; note unusual drop-offs.
-8. Summarize: changes made, pending approvals, what's next.
+7. Pull this week's funnel; note unusual drop-offs.${isMonday ? `
+8. MONDAY WEEKLY: Run content_audit_orphaned_pages. Flag any published post with <3 inbound internal links. Suggest which posts should link to the top orphan.` : ''}
+9. Summarize: changes made, pending approvals, what's next.
 
 Memory: ${lessons.length} lessons, ${comp.length} competitor notes.`;
   },
@@ -125,10 +128,14 @@ const weeklyContentTask: AgentTask = {
 2. Find opportunity keywords (page-2 ranks, decent impressions).
 3. Cross-reference with current keyword_targets — add new ones if found.
 4. Draft 1-2 full blog posts for highest-leverage opportunities.
-   - ≥1200 words, target keyword in title + first 100 words, internal links to /pricing.
+   - ≥1200 words, target keyword in title + first 100 words.
    - Brand voice: founder-style, specific, conversational.
-5. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
-6. Summarize: keywords picked, drafts created, pending publish approvals.`,
+5. For each draft, call content_find_internal_links with the draft's slug, title, and 3-8 topic keywords.
+   Weave the returned link opportunities into the draft markdown as natural anchor text before saving.
+6. Run content_audit_orphaned_pages. If any published post has <3 inbound links, note it in your summary
+   and suggest which existing posts should add a link to the orphan.
+7. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
+8. Summarize: keywords picked, drafts created, internal links added, orphans flagged, pending approvals.`,
   toolNames: [
     "sc_top_queries",
     "sc_top_pages",
@@ -136,6 +143,8 @@ const weeklyContentTask: AgentTask = {
     "rank_add_keyword_target",
     "content_draft_blog_post",
     "content_publish_blog_post",
+    "content_find_internal_links",
+    "content_audit_orphaned_pages",
   ],
 };
 
@@ -233,6 +242,7 @@ export const cmoRole: AgentRole = {
     ...allAdsTools,
     ...allSearchConsoleTools,
     ...allContentTools,
+    ...allInternalLinkTools,
     ...allKwTools,
     ...allRankTrackerTools,
     ...allForumTools,
