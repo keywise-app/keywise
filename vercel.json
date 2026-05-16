@@ -41,6 +41,10 @@
       "schedule": "0 14 1 * *"
     },
     {
+      "path": "/api/cron/agents/cmo/monthly_tool_proposal",
+      "schedule": "0 14 2 * *"
+    },
+    {
       "path": "/api/cron/agents/cpo/daily_flow_audit",
       "schedule": "0 15 * * *"
     },

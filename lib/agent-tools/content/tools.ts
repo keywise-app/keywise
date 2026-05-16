@@ -182,9 +182,68 @@ export const listPublishedPostsTool: AgentTool<{}> = {
   },
 };
 
+export const proposeToolPageTool: AgentTool<{
+  slug: string;
+  title: string;
+  targetKeyword: string;
+  searchIntent: string;
+  featureSpec: string;
+  competitorGap: string;
+  backlinkPotential: string;
+  rationale: string;
+}> = {
+  name: "content_propose_tool_page",
+  description:
+    "Propose a free public tool or calculator for keywise.app/tools/<slug>. These are product features (not blog posts) — they get built by the dev team. The CMO identifies WHICH to build based on keyword opportunity, competitor gaps, and backlink potential. Saves to agent_memory for Chris to review.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      slug: { type: "string", description: "URL slug, e.g. 'rent-calculator-california'" },
+      title: { type: "string", description: "Public-facing title, e.g. 'California Fair Market Rent Calculator'" },
+      targetKeyword: { type: "string", description: "Primary keyword this tool would rank for" },
+      searchIntent: { type: "string", description: "commercial | informational | transactional" },
+      featureSpec: { type: "string", description: "What the tool does — inputs, outputs, data sources, 3-5 sentences" },
+      competitorGap: { type: "string", description: "Why no competitor owns this keyword/tool yet" },
+      backlinkPotential: { type: "string", description: "Why other sites would link to this (resource pages, roundups, etc.)" },
+      rationale: { type: "string", description: "Why this tool over alternatives — tie to ICP and acquisition strategy" },
+    },
+    required: ["slug", "title", "targetKeyword", "searchIntent", "featureSpec", "competitorGap", "backlinkPotential", "rationale"],
+  },
+  defaultAuthority: "auto",
+  describeAction: (i) => `Propose tool: "${i.title}" targeting "${i.targetKeyword}"`,
+  execute: async (i, ctx) => {
+    // Save to agent_memory so it persists and shows in the dashboard
+    const key = `tool_proposal:${i.slug}`;
+    await ctx.supabase
+      .from("agent_memory")
+      .upsert(
+        {
+          role: ctx.role,
+          key,
+          value: {
+            slug: i.slug,
+            title: i.title,
+            targetKeyword: i.targetKeyword,
+            searchIntent: i.searchIntent,
+            featureSpec: i.featureSpec,
+            competitorGap: i.competitorGap,
+            backlinkPotential: i.backlinkPotential,
+            rationale: i.rationale,
+            proposedAt: new Date().toISOString(),
+          },
+          importance: 4,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "role,key" }
+      );
+    return { saved: true, key, url: `/tools/${i.slug}` };
+  },
+};
+
 export const allContentTools = [
   draftBlogPostTool,
   publishBlogPostTool,
   updateBlogPostTool,
   listPublishedPostsTool,
+  proposeToolPageTool,
 ];

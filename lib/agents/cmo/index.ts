@@ -269,6 +269,58 @@ only posts in the blog_drafts table. Focus on those.`,
   ],
 };
 
+const monthlyToolProposalTask: AgentTask = {
+  id: "monthly_tool_proposal",
+  description: "Monthly: propose 1 free tool/calculator for keywise.app/tools/ that would rank for a high-value keyword.",
+  tier: "strategic",
+  maxIterations: 10,
+  prompt: async (ctx) => {
+    const existing = await ctx.memory.list("tool_proposal:");
+    return `Monthly tool proposal — ${new Date().toISOString().slice(0, 10)}.
+
+GOAL: Propose ONE free tool or calculator that lives at keywise.app/tools/<slug> as a public page.
+These are product features — interactive tools that solve a specific landlord problem and rank for
+a high-value keyword. They get built by the dev team; your job is to identify which one to build next.
+
+EXAMPLES OF GOOD TOOL PROPOSALS:
+- Fair Market Rent Calculator by ZIP (target: "fair market rent calculator")
+- California Security Deposit Calculator (target: "california security deposit calculator")
+- Late Fee Calculator by State (target: "late fee calculator landlord")
+- 1099 Income Tracker for Landlords (target: "1099 rental income tracker")
+- Lease Renewal Decision Tool (target: "should I renew my tenant's lease")
+- Rent vs Buy Calculator for Investors (target: "rent vs buy calculator investment")
+
+PROCESS:
+1. Pull Search Console opportunity keywords to see what landlords are already searching for.
+2. Review existing tool proposals in memory (${existing.length} already proposed) — don't duplicate.
+3. Identify 3-5 keyword candidates that have:
+   - Commercial or transactional intent (the searcher wants a tool, not just info)
+   - No dominant free tool from a competitor in the top 3 results
+   - Natural backlink potential (other blogs would link to a useful free calculator)
+4. Pick the SINGLE highest-leverage one and call content_propose_tool_page with a full spec.
+5. Explain your reasoning: why this keyword, why this tool format, why now.
+
+WHAT MAKES A GREAT PROPOSAL:
+- Solves a real ICP pain point (4-10 unit landlords)
+- Keyword has search volume and the SERP isn't dominated by free tools yet
+- Output is actionable (calculator result, recommendation, checklist)
+- Can naturally link to Keywise features ("want to automate this? Try Keywise")
+- Other landlord blogs and resource pages would link to it
+
+WHAT TO AVOID:
+- Tools that require real-time API data we don't have (MLS feeds, tax databases)
+- Tools that duplicate what our existing product does (rent collection is already in the app)
+- Generic tools with no landlord specificity ("basic mortgage calculator")
+
+Existing proposals in memory: ${existing.map(e => e.key).join(", ") || "none yet"}.`;
+  },
+  toolNames: [
+    "sc_top_queries",
+    "sc_opportunity_keywords",
+    "content_propose_tool_page",
+  ],
+};
+
 export const cmoRole: AgentRole = {
   id: "cmo",
   title: "Chief Marketing Officer",
@@ -299,5 +351,6 @@ export const cmoRole: AgentRole = {
     weekly_outreach: weeklyOutreachTask,
     weekly_content_refresh: weeklyContentRefreshTask,
     monthly_pseo: monthlyPseoTask,
+    monthly_tool_proposal: monthlyToolProposalTask,
   },
 };
