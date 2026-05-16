@@ -243,13 +243,15 @@ export const productProposeTool: AgentTool<{
   describeAction: (i) => `Propose: "${i.title}" (${i.severity}, ${i.affected_route})`,
   estimateImpact: (i) => `${i.severity} severity on ${i.affected_route}`,
   execute: async (i, ctx) => {
-    if (i.title.length > 80) {
-      throw new Error(`Title is ${i.title.length} chars — keep it ≤80.`);
-    }
+    // Soft cap: auto-truncate long titles instead of throwing. The agent's
+    // intent is preserved in the description; the title is just a display label.
+    const MAX_TITLE = 100;
+    const title =
+      i.title.length > MAX_TITLE ? i.title.slice(0, MAX_TITLE - 1) + "…" : i.title;
     const { data, error } = await ctx.supabase
       .from("product_proposals")
       .insert({
-        title: i.title,
+        title,
         description: i.description,
         severity: i.severity,
         affected_route: i.affected_route,
@@ -262,6 +264,7 @@ export const productProposeTool: AgentTool<{
     return {
       proposalId: data.id,
       reviewUrl: "/admin/agents/product-proposals",
+      titleTruncated: title !== i.title,
     };
   },
 };
