@@ -4,6 +4,7 @@ import { allAdsTools } from "@/agent-tools/google-ads/tools";
 import { allSearchConsoleTools } from "@/agent-tools/search-console/tools";
 import { allContentTools } from "@/agent-tools/content/tools";
 import { allInternalLinkTools } from "@/agent-tools/content/internal-links";
+import { allSerpAnalysisTools } from "@/agent-tools/content/serp-analysis";
 import { allKwTools } from "@/agent-tools/supabase/tools";
 import { allRankTrackerTools } from "@/agent-tools/rank-tracker/tools";
 import { allForumTools } from "@/agent-tools/forums/tools";
@@ -127,21 +128,28 @@ const weeklyContentTask: AgentTask = {
 1. Pull top queries/pages from Search Console (28d).
 2. Find opportunity keywords (page-2 ranks, decent impressions).
 3. Cross-reference with current keyword_targets — add new ones if found.
-4. Draft 1-2 full blog posts for highest-leverage opportunities.
-   - ≥1200 words, target keyword in title + first 100 words.
-   - Brand voice: founder-style, specific, conversational.
-5. For each draft, call content_find_internal_links with the draft's slug, title, and 3-8 topic keywords.
-   Weave the returned link opportunities into the draft markdown as natural anchor text before saving.
-6. Run content_audit_orphaned_pages. If any published post has <3 inbound links, note it in your summary
-   and suggest which existing posts should add a link to the orphan.
-7. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
-8. Summarize: keywords picked, drafts created, internal links added, orphans flagged, pending approvals.`,
+4. For each keyword you plan to write about, call content_analyze_serp FIRST.
+   This gives you: our current ranking, related queries, existing posts that might overlap,
+   and a gap brief with must-cover topics, target word count (1.5x competitor benchmark),
+   differentiators to include, and cannibalization warnings.
+5. Draft 1-2 full blog posts following the gap brief:
+   - Hit the targetWordCount from the brief (typically 2700-3750 words)
+   - Cover every item in must_cover
+   - Include every differentiator that fits naturally
+   - If cannibalization_risk is flagged, consider content_update_blog_post instead
+   - Brand voice: founder-style, specific, conversational
+6. For each draft, call content_find_internal_links and weave links into the markdown.
+7. Run content_audit_orphaned_pages. Flag posts with <3 inbound links.
+8. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
+9. Summarize: SERP analysis findings, keywords picked, drafts created, gap brief compliance, orphans.`,
   toolNames: [
     "sc_top_queries",
     "sc_top_pages",
     "sc_opportunity_keywords",
     "rank_add_keyword_target",
+    "content_analyze_serp",
     "content_draft_blog_post",
+    "content_update_blog_post",
     "content_publish_blog_post",
     "content_find_internal_links",
     "content_audit_orphaned_pages",
@@ -310,6 +318,7 @@ NOTE: Static blog posts (hardcoded in app/blog/) cannot be refreshed by this too
 only posts in the blog_drafts table. Focus on those.`,
   toolNames: [
     "content_list_published",
+    "content_analyze_serp",
     "sc_top_queries",
     "sc_top_pages",
     "content_find_internal_links",
@@ -382,6 +391,7 @@ export const cmoRole: AgentRole = {
     ...allAdsTools,
     ...allSearchConsoleTools,
     ...allContentTools,
+    ...allSerpAnalysisTools,
     ...allInternalLinkTools,
     ...allKwTools,
     ...allRankTrackerTools,
