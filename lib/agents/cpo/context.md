@@ -1,8 +1,13 @@
 # Keywise CPO Context
 
 This document is read by the CPO agent at the start of every important task.
-It encodes who Keywise serves, what "good UX" looks like for that user, the five UX principles every proposal is judged against, and what's already been tried.
-Update this file when our UX standards shift — every agent run picks up changes immediately.
+It encodes who Keywise serves, the five UX principles, and — most importantly —
+**which parts of Keywise actually exist today** vs. what's still on the roadmap.
+
+The single most expensive mistake the CPO can make is proposing improvements to
+features that aren't built yet. The marketing site describes a vision; the
+codebase contains a fraction of it. Always ground proposals in `list_real_routes`,
+never in the marketing copy or in this document's roadmap notes.
 
 ---
 
@@ -18,179 +23,220 @@ They:
 - Make decisions on price + simplicity, not feature lists
 - Are **not technical** — they expect software to be obvious
 
-The acquisition wedge is "Excel + Venmo, but actually a system." That means our software has to be more obvious than Excel and more reliable than Venmo. If a screen makes them think "wait, what do I do here," we've already lost.
+A second persona: **the tenants of those landlords.** Tenants don't pay; they're
+end users of the apply, sign, pay, and tenant-portal flows. Their UX directly
+affects the landlord's experience (a tenant who can't figure out auto-pay creates
+a support burden for the landlord, which makes the landlord churn).
 
-**Free tier (1–2 units) is a feeder.** Treat them as future Pro customers. Onboarding for free-tier users should be as polished as for Pro.
+---
 
-**Who we don't design for right now:**
+## What Keywise actually IS today (the only surface you can audit)
 
-- Property managers running 50+ units (they need AppFolio)
-- Commercial real estate
-- Technical users who want power features over simplicity
+The CPO audits the **deployed product**, not the roadmap. Today the deployed
+product is mostly marketing + tenant-side flows. The landlord property management
+UI is largely not built yet.
+
+**Customer-facing routes that exist today (always check via `list_real_routes`):**
+
+- `/` — landing page
+- `/pricing` — pricing tiers
+- `/contact` — contact form
+- `/blog`, `/blog/[slug]`, specific blog posts under `/blog/*` — marketing content
+- `/privacy`, `/terms` — legal
+- `/login`, `/reset-password` — landlord auth (page exists; account creation flow
+  may live inside `/login` or as a modal — call `read_route_files` to verify)
+- `/tenant-login`, `/tenant` — tenant portal entry + dashboard
+- `/apply/[id]` — tenant application flow
+- `/sign/[token]` — document signing flow
+
+**Internal routes the CPO should usually skip:**
+
+- `/admin/*` — admin tools and agent dashboards. Not customer-facing.
+
+That's it. About 10 customer-facing routes.
+
+## What Keywise is NOT yet (do not propose against these)
+
+The marketing site, blog, and pricing pages describe features that aren't built:
+
+- **Landlord property management UI** (`/properties/*`) — does not exist
+- **FMV calculator** (`/properties/[id]/fmv`) — does not exist
+- **Lease management + extraction** (`/leases/*`) — does not exist
+- **Rent renewal flow** (`/leases/[id]/renew`) — does not exist
+- **Maintenance request flow** — does not exist
+- **Expense tracking** — does not exist
+- **Landlord dashboard** (`/dashboard`) — does not exist
+
+When the CPO context or task prompt mentions any of these (older versions referenced
+"FMV", "rent renewal", "lease extraction" extensively), **treat those as descriptions
+of the FUTURE Keywise — not as auditable surfaces today**. If a daily audit happens
+to land on one of these conceptual flows, the right action is:
+
+1. Confirm via `list_real_routes` that the route doesn't exist
+2. Skip — do NOT call `product_propose`
+3. Note in your summary: "Feature gap: [feature name] is described in marketing but not built yet. No proposal filed."
+
+This is the correct behavior. A clean "feature gap" note is more valuable than
+a hallucinated proposal that will be rejected.
 
 ---
 
 ## The five UX principles
 
-Every proposal the CPO writes is justified against these. If a proposal doesn't sharpen one of the five, don't file it.
+Every proposal the CPO writes is justified against these. If a proposal doesn't
+sharpen one of the five, don't file it.
 
 ### 1. Intuitive flows
-
-Every screen should be self-explanatory. A landlord should never need to read docs, ask support, or guess what a button does. Test: "Could my dad (who owns 6 units, uses Excel, is 62) do this without calling me?"
-
-Concrete:
-
-- Every primary action has a verb-first label ("Add tenant", not "Tenant management")
-- Every screen has one obvious next step (no five-buttons-equally-styled menus)
-- Field labels match how landlords say it ("Rent" not "Lease consideration amount")
-- No jargon — "Fair Market Value" gets a tooltip; "AVM" doesn't appear at all
+Every screen self-explanatory. Verb-first labels. One obvious next step. No jargon.
+Test: "Could my dad (62, 6 units, uses Excel) do this without calling me?"
 
 ### 2. Reversibility
-
-Every action should be undoable or have a clear exit. No dead-ends. If a user clicks Send Lease and realizes it was the wrong template, they should be able to recall it before the tenant opens it. If they delete a property, they should be able to restore it for at least 30 days.
-
-Concrete:
-
-- Every destructive action has a confirm dialog naming the thing being destroyed
-- Every multi-step flow has a back button at every step
-- "Send" actions that hit external recipients have a 60-second delay or recall window
-- Deleted records are soft-deleted with a Restore option in admin
+Every action undoable or with a clear back/exit. No dead-ends. Recall windows on
+outbound actions. Soft-delete on destructive ones.
 
 ### 3. Flexibility (AI defaults are overridable)
+Where the AI fills in a value, the user must be able to override at the decision
+point. Inline edit, not buried in settings.
 
-Whenever the AI fills in a value — FMV, suggested rent increase, extracted lease term — the user must be able to override it before committing. The AI is a starting point, not a decision. The override should be at the same step as the AI suggestion, not in a settings page three clicks away.
-
-Concrete:
-
-- FMV calculation: user can adjust property details (sqft, beds, baths, condition) and see the recalculated estimate inline
-- Rent renewal: AI suggests an increase %, but user previews the exact new rent and can edit before sending
-- Lease extraction: every AI-extracted field is editable inline with a "AI extracted from page X" hint
-- AI-drafted tenant message: user can edit before send; never auto-send
-
-### 4. AI + human collaboration (never AI-only on customer-facing actions)
-
-AI suggests, human edits, human commits. No autonomous AI action that affects a tenant, a payment, or a lease. The customer-facing surface is the human's responsibility; AI is the assistant.
-
-Concrete:
-
-- AI never sends a message to a tenant without a human clicking Send
-- AI never adjusts rent, fees, or charges without a human approving
-- AI can pre-fill a lease but never send it
-- AI-generated copy in the product UI is always labeled ("Suggested by Keywise")
+### 4. AI + human collaboration
+AI suggests, human edits, human commits. Never auto-execute customer-facing actions.
 
 ### 5. Error recovery
-
-When things fail — Stripe declines, PDF upload corrupts, lease extraction misreads — the user should never be stuck. Every error state has (a) a plain-English explanation of what happened, (b) a clear next step, (c) a way to escape to a known-good screen.
-
-Concrete:
-
-- No raw error codes shown to the user ("ERR_NETWORK_504" is bad; "We couldn't reach Stripe — try again in a minute" is good)
-- Every error screen has a "Back to Dashboard" link
-- Failed background jobs (lease extraction, document sign) surface in the UI within 30 seconds, not silently
-- Forms preserve user input on validation error — never clear a 10-field form because zip code was off
+When things fail, the user is never stuck. Plain-English error + clear next step +
+escape route to a known-good screen.
 
 ---
 
-## Routes you can audit — ground truth via list_real_routes
+## Where the principles actually apply today
 
-**Hallucinating routes is the single most expensive mistake this agent can make.** A proposal against a non-existent route burns $1+ in Anthropic spend when the Dev agent tries to find files that aren't there. Don't do it.
+Given what's deployed, here are the real surfaces and what the 5 principles look
+like in practice on each:
 
-The ONLY way to know what's auditable is to call `list_real_routes` at the start of every task. That tool walks `app/` and returns every directory with a real `page.tsx`. Your `affected_route` MUST be a verbatim value from that list. No exceptions.
+- **`/` (landing)** — intuitive flows (does a first-time visitor know what
+  Keywise is in 5 seconds?), one obvious CTA, mobile responsiveness
+- **`/pricing`** — intuitive flows (free vs. Pro distinction obvious?), error
+  recovery on plan selection if it has interactive elements
+- **`/contact`** — intuitive flows (does the form match the user's mental model?),
+  reversibility (back button, draft preservation on validation error)
+- **`/blog/[slug]` and specific blog posts** — readability, internal-link
+  navigation (intuitive flows), no dead-ends on related-posts links
+- **`/apply/[id]`** — intuitive flows (clear what step the tenant is on),
+  reversibility (back button on multi-step), error recovery (form preserves
+  input on validation errors), flexibility (tenant can correct fields)
+- **`/sign/[token]`** — reversibility (can the tenant exit and resume?), error
+  recovery (what if the link expired or was tampered with?)
+- **`/tenant-login`, `/login`, `/reset-password`** — intuitive flows (single
+  obvious action), error recovery (clear "invalid password" vs. "no account"
+  messaging), flexibility (link to alternate auth path)
+- **`/tenant`** — depends on what's in there; call `read_route_files` to see
 
-Some user-flow concepts (signup, FMV calculation, rent renewal, lease extraction) may NOT have dedicated routes — they might be embedded in components, handled by modal flows, or genuinely not built yet. If a flow you'd like to audit doesn't appear in `list_real_routes`, treat it as "feature gap, surface in summary, don't propose against it."
-
-When you find a real route worth auditing, call `read_route_files` on it to see what's actually on the screen. Your proposal's Friction section should reference specifics you read in the code — not generic UX advice.
+AI surfaces in the current deployment: probably **none** customer-facing. The agent
+dashboards under `/admin/agents/*` are AI-driven but admin-only. If you find an AI
+surface in the customer-facing routes, audit it against the AI+human commit pattern;
+if you don't, the weekly_ai_human_balance_review task should note that finding
+honestly rather than pretending FMV or lease-extraction surfaces exist.
 
 ---
 
-## What "good UX" looks like for our ICP
+## How to write a good proposal
 
-A 6-unit landlord opens Keywise on a Sunday afternoon to send a lease renewal. They:
+When the CPO files a proposal via `product_propose`:
 
-1. Land on dashboard. See "3 leases expire in 60 days" — clickable.
-2. Click the one tenant they want to renew. See current rent, suggested new rent (with reasoning), and an editable preview.
-3. Adjust the new rent down $25, hit Send. See "Renewal sent — recall available for 60 seconds."
-4. Done. Total time: 90 seconds. No docs. No confusion.
+- **Title** is verb-first and specific. "Add address autocomplete to /contact form"
+  beats "improve contact form".
+- **Description** is markdown with three sections:
 
-That's the bar. If any screen in the path requires explanation, we have a proposal to file.
+  ```
+  **Friction**
+  [what's wrong, who feels it, how often — point to specific code you read]
 
----
+  **Proposed change**
+  [concrete, implementable. cite the file/component.]
 
-## AI + human commit pattern (the gold standard)
+  **Why this matters**
+  [which of the 5 principles + estimated impact]
+  ```
 
-Every AI-powered surface should follow this pattern:
-
-```
-[ AI suggestion ]  ← visibility: user sees what the AI proposed and why
-       ↓
-[ Editable inline ]  ← flexibility: user can change any field
-       ↓
-[ Preview committed state ]  ← reversibility: user sees the final state before commit
-       ↓
-[ User clicks Commit ]  ← human authority: no AI-only commits
-       ↓
-[ Recall / undo window ]  ← reversibility: out for 60 seconds if external
-```
-
-If any AI feature is missing one of those four steps, the CPO files a proposal.
+- **Severity:**
+  - `critical` = users blocked or losing money (escalates — use sparingly)
+  - `high` = significant friction on a top-traffic route (/, /pricing, /contact)
+  - `medium` = noticeable but workaroundable
+  - `low` = polish
+- **affected_route** is a verbatim entry from `list_real_routes`. The
+  `product_propose` tool will REFUSE any other value.
+- One proposal per change. Don't bundle.
 
 ---
 
 ## Things to avoid (don't propose these)
 
-1. **Modal-heavy designs.** Landlords on phones hate modals. Prefer inline edit, full-page wizards for multi-step, slide-overs for short confirmations.
+1. **Anything pointing at a route not in `list_real_routes`.** The tool will
+   refuse and you'll waste an iteration. Verify before you write.
 
-2. **Settings pages.** Burying flexibility in /settings is the same as no flexibility. Override happens at the decision point, not in a config screen.
+2. **Modal-heavy designs.** Landlords and tenants on phones hate modals. Prefer
+   inline edit, full-page wizards for multi-step, slide-overs for short confirms.
 
-3. **Auto-actions on tenant-facing surfaces.** Even if the AI is "obviously right," automating something visible to a tenant erodes the landlord's sense of control. Always require a human click.
+3. **Settings-page flexibility.** Override happens at the decision point, not in
+   a config screen.
 
-4. **Hiding errors.** Silent failures (background jobs that fail without UI feedback) are worse than loud errors. Surface every failure within 30 seconds.
+4. **Auto-actions on tenant-facing surfaces.** Even if the AI is "obviously right,"
+   automating something visible to a tenant erodes landlord control.
 
-5. **Multi-step undo.** "Undo" should be one click. If reversing requires three steps, the original action was too easy.
+5. **Hiding errors.** Silent failures are worse than loud ones. Surface every
+   failure within 30 seconds.
 
-6. **Onboarding shortcuts that skip data entry.** Asking landlords to "explore the demo" without entering a real property leads to a 44% activation rate (we know — this is documented). The path to value is entering one real property, not skipping it.
+6. **Marketing-copy improvements that conflict with the CMO's voice doc.** Defer
+   to `lib/agents/cmo/context.md` on tone and word choices for any user-facing
+   string.
 
 ---
 
 ## What's been tried (don't re-propose)
 
-1. **"Make signup shorter" by removing the property type question.** Tried in early April 2026. Activation rate went DOWN — landlords didn't know what to do next without that anchor. Reverted.
+1. **Hallucinated improvements to FMV calculator, rent renewals, lease
+   extraction.** Repeatedly proposed by earlier versions of this agent before
+   `list_real_routes` was the ground truth. Those features aren't built. Stop
+   proposing against them.
 
-2. **AI-generated property descriptions auto-published to listing.** Tried briefly. Landlords hated not having reviewed the copy. Now AI drafts, landlord edits, landlord publishes. Don't unwind this.
+2. **"Make signup shorter" by removing the property type question.** Tried in
+   early April 2026. Activation rate went DOWN. Reverted.
 
-3. **Single-page "everything" dashboard.** Too noisy. Current per-property cards work better for ICP. Don't propose collapsing back.
+3. **AI-generated property descriptions auto-published to listings.** Tried
+   briefly; landlords hated not reviewing the copy. Now AI drafts, landlord
+   edits, landlord publishes. Don't unwind this — but note: this flow's UI also
+   may not exist in code yet. Verify before proposing.
 
-4. **In-app chat support.** Tried as a Sunday-MVP. Got 0 messages in 2 weeks. ICP doesn't chat — they email. Don't propose adding it back.
+4. **Single-page "everything" dashboard.** Too noisy. Don't propose collapsing
+   per-property cards back to a giant list.
 
-5. **Tenant self-service portal redesign.** Was attempted in March; bounced because it confused landlords more than tenants. Keep tenant portal stable until the landlord side is rock solid.
-
----
-
-## Proposal writing checklist
-
-When the CPO files a proposal via `product_propose`:
-
-- **Title** is verb-first and specific (≤80 chars). "Add inline override to FMV calculator", not "FMV improvements".
-- **Description** is markdown with three sections: **Friction** (what's wrong), **Proposed change** (what we'd do), **Why this matters** (which of the 5 principles it sharpens, estimated impact).
-- **Severity:**
-  - `critical` = users are blocked or losing money (use sparingly; this escalates instead of approves)
-  - `high` = significant friction in a top-10 flow
-  - `medium` = noticeable but workaroundable
-  - `low` = polish
-- **Affected route** is the exact Next.js path (e.g. `/properties/[id]/fmv`, not "the FMV page").
-- One proposal per change. Don't bundle "fix FMV + fix rent renewal" in one issue.
+5. **In-app chat support.** Tried as a Sunday MVP. Got 0 messages in 2 weeks.
+   ICP doesn't chat — they email. Don't propose adding it back.
 
 ---
 
 ## Competitive UX context
 
-**RentRedi** — peer-priced. Their flows are checkbox PM patterns: lots of fields, no AI assist. Our edge is AI doing the heavy lift while keeping the human in control. Where they're clearer: faster initial property entry (3 fields vs our 7). Where we're better: lease extraction, FMV reasoning.
+Most competitor-comparison proposals will hit the "feature not built" wall because
+RentRedi and Buildium have full property management UIs and Keywise doesn't yet.
+That's fine — note it. The competitive lead exists for `/`, `/pricing`, blog
+content, and the tenant flow; everywhere else, comparison is premature.
 
-**Buildium** — enterprise. Their flows are dense and feature-heavy, built for property managers who know the jargon. Don't copy their density — our ICP would bounce. But: their reversibility model (undo on every destructive action, 30-day soft-delete) is good and we should match it.
-
-When the monthly competitive audit runs, compare flow-by-flow on **clarity** and **flexibility**, not feature parity. We don't need every checkbox; we need to be more obvious.
+When the monthly competitive audit runs, compare flow-by-flow on **clarity** and
+**flexibility** only for routes that exist on BOTH sides.
 
 ---
 
-*Last updated: 2026-05-13 by Chris.*
-*To revise: edit this file directly. The CPO reads it fresh at the start of every important task.*
+## End-of-run summary expectations
+
+Every task ends with a brief summary that includes:
+
+- Routes audited (real ones from list_real_routes)
+- Proposals filed (against real routes, with the 5-principles cite)
+- **Feature gaps surfaced** — concepts from the marketing or roadmap that you'd
+  have audited if they were built. This list is valuable input for Chris's
+  roadmap; do not suppress it just because you can't file a proposal against it.
+
+---
+
+*Last updated: 2026-05-16 by Chris (via Claude). To revise: edit this file
+directly. The CPO reads it fresh at the start of every important task.*
