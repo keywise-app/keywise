@@ -19,7 +19,7 @@ const T = {
 
 export default function SignPage() {
   const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<'loading' | 'ready' | 'signed' | 'already_signed' | 'expired' | 'error'>('loading');
+  const [state, setState] = useState<'loading' | 'ready' | 'signed' | 'already_signed' | 'expired' | 'revoked' | 'error'>('loading');
   const [docData, setDocData] = useState<{
     tenant_name: string;
     document_name: string;
@@ -42,7 +42,12 @@ export default function SignPage() {
           setSignedAt(data.signed_at || '');
           setState('already_signed');
         } else if (status === 410) {
-          setState('expired');
+          // Differentiate between landlord-revoked and time-expired
+          if (data.reason === 'revoked') {
+            setState('revoked');
+          } else {
+            setState('expired');
+          }
         } else {
           setErrorMsg(data.error || 'Something went wrong.');
           setState('error');
@@ -81,7 +86,17 @@ export default function SignPage() {
             <div style={{ fontSize: 40, marginBottom: 16 }}>⏰</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Link Expired</div>
             <div style={{ fontSize: 14, color: T.inkMuted }}>
-              This signing link has expired. Please contact your landlord to request a new link.
+              This link has expired. Ask your landlord to send a fresh one.
+            </div>
+          </div>
+        )}
+
+        {state === 'revoked' && (
+          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🚫</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 8 }}>Document Recalled</div>
+            <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
+              Your landlord recalled this document. This was likely sent by mistake — they'll be in touch with an updated copy.
             </div>
           </div>
         )}
@@ -149,23 +164,11 @@ export default function SignPage() {
                 )}
 
                 {docData.inspection.report_text && (
-                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 6 }}>AI Report</div>
-                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
+                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 4 }}>Full Report</div>
+                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
                   </div>
                 )}
-
-                {docData.inspection.landlord_signature && (
-                  <div style={{ marginTop: 16, padding: 14, background: T.greenLight, borderRadius: 10, border: `1px solid ${T.greenDark}33` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Landlord Signature</div>
-                    <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{docData.inspection.landlord_signature}</div>
-                    <div style={{ fontSize: 11, color: T.greenDark, marginTop: 2 }}>{docData.inspection.landlord_signed_at ? new Date(docData.inspection.landlord_signed_at).toLocaleDateString() : ''}</div>
-                  </div>
-                )}
-
-                <div style={{ marginTop: 16, padding: 14, background: '#FFF8E0', borderRadius: 10, border: '1px solid #9A650033' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9A6500' }}>Please review the inspection report above, then sign below to confirm.</div>
-                </div>
               </div>
             )}
 
@@ -179,6 +182,7 @@ export default function SignPage() {
             />
           </>
         )}
+
       </div>
     </div>
   );
