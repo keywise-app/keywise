@@ -72,6 +72,19 @@ When the founder story would be self-indulgent or distract from helping the read
 
 ---
 
+## Author byline — E-E-A-T requirement
+
+Every blog post published through Keywise must carry the byline:
+**"By Chris Colwell, founder of Keywise"** with a link to /about/chris.
+
+The dynamic blog route handles this automatically — the byline, avatar, and Article + Person JSON-LD schema are rendered for every published post. The CMO does NOT need to add byline text into the markdown content. Just write the post body; the template handles attribution.
+
+When writing in first person ("I built this because..."), the voice is Chris's. When the context calls for it (~30% of posts), reference the duplex-owner perspective. The /about/chris page establishes expertise: real landlord, real developer, real properties.
+
+Google's E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness) reward content by verifiable people with demonstrated expertise. The byline + author page + JSON-LD schema are the implementation of that signal.
+
+---
+
 ## Strongest differentiator: AI lease extraction
 
 When competing against RentSpree/RentRedi (similar size, similar price range), our lead differentiator is **AI lease extraction**: upload a PDF lease, Keywise auto-fills tenant info, dates, rent amount, deposits, terms. No competitor in our segment does this well.

@@ -85,6 +85,24 @@ export default async function DynamicBlogPost(
         <Link href="/blog" style={{ fontSize: 13, color: INK_MID, textDecoration: 'none', fontWeight: 500 }}>← All articles</Link>
       </nav>
 
+      {/* Article + Author JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: post.title,
+        description: post.meta_description || post.title,
+        datePublished: post.published_at,
+        url: `https://keywise.app/blog/${post.slug}`,
+        author: {
+          '@type': 'Person',
+          name: 'Chris Colwell',
+          url: 'https://keywise.app/about/chris',
+          jobTitle: 'Founder',
+          worksFor: { '@type': 'Organization', name: 'Keywise', url: 'https://keywise.app' },
+        },
+        publisher: { '@type': 'Organization', name: 'Keywise', url: 'https://keywise.app' },
+      }) }} />
+
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px', lineHeight: 1.7 }}>
         {post.target_keyword && (
           <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>
@@ -94,6 +112,18 @@ export default async function DynamicBlogPost(
         <h1 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.2 }}>
           {post.title}
         </h1>
+
+        {/* Author byline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: N, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ color: TEAL, fontSize: 14, fontWeight: 800 }}>CC</span>
+          </div>
+          <div>
+            <Link href="/about/chris" style={{ fontSize: 14, fontWeight: 600, color: N, textDecoration: 'none' }}>Chris Colwell</Link>
+            <div style={{ fontSize: 12, color: INK_MUTED }}>Founder of Keywise{publishedDate ? ` · ${publishedDate}` : ''}</div>
+          </div>
+        </div>
+
         {post.meta_description && (
           <p style={{ fontSize: 18, color: INK_MID, marginBottom: 32 }}>
             {post.meta_description}
