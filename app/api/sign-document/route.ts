@@ -148,7 +148,9 @@ export async function GET(req: Request) {
   if (error || !tokenRow) return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
   if (tokenRow.used_at) return NextResponse.json({ error: 'Already signed', signed_at: tokenRow.used_at }, { status: 409 });
 
-  // Return 410 with a reason: "revoked" if landlord explicitly cancelled, "expired" if TTL passed
+  // Return 410 with a reason so the frontend can show the right message:
+  // "revoked" = landlord explicitly recalled the document (revoked_at is set)
+  // "expired" = the link's TTL passed naturally
   if (tokenRow.revoked_at) {
     return NextResponse.json({ error: 'This link has been recalled', reason: 'revoked' }, { status: 410 });
   }
@@ -163,4 +165,22 @@ export async function GET(req: Request) {
     file_url = urlData?.signedUrl || '';
   }
 
-  // If inspection signing, include inspection d
+  // If inspection signing, include the inspection data for display
+  let inspection = null;
+  if (tokenRow.inspection_id) {
+    const { data: inspData } = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('id', tokenRow.inspection_id)
+      .single();
+    inspection = inspData || null;
+  }
+
+  return NextResponse.json({
+    tenant_name: tokenRow.tenant_name,
+    document_name: tokenRow.documents?.name || 'Document',
+    document_type: tokenRow.documents?.type || '',
+    file_url,
+    inspection,
+  });
+}
