@@ -33,6 +33,10 @@
       "schedule": "0 16 * * 2"
     },
     {
+      "path": "/api/cron/agents/cmo/weekly_content_refresh",
+      "schedule": "0 13 * * 4"
+    },
+    {
       "path": "/api/cron/agents/cmo/monthly_pseo",
       "schedule": "0 14 1 * *"
     },

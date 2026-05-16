@@ -104,4 +104,87 @@ export const publishBlogPostTool: AgentTool<{ draftId: string; reason: string }>
   },
 };
 
-export const allContentTools = [draftBlogPostTool, publishBlogPostTool];
+export const updateBlogPostTool: AgentTool<{
+  draftId: string;
+  title?: string;
+  metaDescription?: string;
+  markdownContent: string;
+  internalLinks?: string[];
+  rationale: string;
+}> = {
+  name: "content_update_blog_post",
+  description:
+    "Update an existing published or draft blog post with refreshed content. Use for content refreshes — updated stats, current year references, expanded sections, new internal links. Sets updated_at to now. Requires approval for published posts (content goes live immediately).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      draftId: { type: "string", description: "ID of the blog_drafts row to update" },
+      title: { type: "string", description: "Updated title (optional — omit to keep existing)" },
+      metaDescription: { type: "string", description: "Updated meta description (optional)" },
+      markdownContent: { type: "string", description: "Full updated markdown content" },
+      internalLinks: { type: "array", items: { type: "string" }, description: "Updated internal link targets" },
+      rationale: { type: "string", description: "What changed and why this refresh matters" },
+    },
+    required: ["draftId", "markdownContent", "rationale"],
+  },
+  defaultAuthority: "approve",
+  resolveAuthority: async (i, ctx) => {
+    const { data } = await ctx.supabase
+      .from("blog_drafts")
+      .select("status")
+      .eq("id", i.draftId)
+      .maybeSingle();
+    // Draft updates are auto; published updates need approval (live content)
+    return data?.status === "published" ? "approve" : "auto";
+  },
+  describeAction: (i) => `Update blog post ${i.draftId} (${i.rationale.slice(0, 60)})`,
+  estimateImpact: () => "Refreshed content typically gains 5-20 positions within 2-4 weeks",
+  execute: async (i, ctx) => {
+    const { data: existing } = await ctx.supabase
+      .from("blog_drafts")
+      .select("id, slug, status")
+      .eq("id", i.draftId)
+      .maybeSingle();
+    if (!existing) throw new Error(`Draft ${i.draftId} not found.`);
+
+    const update: Record<string, any> = {
+      markdown: i.markdownContent,
+      rationale: i.rationale,
+    };
+    if (i.title) update.title = i.title;
+    if (i.metaDescription) update.meta_description = i.metaDescription;
+    if (i.internalLinks) update.internal_links = i.internalLinks;
+
+    const { error } = await ctx.supabase
+      .from("blog_drafts")
+      .update(update)
+      .eq("id", i.draftId);
+    if (error) throw error;
+
+    return { ok: true, slug: existing.slug, status: existing.status, url: `/blog/${existing.slug}` };
+  },
+};
+
+export const listPublishedPostsTool: AgentTool<{}> = {
+  name: "content_list_published",
+  description:
+    "List all published blog posts with their slug, title, target keyword, word count, and published date. Use to identify refresh candidates (old posts that may need updating).",
+  inputSchema: { type: "object", properties: {} },
+  defaultAuthority: "auto",
+  describeAction: () => "List all published blog posts",
+  execute: async (_, ctx) => {
+    const { data } = await ctx.supabase
+      .from("blog_drafts")
+      .select("id, slug, title, target_keyword, word_count, published_at, meta_description")
+      .eq("status", "published")
+      .order("published_at", { ascending: true });
+    return { posts: data || [], count: (data || []).length };
+  },
+};
+
+export const allContentTools = [
+  draftBlogPostTool,
+  publishBlogPostTool,
+  updateBlogPostTool,
+  listPublishedPostsTool,
+];

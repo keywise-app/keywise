@@ -229,6 +229,46 @@ const monthlyPseoTask: AgentTask = {
   ],
 };
 
+const weeklyContentRefreshTask: AgentTask = {
+  id: "weekly_content_refresh",
+  description: "Weekly (Thu): audit published posts older than 90 days, refresh underperformers with updated content.",
+  tier: "strategic",
+  maxIterations: 14,
+  prompt: `Weekly content refresh — ${new Date().toISOString().slice(0, 10)}.
+
+GOAL: Find published blog posts that are stale or underperforming and refresh them.
+Refreshed posts often jump 5-20 positions — often more than new posts ever achieve.
+
+1. Call content_list_published to get all published posts with their dates.
+2. Identify posts older than 90 days (published_at before ${new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)}).
+3. For each candidate, check Search Console performance via sc_top_queries and sc_top_pages:
+   - Is the target keyword ranking on page 2-3 (positions 11-30)? → high-value refresh
+   - Has position stagnated or dropped vs. earlier snapshots? → needs refresh
+   - Is it getting impressions but low CTR? → title/meta refresh
+4. Pick the 1-2 highest-leverage refresh candidates.
+5. For each, call content_find_internal_links to find new linking opportunities
+   from recently published posts that didn't exist when the original was written.
+6. Call content_update_blog_post with refreshed content:
+   - Update all year references to current year (${new Date().getFullYear()})
+   - Add fresh statistics, data points, or examples
+   - Expand thin sections (any H2 with <150 words)
+   - Weave in new internal links to recent posts
+   - Update meta_description if CTR is below 3%
+   - Keep the same slug and URL — we're refreshing, not replacing
+7. The update will queue for approval since the post is published (live content).
+8. Summarize: which posts were refreshed, what changed, expected impact.
+
+NOTE: Static blog posts (hardcoded in app/blog/) cannot be refreshed by this tool —
+only posts in the blog_drafts table. Focus on those.`,
+  toolNames: [
+    "content_list_published",
+    "sc_top_queries",
+    "sc_top_pages",
+    "content_find_internal_links",
+    "content_update_blog_post",
+  ],
+};
+
 export const cmoRole: AgentRole = {
   id: "cmo",
   title: "Chief Marketing Officer",
@@ -257,6 +297,7 @@ export const cmoRole: AgentRole = {
     weekly_content: weeklyContentTask,
     weekly_budget_review: reviewBudgetTask,
     weekly_outreach: weeklyOutreachTask,
+    weekly_content_refresh: weeklyContentRefreshTask,
     monthly_pseo: monthlyPseoTask,
   },
 };
