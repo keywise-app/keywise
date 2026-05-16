@@ -1,10 +1,48 @@
 // app/admin/agents/product-proposals/page.tsx
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
+import * as fs from "fs";
+import * as path from "path";
 import ProposalActions from "./ProposalActions";
+import BacklogActions from "./BacklogActions";
 import ImplementationPanel, { type Implementation } from "./ImplementationPanel";
 
 export const dynamic = "force-dynamic";
+
+// Walk app/ to find which routes are real. Proposals whose affected_route is
+// not in this set get rendered as "Feature backlog" — no implement button,
+// since the Dev agent can't ship a fix for a feature that doesn't exist.
+const PAGE_FILES = ["page.tsx", "page.ts", "page.jsx", "page.js"];
+
+function listRealRoutes(): Set<string> {
+  const APP_DIR = path.join(process.cwd(), "app");
+  const out = new Set<string>();
+  function recurse(absDir: string, segs: string[]) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(absDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    if (
+      PAGE_FILES.some((f) =>
+        entries.some((e) => e.isFile() && e.name === f)
+      )
+    ) {
+      const r = "/" + segs.filter(Boolean).join("/");
+      out.add(r === "/" ? "/" : r.replace(/\/$/, ""));
+    }
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const n = e.name;
+      if (n.startsWith("_") || n.startsWith("@") || n === "api" || n === "node_modules") continue;
+      const isGroup = /^\(.+\)$/.test(n);
+      recurse(path.join(absDir, n), isGroup ? segs : [...segs, n]);
+    }
+  }
+  recurse(APP_DIR, []);
+  return out;
+}
 
 type Proposal = {
   id: string;
@@ -73,9 +111,11 @@ function severityRank(s: Proposal["severity"]): number {
 function ProposalCard({
   proposal,
   implementation,
+  isBacklog = false,
 }: {
   proposal: Proposal;
   implementation?: Implementation;
+  isBacklog?: boolean;
 }) {
   const preview = (proposal.description || "").slice(0, 280).trim();
 
@@ -138,26 +178,44 @@ function ProposalCard({
         </p>
       )}
 
-      <ProposalActions
-        proposal={{ id: proposal.id, status: proposal.status }}
-      />
+      {isBacklog ? (
+        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+          <strong>Backlog idea — feature not built yet.</strong> The route{" "}
+          <code className="font-mono">{proposal.affected_route}</code> doesn&apos;t
+          exist in <code>app/</code>, so the Dev agent can&apos;t implement this
+          today. Build the underlying feature, then re-propose against the real
+          route.
+          <BacklogActions proposalId={proposal.id} />
+        </div>
+      ) : (
+        <ProposalActions
+          proposal={{ id: proposal.id, status: proposal.status }}
+        />
+      )}
 
       {implementation && <ImplementationPanel implementation={implementation} />}
     </div>
   );
 }
 
+
 export default async function ProductProposalsPage() {
   const { proposals, implementationsByProposal } = await getData();
+  const realRoutes = listRealRoutes();
+  const isRealRoute = (route: string | null) =>
+    route != null && realRoutes.has(route);
 
-  // Group open (proposed/approved/in_progress) by severity, decided collapsed
-  const open = proposals
+  // Split open proposals into "active" (real route — can implement) and
+  // "backlog" (fake route — needs feature build first, no implement button).
+  const allOpen = proposals
     .filter((p) => ["proposed", "approved", "in_progress"].includes(p.status))
     .sort((a, b) => {
       const r = severityRank(a.severity) - severityRank(b.severity);
       if (r !== 0) return r;
       return b.created_at.localeCompare(a.created_at);
     });
+  const active = allOpen.filter((p) => isRealRoute(p.affected_route));
+  const backlog = allOpen.filter((p) => !isRealRoute(p.affected_route));
   const shipped = proposals.filter((p) => p.status === "shipped");
   const rejected = proposals.filter((p) => p.status === "rejected");
 
@@ -167,7 +225,7 @@ export default async function ProductProposalsPage() {
     medium: [],
     low: [],
   };
-  for (const p of open) bySeverity[p.severity].push(p);
+  for (const p of active) bySeverity[p.severity].push(p);
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -186,36 +244,76 @@ export default async function ProductProposalsPage() {
           you don&apos;t want.
         </p>
         <div className="mt-3 text-xs text-gray-500">
-          {open.length} open · {shipped.length} shipped · {rejected.length}{" "}
-          rejected
+          {active.length} active · {backlog.length} backlog ·{" "}
+          {shipped.length} shipped · {rejected.length} rejected
         </div>
       </header>
 
-      {(["critical", "high", "medium", "low"] as const).map((sev) => {
-        const items = bySeverity[sev];
-        if (items.length === 0) return null;
-        return (
-          <section key={sev}>
-            <h2 className="text-lg font-semibold mb-3 capitalize">
-              {sev} ({items.length})
-            </h2>
-            <div className="space-y-3">
-              {items.map((p) => (
-                <ProposalCard
-                  key={p.id}
-                  proposal={p}
-                  implementation={implementationsByProposal[p.id]}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {/* Active proposals — routes exist, Approve & implement works */}
+      {active.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold mb-3 text-gray-900">
+            Active proposals
+          </h2>
+          {(["critical", "high", "medium", "low"] as const).map((sev) => {
+            const items = bySeverity[sev];
+            if (items.length === 0) return null;
+            return (
+              <section key={sev} className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-600 mb-2 capitalize">
+                  {sev} ({items.length})
+                </h3>
+                <div className="space-y-3">
+                  {items.map((p) => (
+                    <ProposalCard
+                      key={p.id}
+                      proposal={p}
+                      implementation={implementationsByProposal[p.id]}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
-      {open.length === 0 && (
+      {/* Feature backlog — routes don't exist, ideas only */}
+      {backlog.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold mb-3 text-amber-900">
+            Feature backlog ({backlog.length})
+          </h2>
+          <p className="text-sm text-gray-600 mb-3">
+            Ideas the CPO filed against routes that don&apos;t exist in{" "}
+            <code>app/</code> yet. Read them as a wishlist for what to build
+            next; the Dev agent can&apos;t implement them until the underlying
+            feature exists. Dismiss any you&apos;ve internalized or don&apos;t
+            care about.
+          </p>
+          <div className="space-y-3">
+            {backlog.map((p) => (
+              <ProposalCard
+                key={p.id}
+                proposal={p}
+                implementation={implementationsByProposal[p.id]}
+                isBacklog
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {active.length === 0 && backlog.length === 0 && (
         <p className="text-sm text-gray-500">
-          No open proposals. The CPO files these during its daily and weekly
-          tasks.
+          No open proposals. Run the CPO from{" "}
+          <Link
+            href="/admin/agents"
+            className="text-blue-600 hover:underline"
+          >
+            /admin/agents
+          </Link>{" "}
+          to generate some.
         </p>
       )}
 
