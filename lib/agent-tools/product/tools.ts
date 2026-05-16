@@ -243,6 +243,28 @@ export const productProposeTool: AgentTool<{
   describeAction: (i) => `Propose: "${i.title}" (${i.severity}, ${i.affected_route})`,
   estimateImpact: (i) => `${i.severity} severity on ${i.affected_route}`,
   execute: async (i, ctx) => {
+    // HARD GUARDRAIL: affected_route MUST exist as a real route in app/.
+    // The CPO's system prompt says this; this tool enforces it so a hallucinated
+    // route can never reach the database. Saves $1+ per stopped bad proposal.
+    const realRoutes = walkAppRoutes().map((r) => r.route);
+    if (!realRoutes.includes(i.affected_route)) {
+      // Find the closest match by prefix to give the agent a useful nudge.
+      const sameRootPrefix = i.affected_route.split("/")[1] || "";
+      const candidates = realRoutes.filter((r) =>
+        r.startsWith("/" + sameRootPrefix)
+      );
+      throw new Error(
+        `Refusing to file proposal: affected_route "${i.affected_route}" ` +
+          `does not exist in app/. ` +
+          (candidates.length > 0
+            ? `Closest real routes under /${sameRootPrefix}: ${candidates.slice(0, 5).join(", ")}. `
+            : `No routes match that prefix at all. `) +
+          `Call list_real_routes to see all ${realRoutes.length} valid routes. ` +
+          `If the feature you want to fix doesn't exist yet, do NOT file a proposal — ` +
+          `report it as a feature gap in your summary instead.`
+      );
+    }
+
     // Soft cap: auto-truncate long titles instead of throwing. The agent's
     // intent is preserved in the description; the title is just a display label.
     const MAX_TITLE = 100;
