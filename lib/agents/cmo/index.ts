@@ -206,6 +206,54 @@ const weeklyOutreachTask: AgentTask = {
   toolNames: ["outreach_find_prospects", "outreach_draft_email"],
 };
 
+const weeklyLinkableAssetAuditTask: AgentTask = {
+  id: "weekly_linkable_asset_audit",
+  description: "Weekly (Wed): identify top linkable pages, find journalists/bloggers writing about related topics, draft personalized outreach.",
+  tier: "strategic",
+  maxIterations: 12,
+  prompt: `Weekly linkable asset audit + outreach — ${new Date().toISOString().slice(0, 10)}.
+
+GOAL: Find people writing about topics our best pages cover, and draft outreach emails offering our resource as a relevant addition to their article.
+
+PROCESS:
+
+1. Call outreach_identify_linkable_assets to get our top 5 most linkable pages (templates, data compilations, comprehensive guides).
+
+2. For the top 3 assets, search for recent journalist/blogger activity:
+   - Call outreach_find_prospects with competitors ['buildium.com', 'rentredi.com', 'avail.co', 'turbotenant.com']
+   - Look for sites that wrote about the same topic in the last 30 days (roundup posts, comparison articles, resource lists, how-to guides)
+   - Focus on sites with real editorial content — not scrapers, not AI spam farms
+
+3. For each viable prospect, draft a personalized outreach email:
+   - Reference THEIR specific article by title and a detail from it (proves you read it)
+   - Offer our resource as a relevant addition ("We published a comprehensive [type] that your readers might find useful alongside your piece on [topic]")
+   - Keep subject ≤60 chars, body ≤120 words
+   - Lead with value to THEM, not what we want
+   - No templates — each email must be unique to their article
+   - Include the direct URL to our linkable asset
+
+4. All outreach drafts go to outreach_drafts with status='pending'. Chris reviews and sends manually. This is NEVER automated — legal and reputation risk requires human approval.
+
+5. Summarize: which assets you pitched, which prospects you drafted for, expected link quality.
+
+WHAT MAKES GOOD OUTREACH:
+- Specific: references their article, not generic "Hi, I noticed your blog"
+- Valuable: our resource genuinely helps their readers
+- Short: under 120 words, no fluff
+- Honest: "I'm the founder of Keywise" — transparent about who we are
+
+WHAT TO AVOID:
+- Mass-blast language ("I came across your website")
+- Asking for links directly ("Would you add a link?") — offer the resource and let them decide
+- Targeting sites that clearly don't accept outside contributions
+- Pitching to direct competitors' own blogs`,
+  toolNames: [
+    "outreach_identify_linkable_assets",
+    "outreach_find_prospects",
+    "outreach_draft_email",
+  ],
+};
+
 const monthlyPseoTask: AgentTask = {
   id: "monthly_pseo",
   description: "Monthly: generate programmatic SEO page drafts from real local data.",
@@ -350,6 +398,7 @@ export const cmoRole: AgentRole = {
     weekly_budget_review: reviewBudgetTask,
     weekly_outreach: weeklyOutreachTask,
     weekly_content_refresh: weeklyContentRefreshTask,
+    weekly_linkable_asset_audit: weeklyLinkableAssetAuditTask,
     monthly_pseo: monthlyPseoTask,
     monthly_tool_proposal: monthlyToolProposalTask,
   },

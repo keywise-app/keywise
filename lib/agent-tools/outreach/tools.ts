@@ -107,4 +107,62 @@ export const draftOutreachTool: AgentTool<{
   },
 };
 
-export const allOutreachTools = [findBacklinkProspectsTool, draftOutreachTool];
+export const identifyLinkableAssetsTool: AgentTool<{}> = {
+  name: "outreach_identify_linkable_assets",
+  description:
+    "Identify the top 5 most linkable pages on keywise.app — original data, useful tools, comprehensive guides that journalists and bloggers would want to reference. Pulls from published blog posts, tool pages, and core pages. Returns each with its URL, type (guide/tool/data/template), and why it's linkable.",
+  inputSchema: { type: "object", properties: {} },
+  defaultAuthority: "auto",
+  describeAction: () => "Identify top linkable assets on keywise.app",
+  execute: async (_, ctx) => {
+    // Published blog posts
+    const { data: posts } = await ctx.supabase
+      .from("blog_drafts")
+      .select("slug, title, target_keyword, word_count, published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+
+    // Static pages known to be linkable
+    const staticAssets = [
+      { url: "/blog/late-rent-notice", title: "Late Rent Notice Template (Free)", type: "template", linkableReason: "Free template — resource pages and landlord guides link to free templates" },
+      { url: "/blog/move-in-inspection-checklist", title: "Move-In Inspection Checklist", type: "template", linkableReason: "Comprehensive checklist — real estate blogs compile these as resource lists" },
+      { url: "/blog/security-deposit-laws", title: "Security Deposit Laws by State", type: "data", linkableReason: "State-by-state data — journalists and legal blogs cite specific state law compilations" },
+      { url: "/blog/collect-rent-online", title: "How to Collect Rent Online (Comparison)", type: "guide", linkableReason: "Comparison content — fintech and real estate roundups link to detailed comparisons" },
+      { url: "/blog/free-lease-agreement-template", title: "Free Lease Agreement Template", type: "template", linkableReason: "Free downloadable resource — consistently earns links from legal and landlord resource pages" },
+      { url: "/blog/property-management-software-comparison", title: "Best PM Software Comparison", type: "guide", linkableReason: "Comparison page — cited by software review sites and landlord communities" },
+      { url: "/pricing", title: "Keywise Pricing", type: "page", linkableReason: "Cited in software comparison articles that list pricing" },
+    ];
+
+    // Merge and score
+    const dynamicAssets = (posts || []).map((p: any) => ({
+      url: `/blog/${p.slug}`,
+      title: p.title,
+      type: (p.word_count || 0) > 2000 ? "guide" : "post",
+      targetKeyword: p.target_keyword,
+      wordCount: p.word_count,
+      linkableReason: (p.word_count || 0) > 2000
+        ? "Comprehensive guide — long-form content earns more backlinks"
+        : "Targeted content — relevant for niche roundups",
+    }));
+
+    // Deduplicate by URL, prefer static (richer metadata)
+    const seen = new Set<string>();
+    const all = [...staticAssets, ...dynamicAssets].filter(a => {
+      if (seen.has(a.url)) return false;
+      seen.add(a.url);
+      return true;
+    });
+
+    // Sort: templates and data first (highest link potential), then guides, then posts
+    const typePriority: Record<string, number> = { template: 0, data: 1, guide: 2, page: 3, post: 4 };
+    all.sort((a, b) => (typePriority[a.type] ?? 5) - (typePriority[b.type] ?? 5));
+
+    return {
+      assets: all.slice(0, 5),
+      totalPages: all.length,
+      note: "Top 5 most linkable pages, ordered by type (templates > data > guides). Use these as the pitch angle when drafting outreach.",
+    };
+  },
+};
+
+export const allOutreachTools = [findBacklinkProspectsTool, draftOutreachTool, identifyLinkableAssetsTool];
