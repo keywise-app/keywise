@@ -292,7 +292,6 @@ export default function Home() {
     const resolveAuth = async (session: any) => {
       if (authResolved) return; // Prevent double-resolve
       authResolved = true;
-      setLoading(true); // Show loading screen while resolving auth
       try {
       setSession(session);
       if (!session) { setLoading(false); return; }
