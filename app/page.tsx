@@ -303,6 +303,17 @@ export default function Home() {
       // populates role/subscription in the background without blocking.
       if (showLoading) setLoading(true);
       try {
+      // Force the Supabase client to pick up the JWT before any queries.
+      // Without this, the client races: getSession() returns the session object
+      // but the client's internal Authorization header isn't set yet, so RLS
+      // blocks all reads and returns 0 rows.
+      if (session.access_token && session.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
+
       setSession(session);
       if (!session) { setLoading(false); return; }
 
