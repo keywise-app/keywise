@@ -170,7 +170,7 @@ function ProposalCard({
         <p className="text-sm text-gray-600 mt-2 line-clamp-3">{preview}</p>
       )}
 
-      {proposal.decision_note && (
+      {proposal.decision_note && !isBacklog && (
         <p className="text-xs text-gray-500 mt-2 italic">
           Decision: {proposal.decision_note}
           {proposal.decided_at &&
@@ -194,7 +194,22 @@ function ProposalCard({
         />
       )}
 
-      {implementation && <ImplementationPanel implementation={implementation} />}
+      {/* Show implementation panel only on Active proposals or when a Scaffold
+          attempt is in flight (status indicates it's actively doing something).
+          On backlog items, old failed implementations are noise — those failed
+          because the route didn't exist, which is the whole reason it's in backlog. */}
+      {implementation &&
+        (!isBacklog ||
+          [
+            "agent_running",
+            "pr_open",
+            "preview_ready",
+            "auto_merging",
+            "merged",
+            "shipped",
+          ].includes(implementation.status)) && (
+          <ImplementationPanel implementation={implementation} />
+        )}
     </div>
   );
 }
