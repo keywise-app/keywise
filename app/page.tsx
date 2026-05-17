@@ -289,10 +289,13 @@ export default function Home() {
     }
 
     let authResolved = false;
-    const resolveAuth = async (session: any) => {
+    const resolveAuth = async (session: any, showLoading = false) => {
       if (authResolved) return; // Prevent double-resolve
       authResolved = true;
-      setLoading(true); // Show loading screen while resolving auth
+      // Only show loading spinner for first-time auth flows (magic links, hash tokens).
+      // Returning sessions from getSession() render Dashboard immediately — resolveAuth
+      // populates role/subscription in the background without blocking.
+      if (showLoading) setLoading(true);
       try {
       setSession(session);
       if (!session) { setLoading(false); return; }
@@ -362,12 +365,13 @@ export default function Home() {
       }
     };
 
-    // Try existing session first
+    // Try existing session first — fast path, no loading spinner
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        await resolveAuth(session);
+        await resolveAuth(session, false); // returning user — skip loading screen
       } else if (initialHash && initialHash.includes('access_token')) {
         console.error('[auth] Waiting for session from hash token...');
+        setLoading(true); // Show loading for magic link / hash token flows
         setTimeout(() => {
           if (!authResolved) { console.error('[auth] Hash token timeout'); setLoading(false); }
         }, 8000);
@@ -382,7 +386,10 @@ export default function Home() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.error('[auth] Auth state change:', _event, session?.user?.email || 'none');
       if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && session) {
-        await resolveAuth(session);
+        // SIGNED_IN from magic link/hash = first-time flow, show loading
+        // INITIAL_SESSION/TOKEN_REFRESHED = returning user, skip loading
+        const needsLoading = _event === 'SIGNED_IN';
+        await resolveAuth(session, needsLoading);
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
         setUserRole(null);
