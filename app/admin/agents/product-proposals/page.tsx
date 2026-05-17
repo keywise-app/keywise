@@ -6,6 +6,7 @@ import * as path from "path";
 import ProposalActions from "./ProposalActions";
 import BacklogActions from "./BacklogActions";
 import ImplementationPanel, { type Implementation } from "./ImplementationPanel";
+import { syncAllInFlight } from "@/agents-framework/sync-pr";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,16 @@ async function getData(): Promise<{
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+
+  // Self-correct the dashboard: poll GitHub for any in-flight implementations
+  // and update their status if they've merged/closed on GitHub without our
+  // pipeline catching the transition. Bounded — only hits rows in flight,
+  // each with a 4s timeout — so this adds at most ~5s to page load even when
+  // the pipeline is fully stuck.
+  await syncAllInFlight(supabase).catch(() => {
+    /* sync is best-effort; don't break the page if GitHub is down */
+  });
+
   const [{ data: proposals }, { data: implementations }] = await Promise.all([
     supabase
       .from("product_proposals")

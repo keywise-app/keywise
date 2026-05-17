@@ -15,7 +15,13 @@ type Status =
   | "reverted"
   | "failed";
 
-type Action = "merge" | "retry" | "revert" | "screenshot";
+type Action =
+  | "merge"
+  | "retry"
+  | "revert"
+  | "screenshot"
+  | "mark_shipped"
+  | "sync";
 
 export default function ImplementationActions({
   implementation,
@@ -84,15 +90,33 @@ export default function ImplementationActions({
     );
   }
 
-  if (implementation.status === "pr_open") {
+  if (implementation.status === "pr_open" || implementation.status === "auto_merging" || implementation.status === "merged") {
     return (
-      <div className="flex gap-2 mt-3">
+      <div className="flex gap-2 mt-3 flex-wrap">
         <button
-          onClick={() => act("screenshot")}
+          onClick={() => act("sync")}
           disabled={busy}
           className={`${btn} bg-indigo-600 text-white`}
+          title="Poll GitHub for current PR status — updates the row if it's already merged on GitHub but the dashboard didn't catch up"
         >
-          {busy ? "Capturing…" : "Capture preview screenshot"}
+          {busy ? "Syncing…" : "Sync from GitHub"}
+        </button>
+        {implementation.status === "pr_open" && (
+          <button
+            onClick={() => act("screenshot")}
+            disabled={busy}
+            className={`${btn} bg-white border text-gray-700`}
+          >
+            Capture preview screenshot
+          </button>
+        )}
+        <button
+          onClick={() => act("mark_shipped")}
+          disabled={busy}
+          className={`${btn} bg-white border border-emerald-300 text-emerald-700`}
+          title="If the PR has already been merged and deployed but the dashboard is stuck, mark this shipped manually"
+        >
+          Mark shipped manually
         </button>
       </div>
     );
