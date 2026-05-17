@@ -45,7 +45,7 @@ function KeywiseLogo({ size = 32 }: { size?: number }) {
 
 export default function Home() {
   const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stripeSuccess, setStripeSuccess] = useState(false);
