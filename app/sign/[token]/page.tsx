@@ -125,17 +125,31 @@ export default function SignPage() {
                   </div>
                 )}
 
+                {/* AI disclosure banner */}
+                {(docData.inspection.rooms || []).length > 0 && (
+                  <div style={{ background: T.tealLight, border: `1px solid ${T.teal}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: T.navy, lineHeight: 1.6 }}>
+                    Condition grades below were assessed by Keywise AI based on inspection notes. Contact your landlord to dispute any grade before signing.
+                  </div>
+                )}
+
                 {(docData.inspection.rooms || []).map((room: any, i: number) => (
                   <div key={i} style={{ background: '#F0F4FF', borderRadius: 10, padding: 14, marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>{room.name}</div>
-                      {room.condition && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                          background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
-                          color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
-                        }}>{room.condition}</span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {room.condition && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
+                            color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
+                          }}>{room.condition}</span>
+                        )}
+                        {room.condition && (
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.tealLight, color: T.teal }}>
+                            ✦ AI-assessed
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {room.notes && <div style={{ fontSize: 13, color: '#4A5068', lineHeight: 1.6 }}>{room.notes}</div>}
                   </div>
@@ -149,23 +163,16 @@ export default function SignPage() {
                 )}
 
                 {docData.inspection.report_text && (
-                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12, border: `1px solid ${T.border}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 6 }}>AI Report</div>
-                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
+                  <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase' }}>Inspection Summary</div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.tealLight, color: T.teal }}>
+                        ✦ AI-assessed
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
                   </div>
                 )}
-
-                {docData.inspection.landlord_signature && (
-                  <div style={{ marginTop: 16, padding: 14, background: T.greenLight, borderRadius: 10, border: `1px solid ${T.greenDark}33` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.greenDark, textTransform: 'uppercase' }}>Landlord Signature</div>
-                    <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: T.navy, fontStyle: 'italic', marginTop: 4 }}>{docData.inspection.landlord_signature}</div>
-                    <div style={{ fontSize: 11, color: T.greenDark, marginTop: 2 }}>{docData.inspection.landlord_signed_at ? new Date(docData.inspection.landlord_signed_at).toLocaleDateString() : ''}</div>
-                  </div>
-                )}
-
-                <div style={{ marginTop: 16, padding: 14, background: '#FFF8E0', borderRadius: 10, border: '1px solid #9A650033' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9A6500' }}>Please review the inspection report above, then sign below to confirm.</div>
-                </div>
               </div>
             )}
 
