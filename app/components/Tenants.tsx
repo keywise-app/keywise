@@ -275,6 +275,10 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [proposedRent, setProposedRent] = useState('');
   const [renewalTerm, setRenewalTerm] = useState('12');
   const [responseDate, setResponseDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+  const [showFmvRefine, setShowFmvRefine] = useState(false);
+  const [fmvContext, setFmvContext] = useState({ improvements: '', issues: '', localContext: '', tenantNotes: '', knownComps: '', pricingStrategy: '', customNotes: '' });
+  const [manualOverride, setManualOverride] = useState({ rent: '', reasoning: '' });
+  const [showRenewalPreview, setShowRenewalPreview] = useState(false);
 
   const currentTemplate = TEMPLATES.flatMap(c => c.items).find(t => t.id === msgType);
 
@@ -1501,35 +1505,66 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                                 </div>
                                 <div>
                                   <div style={{ fontSize: 10, opacity: 0.6 }}>OPPORTUNITY</div>
-                                  <div style={{ fontSize: 18, fontWeight: 800, color: '#FFB347' }}>+${((renewalMarket.estimated_market_rent || 0) - (selected.rent || 0)).toLocaleString()}</div>
+                                  <div style={{ fontSize: 18, fontWeight: 800, color: '#FFB347' }}>
+                                    {((renewalMarket.estimated_market_rent || 0) - (selected.rent || 0)) >= 0 ? '+' : ''}${((renewalMarket.estimated_market_rent || 0) - (selected.rent || 0)).toLocaleString()}
+                                  </div>
                                 </div>
                               </div>
+                              {/* Confidence badge */}
+                              {renewalMarket.data_confidence && (
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase',
+                                    background: renewalMarket.data_confidence === 'high' ? 'rgba(0,212,170,0.2)' : renewalMarket.data_confidence === 'low' ? 'rgba(255,107,107,0.2)' : 'rgba(255,179,71,0.2)',
+                                    color: renewalMarket.data_confidence === 'high' ? T.teal : renewalMarket.data_confidence === 'low' ? '#FF6B6B' : '#FFB347' }}>
+                                    {renewalMarket.data_confidence} confidence
+                                  </span>
+                                  {renewalMarket.confidence_reasoning && (
+                                    <span style={{ fontSize: 10, opacity: 0.6 }}>{renewalMarket.confidence_reasoning}</span>
+                                  )}
+                                </div>
+                              )}
+                              {/* Reasoning bullets */}
+                              {renewalMarket.reasoning && Array.isArray(renewalMarket.reasoning) && (
+                                <div style={{ marginBottom: 8 }}>
+                                  <div style={{ fontSize: 10, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Why this number</div>
+                                  {renewalMarket.reasoning.map((r: string, i: number) => (
+                                    <div key={i} style={{ fontSize: 11, opacity: 0.8, marginBottom: 3, display: 'flex', gap: 6 }}>
+                                      <span style={{ color: T.teal, flexShrink: 0 }}>•</span>
+                                      <span>{r}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               {renewalMarket.recommendations && (
                                 <div style={{ fontSize: 11, opacity: 0.8, fontStyle: 'italic' }}>💡 {renewalMarket.recommendations}</div>
                               )}
+                              <button onClick={() => { setRenewalMarket(null); setShowFmvRefine(true); }}
+                                style={{ marginTop: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                ↻ Re-run with more context
+                              </button>
                             </>
                           ) : (
-                            <button onClick={async () => {
-                              setRenewalLoading(true);
-                              const { data: { user } } = await supabase.auth.getUser();
-                              try {
-                                const res = await fetch('/api/market-analysis', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ user_id: user?.id, property: selected.property, current_rent: selected.rent }),
-                                });
-                                if (res.ok) {
-                                  const data = await res.json();
-                                  if (!data.error) {
-                                    setRenewalMarket(data);
-                                    setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent));
-                                  }
-                                }
-                              } catch {}
-                              setRenewalLoading(false);
-                            }} style={{ background: T.teal, color: T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              🔍 Run Market Analysis
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button onClick={() => setShowFmvRefine(true)}
+                                style={{ background: T.teal, color: T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                🔍 Run Market Analysis
+                              </button>
+                              <button onClick={async () => {
+                                setRenewalLoading(true);
+                                const { data: { user } } = await supabase.auth.getUser();
+                                try {
+                                  const res = await fetch('/api/market-analysis', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_id: user?.id, property: selected.property, current_rent: selected.rent, beds: selected.beds, baths: selected.baths, sqft: selected.sqft }),
+                                  });
+                                  if (res.ok) { const data = await res.json(); if (!data.error) { setRenewalMarket(data); setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent)); } }
+                                } catch {}
+                                setRenewalLoading(false);
+                              }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Skip — quick estimate →
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -1542,7 +1577,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                             <label style={label}>New Monthly Rent ($)</label>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <input type="number" value={proposedRent || templateFields.new_rent || ''} placeholder={String(selected.rent || '')}
-                                onChange={e => { setProposedRent(e.target.value); setTemplateFields(prev => ({ ...prev, new_rent: e.target.value })); }}
+                                onChange={e => { setProposedRent(e.target.value); setTemplateFields(prev => ({ ...prev, new_rent: e.target.value })); setManualOverride(prev => ({ ...prev, rent: e.target.value })); }}
                                 style={{ ...input, flex: 1, fontSize: 16, fontWeight: 700 }} />
                               {renewalMarket && (
                                 <button onClick={() => { const v = String(renewalMarket.estimated_market_rent); setProposedRent(v); setTemplateFields(prev => ({ ...prev, new_rent: v })); }}
@@ -1552,6 +1587,15 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                             {proposedRent && +proposedRent !== selected.rent && (
                               <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600, color: +proposedRent > selected.rent ? T.greenDark : T.coral }}>
                                 {+proposedRent > selected.rent ? '+' : ''}${(+proposedRent - selected.rent).toLocaleString()}/mo ({(((+proposedRent - selected.rent) / selected.rent) * 100).toFixed(1)}%)
+                              </div>
+                            )}
+                            {/* Manual override reasoning */}
+                            {proposedRent && renewalMarket && +proposedRent !== renewalMarket.estimated_market_rent && (
+                              <div style={{ marginTop: 8 }}>
+                                <label style={label}>Why different from FMV? (optional)</label>
+                                <input value={manualOverride.reasoning} onChange={e => setManualOverride(prev => ({ ...prev, reasoning: e.target.value }))}
+                                  placeholder="e.g. Retaining a great tenant, below-market intentionally"
+                                  style={input} />
                               </div>
                             )}
                           </div>
@@ -1717,6 +1761,68 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
         </div>
       )}
     </div>
+      )}
+
+      {/* FMV Refine Modal */}
+      {showFmvRefine && selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
+          onClick={() => setShowFmvRefine(false)}>
+          <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 24 : 28, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(15,52,96,0.25)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Refine Your Analysis</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Add context to get a more accurate estimate. All fields optional.</div>
+
+            {[
+              { key: 'improvements', lbl: 'Recent improvements', ph: 'e.g. kitchen reno 2024, new HVAC, fresh paint' },
+              { key: 'issues', lbl: 'Known issues', ph: 'e.g. deferred roof maintenance, old appliances' },
+              { key: 'localContext', lbl: 'Local context', ph: 'e.g. new park 2 blocks away, school district upgraded' },
+              { key: 'tenantNotes', lbl: 'Tenant quality', ph: 'e.g. long-term tenant, always pays early, takes care of property' },
+              { key: 'knownComps', lbl: 'Comparable rentals you know about', ph: 'e.g. unit across street rents for $2400, similar 2bd/1ba' },
+              { key: 'customNotes', lbl: 'Anything else', ph: 'Other context the AI should know' },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={label}>{f.lbl}</label>
+                <textarea value={(fmvContext as any)[f.key]} onChange={e => setFmvContext(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.ph} style={{ ...input, minHeight: 50, resize: 'vertical' as const }} />
+              </div>
+            ))}
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={label}>Pricing strategy</label>
+              <select value={fmvContext.pricingStrategy} onChange={e => setFmvContext(prev => ({ ...prev, pricingStrategy: e.target.value }))} style={input}>
+                <option value="">No preference</option>
+                <option value="Maximize revenue">Maximize revenue</option>
+                <option value="Retain tenant">Retain good tenant</option>
+                <option value="Match market exactly">Match market exactly</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={async () => {
+                setShowFmvRefine(false);
+                setRenewalLoading(true);
+                const { data: { user } } = await supabase.auth.getUser();
+                try {
+                  const res = await fetch('/api/market-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      user_id: user?.id, property: selected.property, current_rent: selected.rent,
+                      beds: selected.beds, baths: selected.baths, sqft: selected.sqft,
+                      differentiators: (selected as any).differentiators || '',
+                      ...fmvContext,
+                    }),
+                  });
+                  if (res.ok) { const data = await res.json(); if (!data.error) { setRenewalMarket(data); setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent)); } }
+                } catch {}
+                setRenewalLoading(false);
+              }} style={{ ...btn.primary, flex: 1 }}>
+                🔍 Run Analysis
+              </button>
+              <button onClick={() => setShowFmvRefine(false)} style={{ ...btn.ghost }}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Archive / Delete Modal */}
