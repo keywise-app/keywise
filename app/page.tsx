@@ -88,16 +88,10 @@ export default function Home() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Loading timeout — auto-recover by clearing loading state instead of showing error
+  // Loading timeout — show error state if stuck
   useEffect(() => {
     if (!loading) { setLoadingTimeout(false); return; }
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.error('[auth] Loading timeout — force-clearing to unblock UI');
-        setLoading(false);
-        setLoadingTimeout(true);
-      }
-    }, 8000);
+    const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 12000);
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -371,21 +365,19 @@ export default function Home() {
       }
     };
 
-    // If URL has hash token (magic link), show loading immediately
-    const isHashFlow = !!(initialHash && initialHash.includes('access_token'));
-    if (isHashFlow) {
-      setLoading(true);
-    }
-
     // Try existing session first — fast path, no loading spinner
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        await resolveAuth(session, isHashFlow); // returning user = no spinner; hash flow = spinner
-      } else if (isHashFlow) {
+        await resolveAuth(session, false); // returning user — skip loading screen
+      } else if (initialHash && initialHash.includes('access_token')) {
         console.error('[auth] Waiting for session from hash token...');
-        // loading already set to true above; timeout will auto-clear
+        setLoading(true); // Show loading for magic link / hash token flows
+        setTimeout(() => {
+          if (!authResolved) { console.error('[auth] Hash token timeout'); setLoading(false); }
+        }, 8000);
+      } else {
+        setLoading(false);
       }
-      // else: no session, no hash — loading is already false, Landing renders
     }).catch(err => {
       console.error('[auth] getSession error:', err);
       setLoading(false);
@@ -466,7 +458,18 @@ export default function Home() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: T.bg, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ textAlign: 'center' }}>
         <KeywiseLogo size={40} />
-        <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 16 }}>Loading…</p>
+        {loadingTimeout ? (
+          <>
+            <p style={{ color: T.coral, fontSize: 14, fontWeight: 600, marginTop: 16 }}>Something went wrong</p>
+            <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 4, maxWidth: 300 }}>The page took too long to load. This usually means a network issue.</p>
+            <button onClick={() => window.location.reload()}
+              style={{ marginTop: 16, background: T.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Reload Page
+            </button>
+          </>
+        ) : (
+          <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 16 }}>Loading…</p>
+        )}
       </div>
     </div>
   );
