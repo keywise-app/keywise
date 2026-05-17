@@ -364,18 +364,9 @@ export default function Landing() {
   const exitShown = useRef(false);
 
   useEffect(() => {
-    // Only show auth modal from URL params if there's no active session.
-    // If a logged-in user lands on ?login=true (stale link, bookmark),
-    // strip the param — page.tsx will route them to Dashboard.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.history.replaceState({}, '', '/');
-        return;
-      }
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('signup') === 'true') setAuthMode('signup');
-      else if (params.get('login') === 'true') setAuthMode('login');
-    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('signup') === 'true') setAuthMode('signup');
+    else if (params.get('login') === 'true') setAuthMode('login');
   }, []);
 
   useEffect(() => {
