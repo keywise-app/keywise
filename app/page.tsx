@@ -91,13 +91,7 @@ export default function Home() {
   // Loading timeout — show error state if stuck
   useEffect(() => {
     if (!loading) { setLoadingTimeout(false); return; }
-    console.log('[auth] starting 12s loading timer at', performance.now(), '| loading:', loading);
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.log('[auth] 12s timer FIRED — still loading. State snapshot:', { loading: true, session: 'check-below', loadingTimeout: true });
-        setLoadingTimeout(true);
-      }
-    }, 12000);
+    const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 12000);
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -296,132 +290,102 @@ export default function Home() {
 
     let authResolved = false;
     const resolveAuth = async (session: any) => {
-      if (authResolved) {
-        console.log('[auth] resolveAuth SKIPPED — already resolved');
-        return;
-      }
+      if (authResolved) return; // Prevent double-resolve
       authResolved = true;
-      console.log('[auth] resolveAuth START at', performance.now());
-      console.time('[auth] resolveAuth-total');
       try {
       setSession(session);
-      if (!session) { console.log('[auth] no session — clearing loading'); setLoading(false); return; }
+      if (!session) { setLoading(false); return; }
 
-      console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow, 'recovery:', isRecovery);
+      console.error('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 
       // Clean URL now that session is established
       if (isTenantFlow || isWelcome) window.history.replaceState({}, '', '/');
 
       // Password recovery — skip tenant detection
       if (isRecovery) {
-        console.log('[auth] recovery flow — setting landlord, clearing loading');
         setUserRole('landlord');
         setLoading(false);
         return;
       }
 
       const linkLeaseByEmail = async () => {
-        console.time('[auth] linkLeaseByEmail');
         const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
         const { lease } = await res.json();
-        console.timeEnd('[auth] linkLeaseByEmail');
-        console.log('[auth] linkLeaseByEmail result:', lease ? `found: ${lease.tenant_name}` : 'NOT FOUND');
+        console.error('[tenant] Lease from API:', lease?.id, lease?.tenant_name || 'NOT FOUND');
       };
 
       // Fetch profile — role is the source of truth
-      console.time('[auth] profile-select');
-      let { data: profile, error: profileErr } = await supabase
+      let { data: profile } = await supabase
         .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).maybeSingle();
-      console.timeEnd('[auth] profile-select');
-      console.log('[auth] profile-select result:', profile ? `role=${profile.role}, name=${profile.full_name}` : 'NULL', profileErr ? `err: ${profileErr.message}` : '');
 
       // Safety net: create profile if trigger missed (handles orphaned auth.users)
       if (!profile) {
-        console.log('[auth] No profile found — running upsert safety net');
-        console.time('[auth] profile-upsert');
+        console.error('[auth] No profile found for', session.user.email, '— creating one');
         try {
-          const { data: created, error: upsertErr } = await supabase.from('profiles').upsert(
+          const { data: created } = await supabase.from('profiles').upsert(
             { id: session.user.id, email: session.user.email, role: 'landlord' },
             { onConflict: 'id' }
           ).select('full_name, role, subscription_status, trial_ends_at').maybeSingle();
-          console.timeEnd('[auth] profile-upsert');
-          console.log('[auth] profile-upsert result:', created ? `role=${created.role}` : 'NULL', upsertErr ? `err: ${upsertErr.message}` : '');
           if (created) profile = created;
         } catch (err) {
-          console.timeEnd('[auth] profile-upsert');
-          console.error('[auth] Profile creation THREW:', err);
+          console.error('[auth] Profile creation failed:', err);
         }
       }
 
-      console.log('[auth] Setting subscription/trial state:', profile?.subscription_status, profile?.trial_ends_at);
       if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
       if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
 
       if (isTenantFlow && profile?.role !== 'landlord') {
-        console.log('[auth] Tenant flow — setting role to tenant');
-        console.time('[auth] tenant-upsert');
+        // First-time tenant login via magic link — set role permanently
+        console.error('[auth] Setting role to tenant for:', session.user.email);
         await supabase.from('profiles').upsert(
           { id: session.user.id, email: session.user.email, role: 'tenant' },
           { onConflict: 'id' }
         );
-        console.timeEnd('[auth] tenant-upsert');
-        console.time('[auth] tenant-linkLease');
         await linkLeaseByEmail();
-        console.timeEnd('[auth] tenant-linkLease');
         setUserRole('tenant');
       } else if (profile?.role === 'tenant') {
-        console.log('[auth] Returning tenant');
-        console.time('[auth] returning-tenant-linkLease');
+        // Returning tenant — ALWAYS show tenant portal
+        console.error('[auth] Returning tenant:', session.user.email);
         await linkLeaseByEmail();
-        console.timeEnd('[auth] returning-tenant-linkLease');
         setUserRole('tenant');
       } else {
-        console.log('[auth] Landlord flow — role:', profile?.role, 'fullName:', profile?.full_name);
+        // Landlord, null role, or recovery flow
         setUserRole('landlord');
         if (!profile?.full_name) setShowOnboarding(true);
       }
       } catch (err) {
-        console.error('[auth] resolveAuth CAUGHT ERROR:', err);
+        console.error('[auth] resolveAuth error:', err);
       } finally {
-        console.timeEnd('[auth] resolveAuth-total');
-        console.log('[auth] resolveAuth DONE — calling setLoading(false) at', performance.now());
         setLoading(false);
       }
     };
 
     // Try existing session first
-    console.log('[auth] calling getSession at', performance.now());
-    console.time('[auth] getSession');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.timeEnd('[auth] getSession');
-      console.log('[auth] getSession returned:', session ? `session for ${session.user.email}` : 'null');
       if (session) {
         await resolveAuth(session);
       } else if (initialHash && initialHash.includes('access_token')) {
-        console.log('[auth] Hash token detected — waiting for onAuthStateChange');
+        console.error('[auth] Waiting for session from hash token...');
         setTimeout(() => {
-          if (!authResolved) { console.log('[auth] Hash token 8s timeout — forcing setLoading(false)'); setLoading(false); }
+          if (!authResolved) { console.error('[auth] Hash token timeout'); setLoading(false); }
         }, 8000);
       } else {
-        console.log('[auth] No session, no hash — clearing loading');
         setLoading(false);
       }
     }).catch(err => {
-      console.timeEnd('[auth] getSession');
-      console.error('[auth] getSession THREW:', err);
+      console.error('[auth] getSession error:', err);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('[auth] onAuthStateChange:', _event, session?.user?.email || 'none', 'at', performance.now());
+      console.error('[auth] Auth state change:', _event, session?.user?.email || 'none');
       if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && session) {
         await resolveAuth(session);
       } else if (_event === 'SIGNED_OUT') {
-        console.log('[auth] SIGNED_OUT — clearing session');
         setSession(null);
         setUserRole(null);
       } else {
-        console.log('[auth] Other event:', _event, '— setting session to', session ? 'truthy' : 'null');
         setSession(session);
       }
     });
