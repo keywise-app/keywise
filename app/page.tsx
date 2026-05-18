@@ -88,18 +88,12 @@ export default function Home() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Loading timeout — show error state if stuck
-  useEffect(() => {
-    if (!loading) { setLoadingTimeout(false); return; }
-    console.log('[auth] starting 12s loading timer at', performance.now(), '| loading:', loading);
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.log('[auth] 12s timer FIRED — still loading. State snapshot:', { loading: true, session: 'check-below', loadingTimeout: true });
-        setLoadingTimeout(true);
-      }
-    }, 12000);
-    return () => clearTimeout(timer);
-  }, [loading]);
+  // Loading timeout — DISABLED for probe investigation
+  // useEffect(() => {
+  //   if (!loading) { setLoadingTimeout(false); return; }
+  //   const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 12000);
+  //   return () => clearTimeout(timer);
+  // }, [loading]);
 
   // Allow child components to navigate via custom event
   useEffect(() => {
@@ -307,28 +301,34 @@ export default function Home() {
       setSession(session);
       if (!session) { console.log('[auth] no session — clearing loading'); setLoading(false); return; }
 
-      console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow, 'recovery:', isRecovery);
+      console.error('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow, 'recovery:', isRecovery);
+      console.error('[auth] PROBE 1: passed session log');
 
+      console.error('[auth] PROBE 2: checking tenant/welcome flow');
       // Clean URL now that session is established
       if (isTenantFlow || isWelcome) window.history.replaceState({}, '', '/');
+      console.error('[auth] PROBE 3: passed history replace');
 
       // Password recovery — skip tenant detection
+      console.error('[auth] PROBE 4: checking recovery');
       if (isRecovery) {
-        console.log('[auth] recovery flow — setting landlord, clearing loading');
+        console.error('[auth] recovery flow — setting landlord, clearing loading');
         setUserRole('landlord');
         setLoading(false);
         return;
       }
+      console.error('[auth] PROBE 5: passed recovery block');
 
       const linkLeaseByEmail = async () => {
-        console.time('[auth] linkLeaseByEmail');
+        console.error('[auth] linkLeaseByEmail START');
         const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
         const { lease } = await res.json();
-        console.timeEnd('[auth] linkLeaseByEmail');
-        console.log('[auth] linkLeaseByEmail result:', lease ? `found: ${lease.tenant_name}` : 'NOT FOUND');
+        console.error('[auth] linkLeaseByEmail result:', lease ? `found: ${lease.tenant_name}` : 'NOT FOUND');
       };
+      console.error('[auth] PROBE 6: defined linkLeaseByEmail');
 
       // Fetch profile — role is the source of truth
+      console.error('[auth] PROBE 7: about to start profile-select');
       console.time('[auth] profile-select');
       let { data: profile, error: profileErr } = await supabase
         .from('profiles').select('full_name, role, subscription_status, trial_ends_at').eq('id', session.user.id).maybeSingle();
