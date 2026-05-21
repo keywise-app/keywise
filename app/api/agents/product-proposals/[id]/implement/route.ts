@@ -5,7 +5,7 @@
 // 3. Returns immediately with implementationId. The agent runs server-side; the dashboard
 //    polls by reloading. (Vercel function maxDuration covers the full agent run.)
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { getRole } from "@/agents-framework/registry";
@@ -192,90 +192,78 @@ export async function POST(
           affectedRoute: proposal.affected_route,
         });
 
-  // 6. Fire the Dev agent
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-  const role = getRole("dev");
+  // 6. Schedule the agent run to happen AFTER we send the response, so the
+  // browser doesn't sit waiting through Vercel's idle proxy timeout.
+  // The implementation row already exists (status=agent_running) — the
+  // dashboard can poll it via reload and the GitHub sync.
+  after(async () => {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    const role = getRole("dev");
+    try {
+      const result = await runAgent(role, "implement_proposal", supabase, anthropic, {
+        trigger: "manual",
+        promptOverride,
+        metadata: { implementationId, proposalId },
+      });
 
-  // Fire-and-forget on the same Vercel function (we have maxDuration=300).
-  // Wrapped in a try/catch so framework errors land as agent_failed.
-  try {
-    const result = await runAgent(role, "implement_proposal", supabase, anthropic, {
-      trigger: "manual",
-      promptOverride,
-      metadata: { implementationId, proposalId },
-    });
+      const { data: current } = await supabase
+        .from("proposal_implementations")
+        .select("status")
+        .eq("id", implementationId)
+        .maybeSingle();
 
-    // The agent SHOULD have called submit_implementation or report_failure, which
-    // updates proposal_implementations.status. If it didn't, the row is stuck on
-    // 'agent_running' — flip it to agent_failed with the run summary.
-    const { data: current } = await supabase
-      .from("proposal_implementations")
-      .select("status")
-      .eq("id", implementationId)
-      .maybeSingle();
+      if (current?.status === "agent_running") {
+        await supabase
+          .from("proposal_implementations")
+          .update({
+            status: "agent_failed",
+            error:
+              "Agent finished without calling submit_implementation or report_failure. " +
+              "Summary: " +
+              (result.summary || "(no summary)"),
+            cost_usd: result.costUsd,
+            agent_run_id: result.runId,
+          })
+          .eq("id", implementationId);
+      } else {
+        await supabase
+          .from("proposal_implementations")
+          .update({ cost_usd: result.costUsd, agent_run_id: result.runId })
+          .eq("id", implementationId);
+      }
 
-    if (current?.status === "agent_running") {
+      // Kick screenshot capture after the agent's done.
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000";
+      if (current?.status === "pr_open" || current?.status === "agent_running") {
+        void fetch(
+          `${baseUrl}/api/agents/implementations/${implementationId}/screenshot`,
+          { method: "POST" }
+        ).catch((e) => console.error("[implement] screenshot kick failed:", e));
+      }
+    } catch (err: any) {
+      const msg = err?.message || String(err);
       await supabase
         .from("proposal_implementations")
         .update({
           status: "agent_failed",
-          error:
-            "Agent finished without calling submit_implementation or report_failure. " +
-            "Summary: " +
-            (result.summary || "(no summary)"),
-          cost_usd: result.costUsd,
-          agent_run_id: result.runId,
+          error: `Agent crashed: ${msg}`.slice(0, 1000),
         })
         .eq("id", implementationId);
-    } else {
-      // Successful path or self-reported failure — just record the cost
-      await supabase
-        .from("proposal_implementations")
-        .update({
-          cost_usd: result.costUsd,
-          agent_run_id: result.runId,
-        })
-        .eq("id", implementationId);
+      console.error("[implement] agent failed:", msg);
     }
+  });
 
-    // Fire the screenshot capture in the background. We don't await the
-    // response here — the agent's already done, and the screenshot endpoint
-    // has its own maxDuration. If this fetch returns before the screenshot
-    // completes, the dashboard still picks up the row update via reload.
-    const baseUrl =
-      process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000";
-    if (current?.status === "pr_open" || current?.status === "agent_running") {
-      // Status will be pr_open if the agent called submit_implementation.
-      // Don't await — let it run in the background.
-      void fetch(
-        `${baseUrl}/api/agents/implementations/${implementationId}/screenshot`,
-        { method: "POST" }
-      ).catch((e) => console.error("[implement] screenshot kick failed:", e));
-    }
-
-    return NextResponse.json({
-      implementationId,
-      runId: result.runId,
-      status: result.status,
-      costUsd: result.costUsd,
-      summary: result.summary,
-    });
-  } catch (err: any) {
-    const msg = err?.message || String(err);
-    await supabase
-      .from("proposal_implementations")
-      .update({
-        status: "agent_failed",
-        error: `Agent crashed: ${msg}`.slice(0, 1000),
-      })
-      .eq("id", implementationId);
-    return NextResponse.json(
-      { implementationId, error: msg },
-      { status: 500 }
-    );
-  }
+  // Return immediately so the browser sees a quick response. The dashboard
+  // reflects progress via the agent_running status + reload polling.
+  return NextResponse.json({
+    implementationId,
+    status: "agent_running",
+    mode,
+    note:
+      "Agent dispatched. The row will update as it progresses (agent_running → pr_open → preview_ready → shipped). Refresh the page in 1-3 min to see status.",
+  });
 }
 
 function buildDevPrompt(args: {

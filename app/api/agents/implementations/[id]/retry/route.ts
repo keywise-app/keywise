@@ -1,10 +1,10 @@
 // POST /api/agents/implementations/[id]/retry
 // Retries a failed implementation by firing the Dev agent again against the same proposal.
+// Fire-and-forget: we kick the implement endpoint and return immediately so the
+// browser doesn't sit waiting through Vercel's idle proxy timeout (~30s).
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
-export const maxDuration = 300;
 
 export async function POST(
   _req: NextRequest,
@@ -32,14 +32,21 @@ export async function POST(
     );
   }
 
-  // Forward to the implement endpoint — creates a new implementation row.
+  // Fire-and-forget. The implement endpoint creates a new proposal_implementations
+  // row immediately (status=agent_running) before doing the heavy lift, so the
+  // dashboard reflects the retry instantly on next reload. We don't await the
+  // full agent run because the browser would time out.
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
-  const res = await fetch(
+  void fetch(
     `${baseUrl}/api/agents/product-proposals/${impl.proposal_id}/implement`,
     { method: "POST" }
-  );
-  const data = await res.json().catch(() => ({}));
-  return NextResponse.json(data, { status: res.status });
+  ).catch((e) => console.error("[retry] implement kick failed:", e));
+
+  return NextResponse.json({
+    queued: true,
+    proposalId: impl.proposal_id,
+    note: "Retry dispatched. A new implementation row will appear within a few seconds. Refresh the page to see progress.",
+  });
 }
