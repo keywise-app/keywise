@@ -256,6 +256,102 @@ export const githubWriteFileTool: AgentTool<{
   },
 };
 
+export const githubPatchFileTool: AgentTool<{
+  path: string;
+  branch: string;
+  oldString: string;
+  newString: string;
+  message: string;
+  replaceAll?: boolean;
+}> = {
+  name: "github_patch_file",
+  description:
+    "Surgically patch a file by find-and-replace, server-side. Pass a unique snippet of the existing file (oldString) and what to replace it with (newString). The tool reads the file, verifies oldString appears exactly once (or replaceAll if you set that flag), substitutes, and commits the new content. Use this for small edits in large files — you don't need to have read the whole file to use it. The tool refuses if oldString isn't found or is ambiguous, so it's safe.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      path: { type: "string", description: "Repo-relative path." },
+      branch: { type: "string" },
+      oldString: {
+        type: "string",
+        description:
+          "A unique snippet of the current file. Must appear EXACTLY ONCE unless replaceAll is true. Include 1-3 lines of surrounding context so the match is reliably unique.",
+      },
+      newString: {
+        type: "string",
+        description: "Replacement text. May be empty to delete.",
+      },
+      message: { type: "string", description: "Commit message (one line)." },
+      replaceAll: {
+        type: "boolean",
+        description: "If true, replace every occurrence. Default false (must match exactly once).",
+      },
+    },
+    required: ["path", "branch", "oldString", "newString", "message"],
+  },
+  defaultAuthority: "auto",
+  describeAction: (i) => `Patch ${i.path} on ${i.branch}`,
+  execute: async (i) => {
+    // GUARDRAIL: refuse protected paths
+    const check = isPathProtected(i.path);
+    if (check.protected) {
+      throw new Error(
+        `Refusing to patch ${i.path} — matches guardrail rule ${check.rule}.`
+      );
+    }
+
+    // Read current file
+    const read: any = await ghJson(
+      `/${repoPath}/contents/${encodeURIComponent(i.path)}?ref=${encodeURIComponent(i.branch)}`
+    );
+    if (Array.isArray(read) || read.type !== "file") {
+      throw new Error(`${i.path} is not a file on branch ${i.branch}`);
+    }
+    const currentContent = Buffer.from(read.content, read.encoding || "base64").toString("utf-8");
+
+    // Find + verify uniqueness
+    const occurrences = currentContent.split(i.oldString).length - 1;
+    if (occurrences === 0) {
+      throw new Error(
+        `oldString not found in ${i.path}. Make sure it matches exactly (whitespace, line endings). ` +
+          `File is ${currentContent.length} bytes on branch ${i.branch}.`
+      );
+    }
+    if (occurrences > 1 && !i.replaceAll) {
+      throw new Error(
+        `oldString matches ${occurrences} times in ${i.path}. Add more surrounding context so the match is unique, or pass replaceAll=true.`
+      );
+    }
+
+    // Replace
+    const newContent = i.replaceAll
+      ? currentContent.split(i.oldString).join(i.newString)
+      : currentContent.replace(i.oldString, i.newString);
+
+    // Write back via the same contents PUT
+    const data: any = await ghJson(
+      `/${repoPath}/contents/${encodeURIComponent(i.path)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          message: i.message,
+          content: Buffer.from(newContent, "utf-8").toString("base64"),
+          branch: i.branch,
+          sha: read.sha,
+        }),
+      }
+    );
+
+    return {
+      path: i.path,
+      occurrencesReplaced: i.replaceAll ? occurrences : 1,
+      newFileSize: newContent.length,
+      previousFileSize: currentContent.length,
+      commitSha: data.commit?.sha,
+    };
+  },
+};
+
 export const githubCreatePrTool: AgentTool<{
   title: string;
   body: string;
@@ -461,6 +557,7 @@ export const allGithubTools = [
   githubSearchCodeTool,
   githubCreateBranchTool,
   githubWriteFileTool,
+  githubPatchFileTool,
   githubCreatePrTool,
   githubMergePrTool,
   submitImplementationTool,

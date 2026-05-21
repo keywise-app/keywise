@@ -195,10 +195,13 @@ export async function runAgent(
           if (authority === "auto") {
             const out = await tool.execute(input, ctx);
             await logAction(supabase, ctx, tool, "auto", "executed", reasoning, input, out);
+            // Tool results can be large (a single source file can be 50KB+).
+            // Cap at 80KB (~20K tokens) so big files reach the agent intact
+            // but a runaway tool can't blow the context window.
             toolResults.push({
               type: "tool_result",
               tool_use_id: block.id,
-              content: JSON.stringify(out).slice(0, 8000),
+              content: JSON.stringify(out).slice(0, 80_000),
             });
           } else if (authority === "approve") {
             const queued = await queueApproval(ctx, tool, input, reasoning);
