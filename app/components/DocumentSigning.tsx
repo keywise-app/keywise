@@ -261,7 +261,7 @@ export default function DocumentSigning({ token, tenantName, documentName, docum
           fontSize: 16, fontWeight: 700, cursor: canSign ? 'pointer' : 'default',
           transition: 'background 0.2s',
         }}>
-        {submitting ? 'Signing…' : '✍️ Sign Document'}
+        {submitting ? 'Signing…' : tenantNotes && Object.values(tenantNotes).some(v => v.trim()) ? '✍️ Sign Document & Submit Notes' : '✍️ Sign Document'}
       </button>
 
       {!canSign && (
