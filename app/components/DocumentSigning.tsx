@@ -33,7 +33,7 @@ type Props = {
   onSigned: () => void;
 };
 
-export default function DocumentSigning({ token, tenantName, documentName, documentType, fileUrl, onSigned }: Props) {
+export default function DocumentSigning({ token, tenantName, documentName, documentType, fileUrl, tenantNotes, onSigned }: Props) {
   const [tab, setTab] = useState<'draw' | 'type'>('draw');
   const [typedName, setTypedName] = useState(tenantName);
   const [agreed, setAgreed] = useState(false);
