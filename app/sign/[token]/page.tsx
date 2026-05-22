@@ -213,6 +213,7 @@ export default function SignPage() {
               documentName={docData.document_name}
               documentType={docData.document_type}
               fileUrl={docData.file_url}
+              tenantNotes={tenantNotes}
               onSigned={() => setState('signed')}
             />
           </>
