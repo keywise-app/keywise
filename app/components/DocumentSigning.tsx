@@ -29,6 +29,7 @@ type Props = {
   documentName: string;
   documentType: string;
   fileUrl?: string;
+  tenantNotes?: Record<string, string>;
   onSigned: () => void;
 };
 
