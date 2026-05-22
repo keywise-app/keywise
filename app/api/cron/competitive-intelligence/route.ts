@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { proposeToQueue } from '@/agent-tools/pipeline/propose';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -77,6 +78,54 @@ IMPORTANT: Return ONLY a valid JSON object. No markdown, no code blocks, no expl
     competitor_updates: intelligence.competitor_updates || [],
     status: 'new',
   }).select().single();
+
+  // Mirror each urgent + opportunity item into build_queue.
+  // 'defensive' items → feature (we need to ship a counter); everything else
+  // gets categorized by `type` if available, otherwise defaults to 'feature'.
+  type IntelItem = {
+    title?: string;
+    description?: string;
+    competitor?: string;
+    source?: string;
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+    type?: string;
+    effort?: string;
+  };
+  const mirror = async (items: IntelItem[] | undefined, defaultPriority: 'high' | 'medium') => {
+    if (!Array.isArray(items)) return;
+    for (const item of items) {
+      const title = (item.title || '').trim();
+      if (!title) continue;
+      const t = (item.type || '').toLowerCase();
+      const category: 'feature' | 'marketing' | 'bug' =
+        t === 'marketing' || t === 'campaign' || t === 'content'
+          ? 'marketing'
+          : t === 'bug' || t === 'defect'
+            ? 'bug'
+            : 'feature';
+      try {
+        await proposeToQueue({
+          title,
+          description:
+            (item.description || '') +
+            (item.competitor ? `\n\nCompetitor: ${item.competitor}` : '') +
+            (item.source ? `\n\nSource: ${item.source}` : '') +
+            (item.effort ? `\n\nEstimated effort: ${item.effort}` : ''),
+          sourceAgent: 'competitive_intel',
+          category,
+          priority: item.priority || defaultPriority,
+          rationale:
+            item.competitor
+              ? `Competitive intel — ${item.competitor}`
+              : 'Competitive intel daily report',
+        });
+      } catch (e) {
+        console.error('[competitive-intel] build_queue mirror failed:', e);
+      }
+    }
+  };
+  await mirror(intelligence.urgent, 'high');
+  await mirror(intelligence.opportunities, 'medium');
 
   // Send email
   const urgentItems = intelligence.urgent || [];

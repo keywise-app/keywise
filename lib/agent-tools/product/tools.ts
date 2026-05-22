@@ -4,6 +4,7 @@
 
 import type { AgentTool } from "@/agents-framework/types";
 import { cpoConfig } from "@/agents/cpo/config";
+import { proposeToQueue } from "@/agent-tools/pipeline/propose";
 
 // ─────────────────────────────────────────────────────────────────
 // CPO context reader — reads lib/agents/cpo/context.md at runtime
@@ -283,10 +284,44 @@ export const productProposeTool: AgentTool<{
       .select("id")
       .single();
     if (error) throw error;
+
+    // Mirror into the unified build_queue. Best-effort: a failure here must NOT
+    // break the existing CPO path. Bug-ish severities (critical/high) → 'bug';
+    // medium/low → 'feature'. Severity maps 1:1 to build_queue priority.
+    let buildQueueId: string | null = null;
+    let buildQueueDeduped = false;
+    try {
+      const isBug =
+        i.severity === "critical" ||
+        /\b(bug|broken|fix|error|crash|fail|regression)\b/i.test(
+          i.title + " " + i.description,
+        );
+      const res = await proposeToQueue({
+        title,
+        description: i.description,
+        sourceAgent: "cpo",
+        category: isBug ? "bug" : "feature",
+        priority: i.severity,
+        rationale: `CPO proposal against ${i.affected_route}`,
+      });
+      if ("id" in res && res.id) buildQueueId = res.id;
+      else if ("existingId" in res) {
+        buildQueueId = res.existingId;
+        buildQueueDeduped = true;
+      }
+    } catch (e) {
+      // Swallow — the proposal is already in product_proposals; the mirror is
+      // additive. The cron route will pick this up on its next pass once
+      // build_queue is reachable.
+      console.error("[product_propose] build_queue mirror failed:", e);
+    }
+
     return {
       proposalId: data.id,
       reviewUrl: "/admin/agents/product-proposals",
       titleTruncated: title !== i.title,
+      buildQueueId,
+      buildQueueDeduped,
     };
   },
 };

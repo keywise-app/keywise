@@ -192,14 +192,33 @@ export const createAdTool: AgentTool<{
   describeAction: (i) =>
     `New ad in adgroup ${i.adGroupId}: "${i.headlines.slice(0, 2).join(" | ")}..."`,
   estimateImpact: () => "TBD — depends on CTR/CVR vs current ads",
-  execute: async (i) =>
-    ads.createResponsiveSearchAd(
+  execute: async (i) => {
+    const result = await ads.createResponsiveSearchAd(
       i.campaignId,
       i.adGroupId,
       i.headlines,
       i.descriptions,
-      i.finalUrls
-    ),
+      i.finalUrls,
+    );
+    // Mirror ad creation into build_queue with category='marketing'.
+    // Marketing category never auto-ships — Chris approves in the dashboard.
+    try {
+      const { proposeToQueue } = await import("@/agent-tools/pipeline/propose");
+      await proposeToQueue({
+        title: `Google Ads: ${i.headlines[0] ?? "(no headline)"}`,
+        description: i.rationale +
+          "\n\n**Headlines:**\n- " + i.headlines.join("\n- ") +
+          "\n\n**Descriptions:**\n- " + i.descriptions.join("\n- "),
+        sourceAgent: "cmo",
+        category: "marketing",
+        priority: "medium",
+        rationale: `Responsive Search Ad draft in adgroup ${i.adGroupId}`,
+      });
+    } catch (e) {
+      console.error("[ads_create] build_queue mirror failed:", e);
+    }
+    return result;
+  },
 };
 
 export const allAdsTools = [
