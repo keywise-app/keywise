@@ -119,6 +119,21 @@ const implementProposalTask: AgentTask = {
     "something wired the agent wrong — call report_failure and stop.)",
 };
 
+const processBuildQueueTask: AgentTask = {
+  id: "process_build_queue",
+  description:
+    "Pick the next non-conflicting queued build_queue item, ship a branch + PR.",
+  tier: "strategic",
+  maxIterations: devConfig.maxIterations,
+  // Prompt is supplied via promptOverride from the cron route. The route does
+  // the picker SQL deterministically and passes the chosen item JSON to the
+  // agent. If you see the placeholder below verbatim, something wired the
+  // agent wrong — call report_failure and stop.
+  prompt:
+    "(This should be overridden by /api/cron/agents/dev/process_build_queue. " +
+    "If you see this verbatim, call report_failure and stop.)",
+};
+
 export const devRole: AgentRole = {
   id: "dev",
   title: "Dev Agent",
@@ -130,5 +145,6 @@ export const devRole: AgentRole = {
   tools: [...allGithubTools],
   tasks: {
     implement_proposal: implementProposalTask,
+    process_build_queue: processBuildQueueTask,
   },
 };

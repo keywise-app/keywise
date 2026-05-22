@@ -3,6 +3,7 @@
 // Drafts go to a `blog_drafts` table; publish_to_prod requires approval.
 
 import type { AgentTool } from "@/agents-framework/types";
+import { proposeToQueue } from "@/agent-tools/pipeline/propose";
 
 export const draftBlogPostTool: AgentTool<{
   targetKeyword: string;
@@ -67,7 +68,25 @@ export const draftBlogPostTool: AgentTool<{
       .select("id")
       .single();
     if (error) throw error;
-    return { draftId: data.id, previewUrl: `/admin/agents` };
+
+    // Mirror into build_queue with category='content'. Best-effort.
+    let buildQueueId: string | null = null;
+    try {
+      const res = await proposeToQueue({
+        title: i.title,
+        description: i.rationale + "\n\n---\n\n" + i.markdownContent.slice(0, 4000),
+        sourceAgent: "cmo",
+        category: "content",
+        priority: "medium",
+        rationale: `Blog draft targeting "${i.targetKeyword}". draft_id=${data.id}`,
+      });
+      if ("id" in res && res.id) buildQueueId = res.id;
+      else if ("existingId" in res) buildQueueId = res.existingId;
+    } catch (e) {
+      console.error("[content_draft_blog_post] build_queue mirror failed:", e);
+    }
+
+    return { draftId: data.id, previewUrl: `/admin/agents`, buildQueueId };
   },
 };
 
