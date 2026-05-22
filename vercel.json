@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/competitive-intelligence",
-      "schedule": "0 6 * * *"
+      "schedule": "0 13 * * 1"
     },
     {
       "path": "/api/cron/agents/cmo/daily_audit",
