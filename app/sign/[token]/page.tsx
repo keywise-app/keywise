@@ -29,6 +29,13 @@ export default function SignPage() {
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [signedAt, setSignedAt] = useState('');
+  const [tenantNotes, setTenantNotes] = useState<Record<string, string>>({});
+  const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
+
+  const toggleRoom = (roomName: string) =>
+    setExpandedRooms(prev => ({ ...prev, [roomName]: !prev[roomName] }));
+  const setNote = (roomName: string, value: string) =>
+    setTenantNotes(prev => ({ ...prev, [roomName]: value }));
 
   useEffect(() => {
     if (!token) return;
