@@ -136,6 +136,7 @@ export default function DocumentSigning({ token, tenantName, documentName, docum
           signature_data: getSignatureData(),
           signature_type: tab,
           signer_name: typedName || tenantName,
+          ...(tenantNotes && Object.values(tenantNotes).some(v => v.trim()) ? { tenant_notes: tenantNotes } : {}),
         }),
       });
       const data = await res.json();
