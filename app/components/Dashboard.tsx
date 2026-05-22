@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, btn, card } from '../lib/theme';
+import FmvRefineModal, { type FmvContext } from './FmvRefineModal';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -572,6 +573,7 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [refineLeaseId, setRefineLeaseId] = useState<string | null>(null);
 
   // Load cached analyses
   useEffect(() => {
@@ -585,7 +587,7 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
     }
   }, [analyses]);
 
-  const runAnalysis = async (lease: any) => {
+  const runAnalysis = async (lease: any, fmvCtx?: FmvContext) => {
     setAnalyzing(lease.id);
     const { data: { user } } = await supabase.auth.getUser();
     try {
@@ -596,6 +598,7 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
           user_id: user?.id,
           property: lease.property,
           current_rent: lease.rent,
+          ...(fmvCtx || {}),
         }),
       });
       if (res.ok) {
@@ -699,7 +702,7 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
                   <div style={{ fontSize: 12, color: T.inkMuted }}>Current: ${(lease.rent || 0).toLocaleString()}/mo · {lease.tenant_name}</div>
                 </div>
                 {!a && (
-                  <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id}
+                  <button onClick={() => setRefineLeaseId(lease.id)} disabled={analyzing === lease.id}
                     style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: analyzing === lease.id ? 0.6 : 1, whiteSpace: 'nowrap' as const }}>
                     {analyzing === lease.id ? '✦ Analyzing...' : '✦ Analyze Rent'}
                   </button>
@@ -751,6 +754,21 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
         })}
       </div>
     </div>
+
+    {/* FMV Refine Modal */}
+    {refineLeaseId && (() => {
+      const lease = activeLeases.find(l => l.id === refineLeaseId);
+      if (!lease) return null;
+      return (
+        <FmvRefineModal
+          onClose={() => setRefineLeaseId(null)}
+          onRun={async (ctx) => {
+            setRefineLeaseId(null);
+            await runAnalysis(lease, ctx);
+          }}
+        />
+      );
+    })()}
     </div>
   );
 }

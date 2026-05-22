@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import AddTenantWizard from './AddTenantWizard';
+import FmvRefineModal, { type FmvContext } from './FmvRefineModal';
 import Inspections from './Inspections';
 import RentalApplications from './RentalApplications';
 
@@ -276,7 +277,6 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
   const [renewalTerm, setRenewalTerm] = useState('12');
   const [responseDate, setResponseDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
   const [showFmvRefine, setShowFmvRefine] = useState(false);
-  const [fmvContext, setFmvContext] = useState({ improvements: '', issues: '', localContext: '', tenantNotes: '', knownComps: '', pricingStrategy: '', customNotes: '' });
   const [manualOverride, setManualOverride] = useState({ rent: '', reasoning: '' });
   const [showRenewalPreview, setShowRenewalPreview] = useState(false);
 
@@ -1765,64 +1765,28 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
       {/* FMV Refine Modal */}
       {showFmvRefine && selected && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
-          onClick={() => setShowFmvRefine(false)}>
-          <div style={{ background: T.surface, borderRadius: 16, padding: isMobile ? 24 : 28, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(15,52,96,0.25)' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Refine Your Analysis</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Add context to get a more accurate estimate. All fields optional.</div>
-
-            {[
-              { key: 'improvements', lbl: 'Recent improvements', ph: 'e.g. kitchen reno 2024, new HVAC, fresh paint' },
-              { key: 'issues', lbl: 'Known issues', ph: 'e.g. deferred roof maintenance, old appliances' },
-              { key: 'localContext', lbl: 'Local context', ph: 'e.g. new park 2 blocks away, school district upgraded' },
-              { key: 'tenantNotes', lbl: 'Tenant quality', ph: 'e.g. long-term tenant, always pays early, takes care of property' },
-              { key: 'knownComps', lbl: 'Comparable rentals you know about', ph: 'e.g. unit across street rents for $2400, similar 2bd/1ba' },
-              { key: 'customNotes', lbl: 'Anything else', ph: 'Other context the AI should know' },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={label}>{f.lbl}</label>
-                <textarea value={(fmvContext as any)[f.key]} onChange={e => setFmvContext(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  placeholder={f.ph} style={{ ...input, minHeight: 50, resize: 'vertical' as const }} />
-              </div>
-            ))}
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={label}>Pricing strategy</label>
-              <select value={fmvContext.pricingStrategy} onChange={e => setFmvContext(prev => ({ ...prev, pricingStrategy: e.target.value }))} style={input}>
-                <option value="">No preference</option>
-                <option value="Maximize revenue">Maximize revenue</option>
-                <option value="Retain tenant">Retain good tenant</option>
-                <option value="Match market exactly">Match market exactly</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={async () => {
-                setShowFmvRefine(false);
-                setRenewalLoading(true);
-                const { data: { user } } = await supabase.auth.getUser();
-                try {
-                  const res = await fetch('/api/market-analysis', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      user_id: user?.id, property: selected.property, current_rent: selected.rent,
-                      beds: selected.beds, baths: selected.baths, sqft: selected.sqft,
-                      differentiators: (selected as any).differentiators || '',
-                      ...fmvContext,
-                    }),
-                  });
-                  if (res.ok) { const data = await res.json(); if (!data.error) { setRenewalMarket(data); setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent)); } }
-                } catch {}
-                setRenewalLoading(false);
-              }} style={{ ...btn.primary, flex: 1 }}>
-                🔍 Run Analysis
-              </button>
-              <button onClick={() => setShowFmvRefine(false)} style={{ ...btn.ghost }}>Cancel</button>
-            </div>
-          </div>
-        </div>
+        <FmvRefineModal
+          onClose={() => setShowFmvRefine(false)}
+          onRun={async (ctx) => {
+            setShowFmvRefine(false);
+            setRenewalLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            try {
+              const res = await fetch('/api/market-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: user?.id, property: selected.property, current_rent: selected.rent,
+                  beds: selected.beds, baths: selected.baths, sqft: selected.sqft,
+                  differentiators: (selected as any).differentiators || '',
+                  ...ctx,
+                }),
+              });
+              if (res.ok) { const data = await res.json(); if (!data.error) { setRenewalMarket(data); setProposedRent(String(data.recommended_rent || data.estimated_market_rent || selected.rent)); } }
+            } catch {}
+            setRenewalLoading(false);
+          }}
+        />
       )}
 
       {/* Archive / Delete Modal */}
