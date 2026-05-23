@@ -628,26 +628,6 @@ function buildUnitItems(units: any[], leases: any[], buildings: any[] = []): Uni
     });
   }
 
-  // Assign unit letters to items at multi-unit buildings that lack unit numbers
-  for (const building of buildings) {
-    if ((building.num_units || 1) <= 1) continue;
-    const addr = (building.address || '').toLowerCase().trim();
-    const buildingItems = items.filter(i => {
-      if (i.id.startsWith('vacant_')) return false;
-      const itemAddr = (i.address || '').toLowerCase().trim();
-      return itemAddr === addr || itemAddr.startsWith(addr) || addr.startsWith(itemAddr);
-    });
-    if (buildingItems.length === 0) continue;
-    let letter = 'A'.charCodeAt(0);
-    for (const item of buildingItems) {
-      if (!item.unitNumber) {
-        item.unitNumber = String.fromCharCode(letter);
-        item.address = building.address + ', Unit ' + item.unitNumber;
-      }
-      letter++;
-    }
-  }
-
   // Generate placeholder entries for missing units (e.g. vacant units never added to properties table)
   for (const building of buildings) {
     const expected = building.num_units || 1;
@@ -731,6 +711,23 @@ function MarketInsights({ units, leases, buildings, onNavigate, isMobile }: { un
   const [refineItemId, setRefineItemId] = useState<string | null>(null);
 
   const allItems = buildUnitItems(units, leases, buildings);
+
+  // Auto-assign unit letters when multiple items share the same base address
+  const addrGroups: Record<string, UnitItem[]> = {};
+  for (const item of allItems) {
+    const base = (item.address || '').replace(/,?\s*(unit|apt|#)\s*\w+/gi, '').split(',')[0].toLowerCase().trim();
+    (addrGroups[base] ??= []).push(item);
+  }
+  for (const group of Object.values(addrGroups)) {
+    if (group.length < 2) continue;
+    let letter = 'A'.charCodeAt(0);
+    for (const item of group) {
+      if (!item.unitNumber) {
+        item.unitNumber = String.fromCharCode(letter);
+      }
+      letter++;
+    }
+  }
 
   // Load cached FMV from DB (fmv_cache column) — no sessionStorage, no AI call
   useEffect(() => {
