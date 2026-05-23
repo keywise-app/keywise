@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "lib/agents/cpo/**/*.ts",
+    "lib/agents/cmo/**/*.ts",
+    "lib/agents/dev/**/*.ts",
+    "lib/agents-framework/**/*.ts",
+    "lib/agent-tools/**/*.ts",
+    "app/admin/agents/**/*.tsx",
+    "middleware.ts",
+    "app/api/agents/product-proposals/**/*.ts",
+    "app/api/agents/implementations/**/*.ts",
+    "app/api/webhooks/**/*.ts",
+    "next-env.d.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}
