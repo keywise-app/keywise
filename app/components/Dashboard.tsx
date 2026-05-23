@@ -568,27 +568,186 @@ function ActiveLeasesTable({ leases, onNavigate, isMobile }: { leases: any[]; on
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 // ── MARKET INSIGHTS ──────────────────────────────────────────────────────────
-function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean }) {
+type UnitItem = {
+  id: string; unitId: string; address: string; unitNumber: string | null;
+  beds: number | null; baths: number | null; sqft: number | null; differentiators: string | null;
+  currentRent: number | null; tenantName: string | null; leaseId: string | null;
+  cachedFmv: number | null; fmvCache: any | null; fmvCalculatedAt: string | null; updatedAt: string | null;
+};
+
+// Build a unified list of unit items for FMV analysis.
+// Each unit gets matched to its active lease (if any) via address.
+function buildUnitItems(units: any[], leases: any[], buildings: any[] = []): UnitItem[] {
+  const activeLeases = leases.filter(l => l.property && !l.archived);
+  const usedLeaseIds = new Set<string>();
+  const items: UnitItem[] = [];
+
+  for (const unit of units) {
+    const unitAddr = (unit.address || '').toLowerCase().trim();
+    const lease = activeLeases.find(l => {
+      if (usedLeaseIds.has(l.id)) return false;
+      const la = (l.property || '').toLowerCase().trim();
+      return la === unitAddr || la.startsWith(unitAddr) || unitAddr.startsWith(la);
+    });
+    if (lease) usedLeaseIds.add(lease.id);
+
+    items.push({
+      id: unit.id,
+      unitId: unit.id,
+      address: unit.address || '',
+      unitNumber: unit.unit_number || null,
+      beds: unit.beds ?? null,
+      baths: unit.baths ?? null,
+      sqft: unit.sqft ?? null,
+      differentiators: unit.differentiators ?? null,
+      currentRent: lease?.rent ?? unit.current_rent ?? null,
+      tenantName: lease?.tenant_name ?? null,
+      leaseId: lease?.id ?? null,
+      cachedFmv: unit.estimated_market_rent ?? lease?.estimated_market_rent ?? null,
+      fmvCache: unit.fmv_cache ?? null,
+      fmvCalculatedAt: unit.fmv_calculated_at ?? null,
+      updatedAt: unit.updated_at ?? null,
+    });
+  }
+
+  // Also include leases that didn't match any unit (legacy data / address mismatch)
+  for (const lease of activeLeases) {
+    if (usedLeaseIds.has(lease.id)) continue;
+    if (!lease.rent || !lease.property) continue;
+    items.push({
+      id: `lease_${lease.id}`,
+      unitId: '',
+      address: lease.property,
+      unitNumber: null,
+      beds: null, baths: null, sqft: null, differentiators: null,
+      currentRent: lease.rent,
+      tenantName: lease.tenant_name,
+      leaseId: lease.id,
+      cachedFmv: lease.estimated_market_rent ?? null,
+      fmvCache: null, fmvCalculatedAt: null, updatedAt: null,
+    });
+  }
+
+  // Assign unit letters to items at multi-unit buildings that lack unit numbers
+  for (const building of buildings) {
+    if ((building.num_units || 1) <= 1) continue;
+    const addr = (building.address || '').toLowerCase().trim();
+    const buildingItems = items.filter(i => {
+      if (i.id.startsWith('vacant_')) return false;
+      const itemAddr = (i.address || '').toLowerCase().trim();
+      return itemAddr === addr || itemAddr.startsWith(addr) || addr.startsWith(itemAddr);
+    });
+    if (buildingItems.length === 0) continue;
+    let letter = 'A'.charCodeAt(0);
+    for (const item of buildingItems) {
+      if (!item.unitNumber) {
+        item.unitNumber = String.fromCharCode(letter);
+        item.address = building.address + ', Unit ' + item.unitNumber;
+      }
+      letter++;
+    }
+  }
+
+  // Generate placeholder entries for missing units (e.g. vacant units never added to properties table)
+  for (const building of buildings) {
+    const expected = building.num_units || 1;
+    const tracked = units.filter(u => u.building_id === building.id);
+    const missing = expected - tracked.length;
+    if (missing <= 0) continue;
+    const hasUnitNumbers = tracked.some((u: any) => u.unit_number);
+    const trackedNumbers = new Set(tracked.map((u: any) => (u.unit_number || '').toUpperCase()));
+    let added = 0;
+    if (hasUnitNumbers) {
+      // Match existing naming scheme (A, B, C… or 1, 2, 3…)
+      const firstTracked = tracked.find((u: any) => u.unit_number)?.unit_number || '';
+      const useLetters = /^[A-Z]$/i.test(firstTracked);
+      let candidate = useLetters ? 'A'.charCodeAt(0) : 1;
+      while (added < missing) {
+        const label = useLetters ? String.fromCharCode(candidate) : String(candidate);
+        if (!trackedNumbers.has(label.toUpperCase())) {
+          items.push({
+            id: `vacant_${building.id}_${label}`,
+            unitId: '',
+            address: building.address + ', Unit ' + label,
+            unitNumber: label,
+            beds: null, baths: null, sqft: null, differentiators: null,
+            currentRent: null, tenantName: null, leaseId: null,
+            cachedFmv: null, fmvCache: null, fmvCalculatedAt: null, updatedAt: null,
+          });
+          added++;
+        }
+        candidate++;
+        if (useLetters && candidate > 'Z'.charCodeAt(0)) break;
+        if (!useLetters && candidate > 100) break;
+      }
+    } else {
+      // No unit numbers in use — assign letters starting from A
+      let candidate = 'A'.charCodeAt(0);
+      // Reserve A for the existing tracked unit
+      const startLabel = String.fromCharCode(candidate + tracked.length);
+      candidate = startLabel.charCodeAt(0);
+      for (let i = 0; i < missing; i++) {
+        const label = String.fromCharCode(candidate);
+        items.push({
+          id: `vacant_${building.id}_${label}`,
+          unitId: '',
+          address: building.address + ', Unit ' + label,
+          unitNumber: label,
+          beds: null, baths: null, sqft: null, differentiators: null,
+          currentRent: null, tenantName: null, leaseId: null,
+          cachedFmv: null, fmvCache: null, fmvCalculatedAt: null, updatedAt: null,
+        });
+        candidate++;
+        if (candidate > 'Z'.charCodeAt(0)) break;
+      }
+    }
+  }
+
+  return items;
+}
+
+function isStale(item: UnitItem): boolean {
+  if (item.id.startsWith('vacant_')) return false; // placeholder units — analyze individually
+  if (!item.fmvCalculatedAt) return true;
+  if (!item.updatedAt) return false;
+  return new Date(item.updatedAt) > new Date(item.fmvCalculatedAt);
+}
+
+function timeAgo(dateStr: string): string {
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : `${months} months ago`;
+}
+
+function MarketInsights({ units, leases, buildings, onNavigate, isMobile }: { units: any[]; leases: any[]; buildings: any[]; onNavigate: (p: string) => void; isMobile: boolean }) {
   const [analyses, setAnalyses] = useState<Record<string, any>>({});
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState('');
   const [expanded, setExpanded] = useState(false);
-  const [refineLeaseId, setRefineLeaseId] = useState<string | null>(null);
+  const [refineItemId, setRefineItemId] = useState<string | null>(null);
 
-  // Load cached analyses
-  useEffect(() => {
-    const cached = sessionStorage.getItem('kw_market_analyses');
-    if (cached) try { setAnalyses(JSON.parse(cached)); } catch {}
-  }, []);
+  const allItems = buildUnitItems(units, leases, buildings);
 
+  // Load cached FMV from DB (fmv_cache column) — no sessionStorage, no AI call
   useEffect(() => {
-    if (Object.keys(analyses).length > 0) {
-      sessionStorage.setItem('kw_market_analyses', JSON.stringify(analyses));
+    const fromDb: Record<string, any> = {};
+    for (const item of allItems) {
+      if (item.fmvCache && typeof item.fmvCache === 'object') {
+        fromDb[item.id] = item.fmvCache;
+      }
     }
-  }, [analyses]);
+    if (Object.keys(fromDb).length > 0) {
+      setAnalyses(prev => ({ ...fromDb, ...prev }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [units, leases]);
 
-  const runAnalysis = async (lease: any, fmvCtx?: FmvContext) => {
-    setAnalyzing(lease.id);
+  const runAnalysis = async (item: UnitItem, fmvCtx?: FmvContext) => {
+    setAnalyzing(item.id);
     const { data: { user } } = await supabase.auth.getUser();
     try {
       const res = await fetch('/api/market-analysis', {
@@ -596,41 +755,71 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user?.id,
-          property: lease.property,
-          current_rent: lease.rent,
+          property: item.address,
+          current_rent: item.currentRent || 0,
+          beds: item.beds,
+          baths: item.baths,
+          sqft: item.sqft,
+          differentiators: item.differentiators,
           ...(fmvCtx || {}),
         }),
       });
       if (res.ok) {
         const data = await res.json();
         if (!data.error) {
-          setAnalyses(prev => ({ ...prev, [lease.id]: data }));
-          await supabase.from('leases').update({
-            estimated_market_rent: data.estimated_market_rent,
-            market_value_updated_at: new Date().toISOString(),
-          }).eq('id', lease.id);
+          setAnalyses(prev => ({ ...prev, [item.id]: data }));
+          const now = new Date().toISOString();
+          if (item.unitId) {
+            await supabase.from('properties').update({
+              estimated_market_rent: data.estimated_market_rent,
+              market_value_updated_at: now,
+              fmv_cache: data,
+              fmv_calculated_at: now,
+            }).eq('id', item.unitId);
+          }
+          if (item.leaseId) {
+            await supabase.from('leases').update({
+              estimated_market_rent: data.estimated_market_rent,
+              market_value_updated_at: now,
+            }).eq('id', item.leaseId);
+          }
         }
       }
     } catch {}
     setAnalyzing(null);
   };
 
+  const staleItems = allItems.filter(isStale);
+  const freshCount = allItems.length - staleItems.length;
+  const allCurrent = staleItems.length === 0;
+
   const refreshAll = async () => {
+    if (allCurrent) return;
     setRefreshingAll(true);
-    for (const lease of activeLeases) { await runAnalysis(lease); }
+    for (let i = 0; i < staleItems.length; i++) {
+      setRefreshProgress(`Refreshing ${i + 1} of ${allItems.length} units (${freshCount} current)`);
+      await runAnalysis(staleItems[i]);
+    }
+    setRefreshProgress('');
     setRefreshingAll(false);
   };
 
-  const activeLeases = leases.filter(l => l.rent && l.property);
-  if (activeLeases.length === 0) return null;
+  if (allItems.length === 0) return null;
 
-  const displayLeases = expanded ? activeLeases : activeLeases.slice(0, 3);
+  const displayItems = expanded ? allItems : allItems.slice(0, 3);
 
-  const analyzedCount = activeLeases.filter(l => analyses[l.id]).length;
-  const totalCurrent = activeLeases.reduce((s, l) => s + (l.rent || 0), 0);
-  const totalMarket = activeLeases.reduce((s, l) => s + (analyses[l.id]?.estimated_market_rent || l.estimated_market_rent || l.rent || 0), 0);
+  const analyzedCount = allItems.filter(item => analyses[item.id] || item.fmvCache).length;
+  const leasedItems = allItems.filter(item => item.currentRent);
+  const vacantItems = allItems.filter(item => !item.currentRent);
+  const expectedUnits = buildings.reduce((s: number, b: any) => s + (b.num_units || 1), 0);
+  const missingUnits = Math.max(0, expectedUnits - units.length);
+  const totalCurrent = leasedItems.reduce((s, item) => s + (item.currentRent || 0), 0);
+  const totalMarket = allItems.reduce((s, item) => s + (analyses[item.id]?.estimated_market_rent || item.cachedFmv || item.currentRent || 0), 0);
   const opportunity = totalMarket - totalCurrent;
-  const belowMarket = activeLeases.filter(l => analyses[l.id] && (analyses[l.id].estimated_market_rent || 0) > (l.rent || 0)).length;
+  const belowMarket = leasedItems.filter(item => {
+    const fmv = analyses[item.id]?.estimated_market_rent || item.cachedFmv;
+    return fmv && fmv > (item.currentRent || 0);
+  }).length;
 
   return (
     <div>
@@ -642,11 +831,17 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
             <div>
               <div style={{ color: T.teal, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 4 }}>📊 Market Intelligence</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>Fair Market Rent Analysis</div>
+              <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>{allItems.length} unit{allItems.length !== 1 ? 's' : ''}{vacantItems.length > 0 ? ` · ${vacantItems.length} vacant` : ''}</div>
             </div>
-            <button onClick={refreshAll} disabled={refreshingAll}
-              style={{ background: T.teal, color: T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: refreshingAll ? 0.7 : 1, whiteSpace: 'nowrap' as const }}>
-              {refreshingAll ? '⟳ Analyzing...' : '🔄 Refresh All'}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <button onClick={refreshAll} disabled={refreshingAll || allCurrent}
+                style={{ background: allCurrent ? 'rgba(255,255,255,0.15)' : T.teal, color: allCurrent ? 'rgba(255,255,255,0.6)' : T.navy, border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allCurrent ? 'default' : 'pointer', fontFamily: 'inherit', opacity: refreshingAll ? 0.7 : 1, whiteSpace: 'nowrap' as const }}>
+                {refreshingAll ? '⟳ Analyzing...' : allCurrent ? '✓ All up to date' : `🔄 Refresh ${staleItems.length} stale`}
+              </button>
+              {refreshingAll && refreshProgress && (
+                <div style={{ fontSize: 10, opacity: 0.6 }}>{refreshProgress}</div>
+              )}
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
             <div>
@@ -654,7 +849,7 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
               <div style={{ fontSize: 20, fontWeight: 800 }}>${totalCurrent.toLocaleString()}<span style={{ fontSize: 12, opacity: 0.5 }}>/mo</span></div>
             </div>
             <div>
-              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>FAIR MARKET</div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4 }}>PORTFOLIO FMV</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: T.teal }}>${totalMarket.toLocaleString()}<span style={{ fontSize: 12, opacity: 0.5 }}>/mo</span></div>
             </div>
             <div>
@@ -668,50 +863,72 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
           </div>
           {belowMarket > 0 && (
             <div style={{ marginTop: 14, fontSize: 12, background: 'rgba(255,179,71,0.15)', borderRadius: 8, padding: '10px 14px' }}>
-              💡 <strong>{belowMarket}</strong> of your {activeLeases.length} units are below market rate. Consider increases at next renewal.
+              💡 <strong>{belowMarket}</strong> of your {leasedItems.length} leased units are below market rate. Consider increases at next renewal.
             </div>
           )}
-          {analyzedCount === 0 && (
+          {vacantItems.length > 0 && analyzedCount > 0 && (
+            <div style={{ marginTop: belowMarket > 0 ? 8 : 14, fontSize: 12, background: 'rgba(0,212,170,0.12)', borderRadius: 8, padding: '10px 14px' }}>
+              🏠 <strong>{vacantItems.length}</strong> vacant unit{vacantItems.length !== 1 ? 's' : ''} — FMV estimates help you price listings competitively.
+            </div>
+          )}
+          {missingUnits > 0 && (
+            <div style={{ marginTop: (belowMarket > 0 || vacantItems.length > 0) ? 8 : 14, fontSize: 12, background: 'rgba(255,179,71,0.15)', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span>⚠ Your buildings have <strong>{expectedUnits}</strong> units but only <strong>{units.length}</strong> are tracked. Add missing units for complete FMV analysis.</span>
+              <button onClick={() => onNavigate('portfolio')} style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>+ Add Units</button>
+            </div>
+          )}
+          {analyzedCount === 0 && missingUnits === 0 && (
             <div style={{ marginTop: 14, fontSize: 12, opacity: 0.7 }}>Click "Refresh All" to analyze fair market rent for all your units.</div>
           )}
         </div>
       </div>
 
-      {/* Per-lease details */}
+      {/* Per-unit details */}
       <div style={{ ...card }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Per-Unit Analysis</div>
-          <span style={{ fontSize: 11, color: T.inkMuted }}>{analyzedCount}/{activeLeases.length} analyzed</span>
+          <span style={{ fontSize: 11, color: T.inkMuted }}>{analyzedCount}/{allItems.length} analyzed</span>
         </div>
-        {activeLeases.length > 3 && (
+        {allItems.length > 3 && (
           <button onClick={() => setExpanded(!expanded)} style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {expanded ? 'Show less' : `Show all ${activeLeases.length}`}
+            {expanded ? 'Show less' : `Show all ${allItems.length}`}
           </button>
         )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {displayLeases.map(lease => {
-          const a = analyses[lease.id];
+        {displayItems.map(item => {
+          const a = analyses[item.id];
+          const isVacant = !item.leaseId && !item.currentRent;
+          const calcAt = item.fmvCalculatedAt || (a ? new Date().toISOString() : null);
+          const baseAddr = item.address?.replace(/,?\s*(unit|apt|#)\s*\w+/gi, '').split(',')[0]?.trim() || item.address;
+          const unitLabel = baseAddr + (item.unitNumber ? ' — Unit ' + item.unitNumber : '');
           return (
-            <div key={lease.id} style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14 }}>
+            <div key={item.id} style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: a ? 10 : 0 }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{lease.property?.split(',')[0]}</div>
-                  <div style={{ fontSize: 12, color: T.inkMuted }}>Current: ${(lease.rent || 0).toLocaleString()}/mo · {lease.tenant_name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{unitLabel}</div>
+                    {isVacant && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: T.inkMuted, background: T.border, borderRadius: 4, padding: '1px 6px', letterSpacing: '0.3px' }}>VACANT</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkMuted }}>
+                    {item.currentRent ? `Current: $${item.currentRent.toLocaleString()}/mo` : 'No active lease'}
+                    {item.tenantName ? ` · ${item.tenantName}` : ''}
+                    {item.beds || item.baths ? ` · ${item.beds || '?'}bd/${item.baths || '?'}ba` : ''}
+                  </div>
                 </div>
-                {!a && (
-                  <button onClick={() => setRefineLeaseId(lease.id)} disabled={analyzing === lease.id}
-                    style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: analyzing === lease.id ? 0.6 : 1, whiteSpace: 'nowrap' as const }}>
-                    {analyzing === lease.id ? '✦ Analyzing...' : '✦ Analyze Rent'}
-                  </button>
-                )}
+                <button onClick={() => setRefineItemId(item.id)} disabled={analyzing === item.id}
+                  style={{ background: a ? 'none' : T.navy, color: a ? T.tealDark : '#fff', border: a ? `1px solid ${T.border}` : 'none', borderRadius: T.radiusSm, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: analyzing === item.id ? 0.6 : 1, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+                  {analyzing === item.id ? '✦ Analyzing...' : a ? '↻ Refine' : '✦ Analyze'}
+                </button>
               </div>
 
               {a && (
                 <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isVacant ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
                     <div>
                       <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Market Rent</div>
                       <div style={{ fontWeight: 700, fontSize: 16, color: T.tealDark }}>${(a.estimated_market_rent || 0).toLocaleString()}</div>
@@ -720,11 +937,11 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
                       <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Range</div>
                       <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>${(a.market_rent_low || 0).toLocaleString()}–${(a.market_rent_high || 0).toLocaleString()}</div>
                     </div>
-                    {!isMobile && (
+                    {!isVacant && !isMobile && (
                       <div>
                         <div style={{ fontSize: 10, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Difference</div>
                         <div style={{ fontWeight: 700, fontSize: 13, color: (a.rent_difference || 0) > 0 ? T.greenDark : (a.rent_difference || 0) < 0 ? T.coral : T.navy }}>
-                          {(a.rent_difference || 0) > 0 ? '+' : ''}{(a.rent_difference ?? a.estimated_market_rent - lease.rent)?.toLocaleString()}/mo
+                          {(a.rent_difference || 0) > 0 ? '+' : ''}{(a.rent_difference ?? (a.estimated_market_rent - (item.currentRent || 0)))?.toLocaleString()}/mo
                         </div>
                       </div>
                     )}
@@ -735,16 +952,15 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
                   {a.neighborhood_trends && (
                     <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>{a.neighborhood_trends}</div>
                   )}
-                  <div style={{ display: 'flex', gap: 12, marginTop: 6, alignItems: 'center' }}>
-                    <button onClick={() => runAnalysis(lease)} disabled={analyzing === lease.id || refreshingAll}
-                      style={{ background: 'none', border: 'none', color: T.tealDark, fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      ↻ Refresh
-                    </button>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     {a.demand_indicator && (
                       <span style={{ fontSize: 10, color: T.inkMuted }}>Demand: <strong style={{ color: a.demand_indicator === 'high' ? T.greenDark : a.demand_indicator === 'low' ? T.coral : T.navy, textTransform: 'capitalize' }}>{a.demand_indicator}</strong></span>
                     )}
                     {a.data_confidence && (
                       <span style={{ fontSize: 10, color: T.inkMuted }}>Confidence: {a.data_confidence}</span>
+                    )}
+                    {calcAt && (
+                      <span style={{ fontSize: 10, color: T.inkMuted }}>Calculated {timeAgo(calcAt)}</span>
                     )}
                   </div>
                 </div>
@@ -756,15 +972,15 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
     </div>
 
     {/* FMV Refine Modal */}
-    {refineLeaseId && (() => {
-      const lease = activeLeases.find(l => l.id === refineLeaseId);
-      if (!lease) return null;
+    {refineItemId && (() => {
+      const item = allItems.find(i => i.id === refineItemId);
+      if (!item) return null;
       return (
         <FmvRefineModal
-          onClose={() => setRefineLeaseId(null)}
+          onClose={() => setRefineItemId(null)}
           onRun={async (ctx) => {
-            setRefineLeaseId(null);
-            await runAnalysis(lease, ctx);
+            setRefineItemId(null);
+            await runAnalysis(item, ctx);
           }}
         />
       );
@@ -775,6 +991,8 @@ function MarketInsights({ leases, isMobile }: { leases: any[]; isMobile: boolean
 
 export default function Dashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [leases, setLeases] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [maintenance, setMaintenance] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -795,16 +1013,20 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
     try {
       const now = new Date();
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
-      const [lRes, pRes, mRes, eRes] = await Promise.all([
+      const [lRes, pRes, mRes, eRes, uRes, bRes] = await Promise.all([
         supabase.from('leases').select('*').order('end_date', { ascending: true }),
         supabase.from('payments').select('*').gte('due_date', sixMonthsAgo).order('due_date', { ascending: false }),
         supabase.from('maintenance').select('*').order('created_at', { ascending: false }).limit(30),
         supabase.from('expenses').select('*').gte('date', sixMonthsAgo).order('date', { ascending: false }),
+        supabase.from('properties').select('id, address, unit_number, building_id, beds, baths, sqft, current_rent, differentiators, estimated_market_rent, market_value_updated_at, fmv_cache, fmv_calculated_at, updated_at').eq('is_unit', true).order('address'),
+        supabase.from('buildings').select('id, address, num_units').order('address'),
       ]);
       if (lRes.data) setLeases(lRes.data);
       if (pRes.data) setPayments(pRes.data);
       if (mRes.data) setMaintenance(mRes.data);
       if (eRes.data) setExpenses(eRes.data);
+      if (uRes.data) setUnits(uRes.data);
+      if (bRes.data) setBuildings(bRes.data);
     } catch (err) {
       console.error('[dashboard] fetchAll error:', err);
     } finally {
@@ -914,7 +1136,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
 
       {/* ── MARKET INSIGHTS ── */}
-      <MarketInsights leases={leases.filter(l => !l.archived)} isMobile={isMobile} />
+      <MarketInsights units={units} leases={leases.filter(l => !l.archived)} buildings={buildings} onNavigate={onNavigate} isMobile={isMobile} />
 
       {/* ── ROW 3: AI DAILY DIGEST (full width) ── */}
       <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />

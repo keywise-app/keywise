@@ -280,7 +280,7 @@ export default function Home() {
     const isWelcome = initialParams.get('welcome') === 'true';
     const isRecovery = initialHash.includes('type=recovery') || initialHash.includes('type=signup');
 
-    console.error('[auth] Init — search:', initialSearch, 'tenant:', isTenantFlow, 'recovery:', isRecovery);
+    console.log('[auth] Init — search:', initialSearch, 'tenant:', isTenantFlow, 'recovery:', isRecovery);
 
     // Clean auth hash fragments from URL (left by Supabase redirects)
     // Do NOT clean yet if we need to wait for session from the hash
@@ -296,7 +296,7 @@ export default function Home() {
       setSession(session);
       if (!session) { setLoading(false); return; }
 
-      console.error('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
+      console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 
       // Clean URL now that session is established
       if (isTenantFlow || isWelcome) window.history.replaceState({}, '', '/');
@@ -320,7 +320,7 @@ export default function Home() {
 
       // Safety net: create profile if trigger missed (handles orphaned auth.users)
       if (!profile) {
-        console.error('[auth] No profile found for', session.user.email, '— creating one');
+        console.log('[auth] No profile found for', session.user.email, '— creating one');
         try {
           const { data: created } = await supabase.from('profiles').upsert(
             { id: session.user.id, email: session.user.email, role: 'landlord' },
@@ -337,7 +337,7 @@ export default function Home() {
 
       if (isTenantFlow && profile?.role !== 'landlord') {
         // First-time tenant login via magic link — set role permanently
-        console.error('[auth] Setting role to tenant for:', session.user.email);
+        console.log('[auth] Setting role to tenant for:', session.user.email);
         await supabase.from('profiles').upsert(
           { id: session.user.id, email: session.user.email, role: 'tenant' },
           { onConflict: 'id' }
@@ -346,7 +346,7 @@ export default function Home() {
         setUserRole('tenant');
       } else if (profile?.role === 'tenant') {
         // Returning tenant — ALWAYS show tenant portal
-        console.error('[auth] Returning tenant:', session.user.email);
+        console.log('[auth] Returning tenant:', session.user.email);
         await linkLeaseByEmail();
         setUserRole('tenant');
       } else {
@@ -366,9 +366,9 @@ export default function Home() {
       if (session) {
         await resolveAuth(session);
       } else if (initialHash && initialHash.includes('access_token')) {
-        console.error('[auth] Waiting for session from hash token...');
+        console.log('[auth] Waiting for session from hash token...');
         setTimeout(() => {
-          if (!authResolved) { console.error('[auth] Hash token timeout'); setLoading(false); }
+          if (!authResolved) { console.log('[auth] Hash token timeout'); setLoading(false); }
         }, 8000);
       } else {
         setLoading(false);
@@ -379,7 +379,7 @@ export default function Home() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.error('[auth] Auth state change:', _event, session?.user?.email || 'none');
+      console.log('[auth] Auth state change:', _event, session?.user?.email || 'none');
       if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && session) {
         await resolveAuth(session);
       } else if (_event === 'SIGNED_OUT') {
