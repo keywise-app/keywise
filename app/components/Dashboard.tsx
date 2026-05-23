@@ -577,7 +577,7 @@ type UnitItem = {
 
 // Build a unified list of unit items for FMV analysis.
 // Each unit gets matched to its active lease (if any) via address.
-function buildUnitItems(units: any[], leases: any[]): UnitItem[] {
+function buildUnitItems(units: any[], leases: any[], buildings: any[] = []): UnitItem[] {
   const activeLeases = leases.filter(l => l.property && !l.archived);
   const usedLeaseIds = new Set<string>();
   const items: UnitItem[] = [];
@@ -628,10 +628,86 @@ function buildUnitItems(units: any[], leases: any[]): UnitItem[] {
     });
   }
 
+  // Assign unit letters to items at multi-unit buildings that lack unit numbers
+  for (const building of buildings) {
+    if ((building.num_units || 1) <= 1) continue;
+    const addr = (building.address || '').toLowerCase().trim();
+    const buildingItems = items.filter(i => {
+      if (i.id.startsWith('vacant_')) return false;
+      const itemAddr = (i.address || '').toLowerCase().trim();
+      return itemAddr === addr || itemAddr.startsWith(addr) || addr.startsWith(itemAddr);
+    });
+    if (buildingItems.length === 0) continue;
+    let letter = 'A'.charCodeAt(0);
+    for (const item of buildingItems) {
+      if (!item.unitNumber) {
+        item.unitNumber = String.fromCharCode(letter);
+        item.address = building.address + ', Unit ' + item.unitNumber;
+      }
+      letter++;
+    }
+  }
+
+  // Generate placeholder entries for missing units (e.g. vacant units never added to properties table)
+  for (const building of buildings) {
+    const expected = building.num_units || 1;
+    const tracked = units.filter(u => u.building_id === building.id);
+    const missing = expected - tracked.length;
+    if (missing <= 0) continue;
+    const hasUnitNumbers = tracked.some((u: any) => u.unit_number);
+    const trackedNumbers = new Set(tracked.map((u: any) => (u.unit_number || '').toUpperCase()));
+    let added = 0;
+    if (hasUnitNumbers) {
+      // Match existing naming scheme (A, B, C… or 1, 2, 3…)
+      const firstTracked = tracked.find((u: any) => u.unit_number)?.unit_number || '';
+      const useLetters = /^[A-Z]$/i.test(firstTracked);
+      let candidate = useLetters ? 'A'.charCodeAt(0) : 1;
+      while (added < missing) {
+        const label = useLetters ? String.fromCharCode(candidate) : String(candidate);
+        if (!trackedNumbers.has(label.toUpperCase())) {
+          items.push({
+            id: `vacant_${building.id}_${label}`,
+            unitId: '',
+            address: building.address + ', Unit ' + label,
+            unitNumber: label,
+            beds: null, baths: null, sqft: null, differentiators: null,
+            currentRent: null, tenantName: null, leaseId: null,
+            cachedFmv: null, fmvCache: null, fmvCalculatedAt: null, updatedAt: null,
+          });
+          added++;
+        }
+        candidate++;
+        if (useLetters && candidate > 'Z'.charCodeAt(0)) break;
+        if (!useLetters && candidate > 100) break;
+      }
+    } else {
+      // No unit numbers in use — assign letters starting from A
+      let candidate = 'A'.charCodeAt(0);
+      // Reserve A for the existing tracked unit
+      const startLabel = String.fromCharCode(candidate + tracked.length);
+      candidate = startLabel.charCodeAt(0);
+      for (let i = 0; i < missing; i++) {
+        const label = String.fromCharCode(candidate);
+        items.push({
+          id: `vacant_${building.id}_${label}`,
+          unitId: '',
+          address: building.address + ', Unit ' + label,
+          unitNumber: label,
+          beds: null, baths: null, sqft: null, differentiators: null,
+          currentRent: null, tenantName: null, leaseId: null,
+          cachedFmv: null, fmvCache: null, fmvCalculatedAt: null, updatedAt: null,
+        });
+        candidate++;
+        if (candidate > 'Z'.charCodeAt(0)) break;
+      }
+    }
+  }
+
   return items;
 }
 
 function isStale(item: UnitItem): boolean {
+  if (item.id.startsWith('vacant_')) return false; // placeholder units — analyze individually
   if (!item.fmvCalculatedAt) return true;
   if (!item.updatedAt) return false;
   return new Date(item.updatedAt) > new Date(item.fmvCalculatedAt);
@@ -646,7 +722,7 @@ function timeAgo(dateStr: string): string {
   return months === 1 ? '1 month ago' : `${months} months ago`;
 }
 
-function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any[]; isMobile: boolean }) {
+function MarketInsights({ units, leases, buildings, onNavigate, isMobile }: { units: any[]; leases: any[]; buildings: any[]; onNavigate: (p: string) => void; isMobile: boolean }) {
   const [analyses, setAnalyses] = useState<Record<string, any>>({});
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -654,7 +730,7 @@ function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any
   const [expanded, setExpanded] = useState(false);
   const [refineItemId, setRefineItemId] = useState<string | null>(null);
 
-  const allItems = buildUnitItems(units, leases);
+  const allItems = buildUnitItems(units, leases, buildings);
 
   // Load cached FMV from DB (fmv_cache column) — no sessionStorage, no AI call
   useEffect(() => {
@@ -735,6 +811,8 @@ function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any
   const analyzedCount = allItems.filter(item => analyses[item.id] || item.fmvCache).length;
   const leasedItems = allItems.filter(item => item.currentRent);
   const vacantItems = allItems.filter(item => !item.currentRent);
+  const expectedUnits = buildings.reduce((s: number, b: any) => s + (b.num_units || 1), 0);
+  const missingUnits = Math.max(0, expectedUnits - units.length);
   const totalCurrent = leasedItems.reduce((s, item) => s + (item.currentRent || 0), 0);
   const totalMarket = allItems.reduce((s, item) => s + (analyses[item.id]?.estimated_market_rent || item.cachedFmv || item.currentRent || 0), 0);
   const opportunity = totalMarket - totalCurrent;
@@ -793,7 +871,13 @@ function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any
               🏠 <strong>{vacantItems.length}</strong> vacant unit{vacantItems.length !== 1 ? 's' : ''} — FMV estimates help you price listings competitively.
             </div>
           )}
-          {analyzedCount === 0 && (
+          {missingUnits > 0 && (
+            <div style={{ marginTop: (belowMarket > 0 || vacantItems.length > 0) ? 8 : 14, fontSize: 12, background: 'rgba(255,179,71,0.15)', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span>⚠ Your buildings have <strong>{expectedUnits}</strong> units but only <strong>{units.length}</strong> are tracked. Add missing units for complete FMV analysis.</span>
+              <button onClick={() => onNavigate('portfolio')} style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>+ Add Units</button>
+            </div>
+          )}
+          {analyzedCount === 0 && missingUnits === 0 && (
             <div style={{ marginTop: 14, fontSize: 12, opacity: 0.7 }}>Click "Refresh All" to analyze fair market rent for all your units.</div>
           )}
         </div>
@@ -818,7 +902,8 @@ function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any
           const a = analyses[item.id];
           const isVacant = !item.leaseId && !item.currentRent;
           const calcAt = item.fmvCalculatedAt || (a ? new Date().toISOString() : null);
-          const unitLabel = item.address?.split(',')[0] + (item.unitNumber ? ' — Unit ' + item.unitNumber : '');
+          const baseAddr = item.address?.replace(/,?\s*(unit|apt|#)\s*\w+/gi, '').split(',')[0]?.trim() || item.address;
+          const unitLabel = baseAddr + (item.unitNumber ? ' — Unit ' + item.unitNumber : '');
           return (
             <div key={item.id} style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: a ? 10 : 0 }}>
@@ -907,6 +992,7 @@ function MarketInsights({ units, leases, isMobile }: { units: any[]; leases: any
 export default function Dashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [leases, setLeases] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [maintenance, setMaintenance] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -927,18 +1013,20 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
     try {
       const now = new Date();
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
-      const [lRes, pRes, mRes, eRes, uRes] = await Promise.all([
+      const [lRes, pRes, mRes, eRes, uRes, bRes] = await Promise.all([
         supabase.from('leases').select('*').order('end_date', { ascending: true }),
         supabase.from('payments').select('*').gte('due_date', sixMonthsAgo).order('due_date', { ascending: false }),
         supabase.from('maintenance').select('*').order('created_at', { ascending: false }).limit(30),
         supabase.from('expenses').select('*').gte('date', sixMonthsAgo).order('date', { ascending: false }),
         supabase.from('properties').select('id, address, unit_number, building_id, beds, baths, sqft, current_rent, differentiators, estimated_market_rent, market_value_updated_at, fmv_cache, fmv_calculated_at, updated_at').eq('is_unit', true).order('address'),
+        supabase.from('buildings').select('id, address, num_units').order('address'),
       ]);
       if (lRes.data) setLeases(lRes.data);
       if (pRes.data) setPayments(pRes.data);
       if (mRes.data) setMaintenance(mRes.data);
       if (eRes.data) setExpenses(eRes.data);
       if (uRes.data) setUnits(uRes.data);
+      if (bRes.data) setBuildings(bRes.data);
     } catch (err) {
       console.error('[dashboard] fetchAll error:', err);
     } finally {
@@ -1048,7 +1136,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
 
       {/* ── MARKET INSIGHTS ── */}
-      <MarketInsights units={units} leases={leases.filter(l => !l.archived)} isMobile={isMobile} />
+      <MarketInsights units={units} leases={leases.filter(l => !l.archived)} buildings={buildings} onNavigate={onNavigate} isMobile={isMobile} />
 
       {/* ── ROW 3: AI DAILY DIGEST (full width) ── */}
       <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
