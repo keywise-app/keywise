@@ -13,6 +13,9 @@ import TenantDashboard from './components/TenantDashboard';
 import Landing from './components/Landing';
 import TrialBanner from './components/TrialBanner';
 import ErrorBoundary from './components/ErrorBoundary';
+import WizardOnboardUnit from './components/WizardOnboardUnit';
+import WizardRenewal from './components/WizardRenewal';
+import WizardMarketAnalysis from './components/WizardMarketAnalysis';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
@@ -51,6 +54,7 @@ export default function Home() {
   const [stripeSuccess, setStripeSuccess] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [previewLeaseId, setPreviewLeaseId] = useState<string | null>(null);
+  const [activeWizard, setActiveWizard] = useState<'onboard' | 'renewal' | 'fmv' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
@@ -509,6 +513,24 @@ export default function Home() {
                 </div>
               );
             })}
+
+            {/* Quick Actions */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 12 }}>
+              <div style={{ padding: '0 20px 8px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Actions</div>
+              {[
+                { id: 'onboard', label: 'Onboard a Unit', icon: '+' },
+                { id: 'renewal', label: 'Send Renewal', icon: '📄' },
+                { id: 'fmv', label: 'Market Analysis', icon: '📊' },
+              ].map(w => (
+                <div key={w.id} onClick={() => setActiveWizard(w.id as any)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, transition: 'all 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.color = '#fff'}
+                  onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.5)'}>
+                  <span style={{ fontSize: 13, opacity: 0.7, width: 18, textAlign: 'center' }}>{w.icon}</span>
+                  {w.label}
+                </div>
+              ))}
+            </div>
           </div>
           <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 10 }}>
             <button onClick={() => setShowFeedback(true)}
@@ -747,6 +769,11 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Wizards */}
+      {activeWizard === 'onboard' && <WizardOnboardUnit onClose={() => setActiveWizard(null)} />}
+      {activeWizard === 'renewal' && <WizardRenewal onClose={() => setActiveWizard(null)} />}
+      {activeWizard === 'fmv' && <WizardMarketAnalysis onClose={() => setActiveWizard(null)} />}
 
       {/* Search overlay */}
       {searchOpen && (

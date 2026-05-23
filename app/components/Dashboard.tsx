@@ -851,82 +851,19 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
 
   const colGrid = (a: number, b: number) => isMobile ? '1fr' : `${a}fr ${b}fr`;
 
+  const [showFinancials, setShowFinancials] = useState(false);
+  const [showOccupancy, setShowOccupancy] = useState(false);
+  const [showMarket, setShowMarket] = useState(false);
+
+  const paidThisMonth = payments.filter(p => p.status === 'paid' && (() => { const d = new Date(p.due_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; })());
+  const lateThisMonth = overduePayments;
+  const pendingThisMonth = payments.filter(p => p.status === 'pending' && (() => { const d = new Date(p.due_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; })());
+  const occupiedUnits = nonArchivedLeases.length;
+  const collectionPct = totalRent > 0 ? Math.round(collectedThisMonth / totalRent * 100) : 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <style>{`@keyframes kw-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-
-      {/* ── ALERT STRIPS ── */}
-      {urgentCount > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {overduePayments.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', background: T.coralLight, border: `1px solid ${T.coral}33`, borderRadius: T.radiusSm, padding: '11px 16px', gap: isMobile ? 10 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 15 }}>⚠</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: T.coral }}>Overdue:</span>
-                <span style={{ fontSize: 13, color: T.inkMid }}>{p.tenant_name}{p.property ? ', ' + p.property.split(',')[0] : ''} — <b>${(p.amount || 0).toLocaleString()}</b></span>
-              </div>
-              <button onClick={() => onNavigate('tenants')} style={{ ...btn.danger, fontSize: 12, padding: '5px 14px' }}>View Tenant →</button>
-            </div>
-          ))}
-          {expiringLeases.map(l => {
-            const days = Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000);
-            return (
-              <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.amberLight, border: `1px solid ${T.amber}44`, borderRadius: T.radiusSm, padding: '11px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 15 }}>📅</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: T.amberDark }}>Lease expiring in {days} days</span>
-                  <span style={{ fontSize: 13, color: T.inkMid }}> — {l.tenant_name}, {l.property?.split(',')[0]}</span>
-                </div>
-                <button onClick={() => onNavigate('tenants')} style={{ background: T.amberLight, color: T.amberDark, border: `1px solid ${T.amber}66`, borderRadius: T.radiusSm, padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Renew Lease →</button>
-              </div>
-            );
-          })}
-          {highPrioMaint.map(m => (
-            <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF4EE', border: '1px solid #F9731644', borderRadius: T.radiusSm, padding: '11px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 15 }}>🔧</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#C2410C' }}>High priority maintenance</span>
-                <span style={{ fontSize: 13, color: T.inkMid }}> — {m.issue || 'Issue'}{m.property ? ', ' + m.property.split(',')[0] : ''}</span>
-              </div>
-              <button onClick={() => onNavigate('operations')} style={{ background: '#FFF4EE', color: '#C2410C', border: '1px solid #F9731644', borderRadius: T.radiusSm, padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View Issue →</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── ROW 1: STATS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 14 }}>
-        {[
-          { label: 'Rent Expected', value: '$' + totalRent.toLocaleString(), sub: leases.length + ' active lease' + (leases.length !== 1 ? 's' : ''), color: T.navy },
-          { label: 'Collected', value: '$' + collectedThisMonth.toLocaleString(), sub: totalRent > 0 ? Math.round(collectedThisMonth / totalRent * 100) + '% of expected' : 'this month', color: T.greenDark },
-          { label: 'Expenses', value: '$' + totalExpenses.toLocaleString(), sub: 'this month', color: T.inkMid },
-          { label: 'Net Cash Flow', value: (netCashFlow >= 0 ? '+$' : '-$') + Math.abs(netCashFlow).toLocaleString(), sub: 'income minus expenses', color: netCashFlow >= 0 ? T.greenDark : T.coral },
-        ].map(s => (
-          <div key={s.label} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: '18px 20px', boxShadow: T.shadow }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: s.color, letterSpacing: '-0.5px' }}>{s.value}</div>
-            <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>{s.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── ROW 2: SMART ACTIONS (proactive AI) ── */}
-      <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
-
-      {/* ── MARKET INSIGHTS ── */}
-      <MarketInsights leases={leases.filter(l => !l.archived)} isMobile={isMobile} />
-
-      {/* ── ROW 3: AI DAILY DIGEST (full width) ── */}
-      <AIDailyDigest leases={leases} payments={payments} maintenance={maintenance} expenses={expenses} />
-
-      {/* ── ROW 3: LEASE TIMELINE (full width) ── */}
-      <LeaseTimeline leases={leases} onNavigate={onNavigate} isMobile={isMobile} />
-
-      {/* ── ROW 4: CASH FLOW + ACTIVE LEASES (50/50) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'stretch' }}>
-        <CashFlowChart payments={payments} expenses={expenses} />
-        <ActiveLeasesTable leases={leases} onNavigate={onNavigate} isMobile={isMobile} />
-      </div>
 
       {/* ── EMPTY STATE ── */}
       {leases.length === 0 && (
@@ -941,6 +878,138 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
             </button>
           </div>
         </div>
+      )}
+
+      {leases.length > 0 && (
+        <>
+          {/* ══════════════════════════════════════════════════
+              ABOVE THE FOLD — primary glance
+              ══════════════════════════════════════════════════ */}
+
+          {/* 1. RENT COLLECTION STATUS — hero widget */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: isMobile ? 18 : 24, boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: T.navy }}>Rent Collection</div>
+              <div style={{ fontSize: 12, color: T.inkMuted }}>
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ height: 10, background: T.bg, borderRadius: 5, overflow: 'hidden', marginBottom: 12 }}>
+              <div style={{ height: '100%', borderRadius: 5, width: `${collectionPct}%`, background: collectionPct >= 90 ? T.green : collectionPct >= 50 ? T.amber : T.coral, transition: 'width 0.6s' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 12 }}>
+              <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: T.navy, letterSpacing: '-0.5px' }}>${totalRent.toLocaleString()}</div>
+                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Expected</div>
+              </div>
+              <div style={{ background: T.greenLight, borderRadius: T.radiusSm, padding: '14px 16px' }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: T.greenDark, letterSpacing: '-0.5px' }}>${collectedThisMonth.toLocaleString()}</div>
+                <div style={{ fontSize: 11, color: T.greenDark, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Collected ({collectionPct}%)</div>
+              </div>
+              <div style={{ background: lateThisMonth.length > 0 ? T.coralLight : T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: lateThisMonth.length > 0 ? T.coral : T.inkMid, letterSpacing: '-0.5px' }}>{lateThisMonth.length}</div>
+                <div style={{ fontSize: 11, color: lateThisMonth.length > 0 ? T.coral : T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Late</div>
+              </div>
+              <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: T.inkMid, letterSpacing: '-0.5px' }}>{pendingThisMonth.length}</div>
+                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Pending</div>
+              </div>
+            </div>
+
+            {/* Late tenant details */}
+            {lateThisMonth.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                {lateThisMonth.map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13 }}>⚠</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: T.coral }}>{p.tenant_name}</span>
+                      <span style={{ fontSize: 12, color: T.inkMuted }}>${(p.amount || 0).toLocaleString()}</span>
+                    </div>
+                    <button onClick={() => onNavigate('tenants')} style={{ background: 'none', border: 'none', color: T.navy, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>View →</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. UPCOMING ACTIONS — what needs you this week */}
+          <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
+
+          {/* ══════════════════════════════════════════════════
+              BELOW THE FOLD — click to expand
+              ══════════════════════════════════════════════════ */}
+
+          {/* 3. FINANCIAL SNAPSHOT — collapsed */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden' }}>
+            <button onClick={() => setShowFinancials(!showFinancials)}
+              style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Financial Snapshot</span>
+                <span style={{ fontSize: 13, color: netCashFlow >= 0 ? T.greenDark : T.coral, fontWeight: 600 }}>
+                  Net {netCashFlow >= 0 ? '+' : ''}${netCashFlow.toLocaleString()}/mo
+                </span>
+              </div>
+              <span style={{ color: T.inkMuted, fontSize: 14, transition: 'transform 0.2s', transform: showFinancials ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+            {showFinancials && (
+              <div style={{ padding: '0 20px 20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+                  <CashFlowChart payments={payments} expenses={expenses} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {[
+                      { label: 'Collected', value: '$' + collectedThisMonth.toLocaleString(), color: T.greenDark },
+                      { label: 'Expenses', value: '$' + totalExpenses.toLocaleString(), color: T.inkMid },
+                      { label: 'Net Cash Flow', value: (netCashFlow >= 0 ? '+$' : '-$') + Math.abs(netCashFlow).toLocaleString(), color: netCashFlow >= 0 ? T.greenDark : T.coral },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: T.bg, borderRadius: T.radiusSm, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: T.inkMid }}>{s.label}</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: s.color }}>{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 4. OCCUPANCY — collapsed */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden' }}>
+            <button onClick={() => setShowOccupancy(!showOccupancy)}
+              style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Occupancy</span>
+                <span style={{ fontSize: 13, color: T.greenDark, fontWeight: 600 }}>{occupiedUnits} occupied</span>
+              </div>
+              <span style={{ color: T.inkMuted, fontSize: 14, transition: 'transform 0.2s', transform: showOccupancy ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+            {showOccupancy && (
+              <div style={{ padding: '0 20px 20px' }}>
+                <ActiveLeasesTable leases={leases} onNavigate={onNavigate} isMobile={isMobile} />
+              </div>
+            )}
+          </div>
+
+          {/* 5. MARKET INSIGHTS — collapsed */}
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, boxShadow: T.shadow, overflow: 'hidden' }}>
+            <button onClick={() => setShowMarket(!showMarket)}
+              style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Market Insights</span>
+                <span style={{ fontSize: 13, color: T.inkMuted }}>FMV analysis</span>
+              </div>
+              <span style={{ color: T.inkMuted, fontSize: 14, transition: 'transform 0.2s', transform: showMarket ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+            {showMarket && (
+              <div style={{ padding: '0 20px 20px' }}>
+                <MarketInsights leases={leases.filter(l => !l.archived)} isMobile={isMobile} />
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
