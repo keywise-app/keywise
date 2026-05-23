@@ -147,7 +147,14 @@ export async function GET(req: Request) {
 
   if (error || !tokenRow) return NextResponse.json({ error: 'Invalid token' }, { status: 404 });
   if (tokenRow.used_at) return NextResponse.json({ error: 'Already signed', signed_at: tokenRow.used_at }, { status: 409 });
-  if (new Date(tokenRow.expires_at) < new Date()) return NextResponse.json({ error: 'Token expired' }, { status: 410 });
+
+  // Distinguish revoked (landlord explicitly cancelled) from naturally expired.
+  // `revoked` is set to true when a landlord recalls a signing link.
+  // Falls back to "expired" if the column doesn't exist or is falsy.
+  if (new Date(tokenRow.expires_at) < new Date()) {
+    const reason: 'revoked' | 'expired' = tokenRow.revoked ? 'revoked' : 'expired';
+    return NextResponse.json({ error: 'Token expired', reason }, { status: 410 });
+  }
 
   // Generate signed URL for the document if it has a file
   let file_url = '';
@@ -160,13 +167,12 @@ export async function GET(req: Request) {
   let inspection = null;
   if (tokenRow.inspection_id) {
     const { data: inspData } = await supabase.from('inspections').select('*').eq('id', tokenRow.inspection_id).single();
-    inspection = inspData;
+    inspection = inspData || null;
   }
 
   return NextResponse.json({
     tenant_name: tokenRow.tenant_name,
-    tenant_email: tokenRow.tenant_email,
-    document_name: tokenRow.documents?.name || 'Document',
+    document_name: tokenRow.documents?.name || '',
     document_type: tokenRow.documents?.type || '',
     file_url,
     inspection,
