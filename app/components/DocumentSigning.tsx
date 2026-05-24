@@ -29,10 +29,11 @@ type Props = {
   documentName: string;
   documentType: string;
   fileUrl?: string;
+  tenantNotes?: Record<string, string>;
   onSigned: () => void;
 };
 
-export default function DocumentSigning({ token, tenantName, documentName, documentType, fileUrl, onSigned }: Props) {
+export default function DocumentSigning({ token, tenantName, documentName, documentType, fileUrl, tenantNotes, onSigned }: Props) {
   const [tab, setTab] = useState<'draw' | 'type'>('draw');
   const [typedName, setTypedName] = useState(tenantName);
   const [agreed, setAgreed] = useState(false);
@@ -135,6 +136,7 @@ export default function DocumentSigning({ token, tenantName, documentName, docum
           signature_data: getSignatureData(),
           signature_type: tab,
           signer_name: typedName || tenantName,
+          ...(tenantNotes && Object.values(tenantNotes).some(v => v.trim()) ? { tenant_notes: tenantNotes } : {}),
         }),
       });
       const data = await res.json();
@@ -259,7 +261,7 @@ export default function DocumentSigning({ token, tenantName, documentName, docum
           fontSize: 16, fontWeight: 700, cursor: canSign ? 'pointer' : 'default',
           transition: 'background 0.2s',
         }}>
-        {submitting ? 'Signing…' : '✍️ Sign Document'}
+        {submitting ? 'Signing…' : tenantNotes && Object.values(tenantNotes).some(v => v.trim()) ? '✍️ Sign Document & Submit Notes' : '✍️ Sign Document'}
       </button>
 
       {!canSign && (

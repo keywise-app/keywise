@@ -30,6 +30,13 @@ export default function SignPage() {
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [signedAt, setSignedAt] = useState('');
+  const [tenantNotes, setTenantNotes] = useState<Record<string, string>>({});
+  const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
+
+  const toggleRoom = (roomName: string) =>
+    setExpandedRooms(prev => ({ ...prev, [roomName]: !prev[roomName] }));
+  const setNote = (roomName: string, value: string) =>
+    setTenantNotes(prev => ({ ...prev, [roomName]: value }));
 
   useEffect(() => {
     if (!token) return;
@@ -193,15 +200,46 @@ export default function SignPage() {
                   <div key={i} style={{ background: '#F0F4FF', borderRadius: 10, padding: 14, marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>{room.name}</div>
-                      {room.condition && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                          background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
-                          color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
-                        }}>{room.condition}</span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {room.condition && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
+                            color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
+                          }}>{room.condition}</span>
+                        )}
+                        <button
+                          onClick={() => toggleRoom(room.name)}
+                          style={{
+                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                            border: `1px solid ${tenantNotes[room.name]?.trim() ? T.coral : T.border}`,
+                            background: tenantNotes[room.name]?.trim() ? T.coralLight : '#fff',
+                            color: tenantNotes[room.name]?.trim() ? T.coral : T.inkMuted,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {tenantNotes[room.name]?.trim() ? '📝 Note added' : '+ Dispute / Add note'}
+                        </button>
+                      </div>
                     </div>
                     {room.notes && <div style={{ fontSize: 13, color: '#4A5068', lineHeight: 1.6 }}>{room.notes}</div>}
+                    {expandedRooms[room.name] && (
+                      <div style={{ marginTop: 10 }}>
+                        <textarea
+                          value={tenantNotes[room.name] || ''}
+                          onChange={e => setNote(room.name, e.target.value)}
+                          placeholder="Add your note (e.g. 'Kitchen was clean — no damage')"
+                          rows={3}
+                          style={{
+                            width: '100%', boxSizing: 'border-box' as const,
+                            border: `1.5px solid ${T.border}`, borderRadius: 8,
+                            padding: '10px 12px', fontSize: 13, outline: 'none',
+                            color: T.navy, background: '#fff', resize: 'vertical',
+                            fontFamily: "inherit", lineHeight: 1.6,
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -227,6 +265,7 @@ export default function SignPage() {
               documentName={docData.document_name}
               documentType={docData.document_type}
               fileUrl={docData.file_url}
+              tenantNotes={tenantNotes}
               onSigned={() => setState('signed')}
             />
           </>
