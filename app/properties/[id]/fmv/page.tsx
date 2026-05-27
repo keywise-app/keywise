@@ -335,6 +335,38 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
             </p>
           )}
 
+          {/* Override reasoning note */}
+          {overrideVal !== property.fmvEstimate && overrideVal > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="override-note"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, color: INK_MID, marginBottom: 6 }}
+              >
+                Why is your unit different? <span style={{ fontWeight: 400 }}>(optional)</span>
+              </label>
+              <textarea
+                id="override-note"
+                value={overrideNote}
+                onChange={(e) => setOverrideNote(e.target.value)}
+                placeholder="e.g. Recently renovated kitchen, private parking, larger floorplan than comps"
+                rows={3}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  border: `1.5px solid ${BORDER}`,
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontSize: 13,
+                  color: N,
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  resize: 'vertical',
+                  background: '#fff',
+                }}
+              />
+            </div>
+          )}
+
           {/* Apply CTA */}
           <button
             disabled={overrideVal <= 0 || applied}
