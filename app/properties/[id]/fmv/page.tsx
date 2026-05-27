@@ -41,6 +41,8 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
   const [overrideRaw, setOverrideRaw] = useState<string>(String(property.fmvEstimate));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [compsOpen, setCompsOpen] = useState(false);
+  const [overrideNote, setOverrideNote] = useState('');
 
   const overrideVal = parseInt(overrideRaw.replace(/\D/g, ''), 10) || 0;
   const diff = overrideVal - property.fmvEstimate;
