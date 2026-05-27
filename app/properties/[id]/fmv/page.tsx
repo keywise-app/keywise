@@ -23,6 +23,15 @@ const SAMPLE_PROPERTY = {
   estimatedAt: 'May 16, 2026',
 };
 
+// TODO: Replace with comps returned by the AI estimate API
+const SAMPLE_COMPS = [
+  { address: '8 Maple Ave', neighborhood: 'Glenview', beds: 2, baths: 1, rent: 2795, distanceMi: 0.1 },
+  { address: '340 Fruitvale Ave', neighborhood: 'Fruitvale', beds: 2, baths: 1, rent: 2750, distanceMi: 0.4 },
+  { address: '1102 High St', neighborhood: 'Millsmont', beds: 2, baths: 1.5, rent: 2900, distanceMi: 0.6 },
+  { address: '57 Brookdale Ave', neighborhood: 'Glenview', beds: 2, baths: 1, rent: 2825, distanceMi: 0.7 },
+  { address: '29 Hanly Rd', neighborhood: 'Maxwell Park', beds: 2, baths: 1, rent: 2980, distanceMi: 0.9 },
+];
+
 export default function FmvOverridePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
