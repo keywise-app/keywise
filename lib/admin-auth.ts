@@ -33,13 +33,6 @@ export async function verifyAdminToken(token: string): Promise<AdminUser | null>
   const user = data.user;
   if ((user.email || "").toLowerCase() !== ADMIN_EMAIL) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile || profile.role !== "admin") return null;
-
   return { id: user.id, email: user.email! };
 }
 
