@@ -155,8 +155,12 @@ ${updates.length > 0 ? `<div style="background:white;padding:24px 32px;border-bo
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  if (!isCron) {
+    // Allow admin users to trigger manually
+    const { requireAdminApi } = await import('@/lib/admin-auth');
+    const denied = await requireAdminApi(req as any);
+    if (denied) return denied;
   }
 
   const supabase = createClient(

@@ -9,10 +9,6 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/competitive-intelligence",
-      "schedule": "0 13 * * 1"
-    },
-    {
       "path": "/api/cron/agents/cmo/daily_audit",
       "schedule": "0 13 * * *"
     },

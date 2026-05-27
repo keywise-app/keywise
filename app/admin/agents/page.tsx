@@ -4,6 +4,7 @@ import { roles } from "@/agents-framework/registry";
 import { getBudgetStatus, type BudgetStatus } from "@/agents-framework/budget";
 import Link from "next/link";
 import RunButton from "./RunButton";
+import CronTriggerButton from "./CronTriggerButton";
 import ApprovalCard from "./ApprovalCard";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,12 @@ export default async function AgentsPage() {
             Product proposals →
           </Link>
         </nav>
+        <div className="mt-4 flex gap-3">
+          <CronTriggerButton
+            label="Run competitive intelligence"
+            endpoint="/api/cron/competitive-intelligence"
+          />
+        </div>
       </header>
 
       {/* Budget status */}
