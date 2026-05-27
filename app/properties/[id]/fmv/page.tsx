@@ -178,7 +178,82 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
           <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
             Based on {property.compsUsed} comparable units · estimated {property.estimatedAt}
           </p>
-          {/* TODO: show comp breakdown / map link */}
+          {/* Comp breakdown toggle */}
+          <button
+            onClick={() => setCompsOpen((o) => !o)}
+            style={{
+              marginTop: 14,
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              fontSize: 13,
+              fontWeight: 600,
+              color: TEAL_DARK,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            {compsOpen ? '▾' : '▸'} {compsOpen ? 'Hide breakdown' : 'See how this was calculated →'}
+          </button>
+
+          {compsOpen && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 13,
+                    color: N,
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {['Address / area', 'Bed/Bath', 'Rent', 'Distance'].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: 'left',
+                            fontWeight: 700,
+                            fontSize: 11,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            color: INK_MUTED,
+                            padding: '0 8px 8px 0',
+                            borderBottom: `1px solid ${BORDER}`,
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SAMPLE_COMPS.map((c, i) => (
+                      <tr key={i}>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}` }}>
+                          <div style={{ fontWeight: 500 }}>{c.address}</div>
+                          <div style={{ fontSize: 12, color: INK_MUTED }}>{c.neighborhood}</div>
+                        </td>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}`, color: INK_MID }}>
+                          {c.beds}bd / {c.baths}ba
+                        </td>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}`, fontWeight: 600 }}>
+                          ${c.rent.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '9px 0 9px 0', borderBottom: `1px solid ${BORDER}`, color: INK_MUTED }}>
+                          {c.distanceMi} mi
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Override input card */}
