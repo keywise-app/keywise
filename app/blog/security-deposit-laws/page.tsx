@@ -29,6 +29,9 @@ const INK = '#1A1A2E';
 const INK_MID = '#4A5068';
 const INK_MUTED = '#8892A4';
 
+// Update this constant whenever the article's state-by-state data is audited.
+const LAST_REVIEWED = 'May 2026';
+
 export default function Page() {
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
