@@ -29,9 +29,6 @@ const INK = '#1A1A2E';
 const INK_MID = '#4A5068';
 const INK_MUTED = '#8892A4';
 
-// Update this constant whenever the article's state-by-state data is audited.
-const LAST_REVIEWED = 'May 2026';
-
 export default function Page() {
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
@@ -53,14 +50,17 @@ export default function Page() {
 
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px', lineHeight: 1.7 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: INK_MUTED, marginBottom: 12 }}>
-          <span style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Legal</span>
+          <span style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Legal · Published April 2026</span>
           <span style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>Last reviewed: June 2026</span>
         </div>
         <h1 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.2 }}>
           Security Deposit Laws: What Every Landlord Needs to Know
         </h1>
-        <p style={{ fontSize: 18, color: INK_MID, marginBottom: 32 }}>
+        <p style={{ fontSize: 18, color: INK_MID, marginBottom: 16 }}>
           Security deposits are one of the most litigated topics in landlord-tenant law. Get the rules wrong — even innocently — and you could owe your tenant double or triple the deposit in penalties, plus their attorney fees. Here is a practical guide to staying compliant.
+        </p>
+        <p style={{ fontSize: 14, color: INK_MUTED, fontStyle: 'italic', marginBottom: 32 }}>
+          Laws change. Verify your state&apos;s current rules at your state attorney general&apos;s website before collecting or returning a deposit.
         </p>
 
         <div style={{ background: '#E0FAF5', border: '1px solid #00D4AA44', borderRadius: 10, padding: '14px 18px', marginBottom: 32, fontSize: 13, color: '#00A886' }}>
