@@ -169,17 +169,139 @@ export default function SignPage() {
           </div>
         )}
 
-        {state === 'signed' && (
-          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%', background: T.greenLight, marginBottom: 20 }}>
-              <span style={{ fontSize: 32 }}>✓</span>
+        {state === 'signed' && docData && (() => {
+          const isInspection = docData.document_type === 'inspection' || !!docData.inspection;
+          const withinDispute = justSignedAt
+            ? Date.now() - justSignedAt.getTime() < 24 * 60 * 60 * 1000
+            : false;
+          const disputeMailto = `mailto:${landlordEmail}?subject=${encodeURIComponent(`Dispute: ${documentName}`)}&body=${encodeURIComponent(`Hi,\n\nI've just signed "${documentName}" but I'd like to raise a concern about the following:\n\n${disputeText}\n\n— ${docData.tenant_name}`)}`;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Part 1: Confirmation + PDF access */}
+              <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%', background: T.greenLight, marginBottom: 20 }}>
+                  <span style={{ fontSize: 32, color: T.greenDark }}>✓</span>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: T.navy, marginBottom: 8 }}>Document Signed</div>
+                <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6, marginBottom: 24 }}>
+                  You'll receive a confirmation email shortly. Keep it for your records.
+                </div>
+                {docData.file_url && (
+                  <a
+                    href={docData.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-block',
+                      background: T.teal,
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: 14,
+                      padding: '10px 22px',
+                      borderRadius: 8,
+                      textDecoration: 'none',
+                      marginBottom: 16,
+                    }}
+                  >
+                    View what you signed →
+                  </a>
+                )}
+                <div>
+                  <a
+                    href="/tenant"
+                    style={{ fontSize: 14, color: T.teal, fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    ← Go to tenant portal
+                  </a>
+                </div>
+              </div>
+
+              {/* Part 2: Dispute window (inspection reports only, within 24h) */}
+              {isInspection && (
+                <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: 6 }}>Something look wrong?</div>
+                  {withinDispute ? (
+                    disputeSent ? (
+                      <div style={{ fontSize: 14, color: T.greenDark, fontWeight: 600 }}>
+                        ✓ Concern sent. Your landlord will be in touch.
+                      </div>
+                    ) : disputeOpen ? (
+                      <div>
+                        <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 10 }}>
+                          Describe what looks wrong. We'll draft an email to your landlord.
+                        </div>
+                        <textarea
+                          value={disputeText}
+                          onChange={e => setDisputeText(e.target.value)}
+                          placeholder={`e.g. "The bathroom was rated Fair but it was in good condition when I moved in."`}
+                          rows={4}
+                          style={{
+                            width: '100%', boxSizing: 'border-box' as const,
+                            border: `1.5px solid ${T.border}`, borderRadius: 8,
+                            padding: '10px 12px', fontSize: 13, outline: 'none',
+                            color: T.navy, background: '#fff', resize: 'vertical',
+                            fontFamily: 'inherit', lineHeight: 1.6, marginBottom: 10,
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <a
+                            href={disputeMailto}
+                            onClick={() => setDisputeSent(true)}
+                            style={{
+                              display: 'inline-block',
+                              background: T.coral,
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: 13,
+                              padding: '9px 18px',
+                              borderRadius: 8,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Send concern to landlord →
+                          </a>
+                          <button
+                            onClick={() => setDisputeOpen(false)}
+                            style={{
+                              fontSize: 13, color: T.inkMuted, fontWeight: 600,
+                              background: 'none', border: 'none', cursor: 'pointer', padding: '9px 0',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 12 }}>
+                          You have 24 hours after signing to flag a concern about this inspection report.
+                        </div>
+                        <button
+                          onClick={() => setDisputeOpen(true)}
+                          style={{
+                            fontSize: 14, fontWeight: 700, color: T.coral,
+                            background: T.coralLight, border: `1px solid ${T.coral}`,
+                            borderRadius: 8, padding: '9px 18px', cursor: 'pointer',
+                          }}
+                        >
+                          Raise a concern →
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.inkMuted }}>
+                      The 24-hour dispute window has passed.{' '}
+                      <a href={`mailto:${landlordEmail}`} style={{ color: T.teal, fontWeight: 600, textDecoration: 'none' }}>
+                        Contact your landlord
+                      </a>{' '}
+                      directly if you have concerns.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: T.navy, marginBottom: 8 }}>Document Signed!</div>
-            <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
-              You'll receive a confirmation email shortly. Keep it for your records.
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {state === 'ready' && docData && (
           <>
