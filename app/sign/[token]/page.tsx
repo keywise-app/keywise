@@ -32,6 +32,10 @@ export default function SignPage() {
   const [signedAt, setSignedAt] = useState('');
   const [tenantNotes, setTenantNotes] = useState<Record<string, string>>({});
   const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
+  const [justSignedAt, setJustSignedAt] = useState<Date | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeText, setDisputeText] = useState('');
+  const [disputeSent, setDisputeSent] = useState(false);
 
   const toggleRoom = (roomName: string) =>
     setExpandedRooms(prev => ({ ...prev, [roomName]: !prev[roomName] }));
