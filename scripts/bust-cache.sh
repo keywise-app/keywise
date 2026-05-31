@@ -1,0 +1,30 @@
+#!/bin/bash
+# bust-cache.sh — Instructions for clearing stale browser cache
+#
+# Run: npm run cache:bust
+
+echo ""
+echo "=== Cache Bust Instructions ==="
+echo ""
+echo "Chrome (quickest):"
+echo "  1. Open https://keywise.app"
+echo "  2. Cmd+Shift+Delete → Clear browsing data"
+echo "  3. Select 'Cached images and files' → Clear"
+echo "  OR"
+echo "  4. Open DevTools (Cmd+Option+I)"
+echo "  5. Right-click the refresh button → 'Empty Cache and Hard Reload'"
+echo ""
+echo "Chrome (nuclear — clears site data + cookies):"
+echo "  1. Open DevTools (Cmd+Option+I)"
+echo "  2. Application tab → Storage → 'Clear site data'"
+echo ""
+echo "Quick test after deploy:"
+echo "  curl -sI https://keywise.app/ | grep cache-control"
+echo "  Expected: cache-control: no-store, must-revalidate"
+echo ""
+echo "Incognito test (zero cache):"
+echo "  Cmd+Shift+N → navigate to https://keywise.app"
+echo ""
+echo "Local dev server cache:"
+echo "  rm -rf .next && npm run dev"
+echo ""

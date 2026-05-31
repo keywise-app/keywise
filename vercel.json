@@ -94,5 +94,19 @@
       "maxDuration": 300,
       "memory": 1024
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/((?!api/|_next/static/).*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(favicon.ico|robots.txt|sitemap.xml|og-image.png|apple-touch-icon.png)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    }
+  ]
 }
