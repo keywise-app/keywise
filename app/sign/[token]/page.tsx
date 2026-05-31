@@ -270,7 +270,7 @@ export default function SignPage() {
               documentType={docData.document_type}
               fileUrl={docData.file_url}
               tenantNotes={tenantNotes}
-              onSigned={() => setState('signed')}
+              onSigned={() => { setState('signed'); setJustSignedAt(new Date()); }}
             />
           </>
         )}
