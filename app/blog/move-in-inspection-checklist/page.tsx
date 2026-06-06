@@ -135,7 +135,7 @@ export default function Page() {
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise makes inspections easier</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise has a built-in inspection tool that walks you through the property room by room — you tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place.
+          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise is building an inspection tool (coming soon) that will walk you through the property room by room — tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           When you're done, Keywise generates a professional inspection report and sends it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later.
@@ -151,7 +151,7 @@ export default function Page() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Run inspections in minutes, not hours</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Keywise's mobile inspection tool: room by room, photos, notes, and digital signatures.
+            Keywise's mobile inspection tool (coming soon): room by room, photos, notes, and digital signatures.
           </p>
           <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →

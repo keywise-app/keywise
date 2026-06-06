@@ -146,7 +146,7 @@ export default function Page() {
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise helps with security deposits</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Keywise tracks security deposit amounts as part of each lease record, so you always know exactly how much you are holding for each tenant. The built-in inspection tool creates timestamped, photo-documented reports at move-in and move-out, giving you the evidence you need if a deduction is ever challenged.
+          Keywise tracks security deposit amounts as part of each lease record, so you always know exactly how much you are holding for each tenant. Our upcoming inspection tool (coming soon) will create timestamped, photo-documented reports at move-in and move-out, giving you the evidence you need if a deduction is ever challenged.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           When a lease ends, Keywise surfaces the deposit return deadline based on your property&apos;s state so you never miss it. All inspection reports, lease terms, and communication history are stored in one place — no more digging through email threads and filing cabinets when a dispute arises.

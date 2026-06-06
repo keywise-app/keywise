@@ -31,7 +31,7 @@ export default function BotLandingPage() {
           <li><strong>Document Storage</strong> — Leases, insurance certificates, inspection reports — organized, searchable, always accessible.</li>
           <li><strong>Portfolio Overview</strong> — Buildings, units, cash flow, occupancy — see your whole portfolio at a glance.</li>
           <li><strong>Native Document Signing</strong> — Send leases and addenda for e-signature without third-party tools.</li>
-          <li><strong>Move-In/Out Inspections</strong> — AI-powered room-by-room inspections with photo documentation.</li>
+          <li><strong>Move-In/Out Inspections</strong> — Room-by-room inspections with photo documentation and digital signatures.</li>
           <li><strong>Fair Market Value Analysis</strong> — AI estimates market rent for each unit based on local comps and property attributes.</li>
         </ul>
       </section>
