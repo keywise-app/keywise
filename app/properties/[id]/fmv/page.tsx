@@ -23,6 +23,15 @@ const SAMPLE_PROPERTY = {
   estimatedAt: 'May 16, 2026',
 };
 
+// TODO: Replace with comps returned by the AI estimate API
+const SAMPLE_COMPS = [
+  { address: '8 Maple Ave', neighborhood: 'Glenview', beds: 2, baths: 1, rent: 2795, distanceMi: 0.1 },
+  { address: '340 Fruitvale Ave', neighborhood: 'Fruitvale', beds: 2, baths: 1, rent: 2750, distanceMi: 0.4 },
+  { address: '1102 High St', neighborhood: 'Millsmont', beds: 2, baths: 1.5, rent: 2900, distanceMi: 0.6 },
+  { address: '57 Brookdale Ave', neighborhood: 'Glenview', beds: 2, baths: 1, rent: 2825, distanceMi: 0.7 },
+  { address: '29 Hanly Rd', neighborhood: 'Maxwell Park', beds: 2, baths: 1, rent: 2980, distanceMi: 0.9 },
+];
+
 export default function FmvOverridePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
@@ -32,6 +41,8 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
   const [overrideRaw, setOverrideRaw] = useState<string>(String(property.fmvEstimate));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [compsOpen, setCompsOpen] = useState(false);
+  const [overrideNote, setOverrideNote] = useState('');
 
   const overrideVal = parseInt(overrideRaw.replace(/\D/g, ''), 10) || 0;
   const diff = overrideVal - property.fmvEstimate;
@@ -167,7 +178,82 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
           <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
             Based on {property.compsUsed} comparable units · estimated {property.estimatedAt}
           </p>
-          {/* TODO: show comp breakdown / map link */}
+          {/* Comp breakdown toggle */}
+          <button
+            onClick={() => setCompsOpen((o) => !o)}
+            style={{
+              marginTop: 14,
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              fontSize: 13,
+              fontWeight: 600,
+              color: TEAL_DARK,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            {compsOpen ? '▾' : '▸'} {compsOpen ? 'Hide breakdown' : 'See how this was calculated →'}
+          </button>
+
+          {compsOpen && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 13,
+                    color: N,
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {['Address / area', 'Bed/Bath', 'Rent', 'Distance'].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: 'left',
+                            fontWeight: 700,
+                            fontSize: 11,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            color: INK_MUTED,
+                            padding: '0 8px 8px 0',
+                            borderBottom: `1px solid ${BORDER}`,
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SAMPLE_COMPS.map((c, i) => (
+                      <tr key={i}>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}` }}>
+                          <div style={{ fontWeight: 500 }}>{c.address}</div>
+                          <div style={{ fontSize: 12, color: INK_MUTED }}>{c.neighborhood}</div>
+                        </td>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}`, color: INK_MID }}>
+                          {c.beds}bd / {c.baths}ba
+                        </td>
+                        <td style={{ padding: '9px 8px 9px 0', borderBottom: `1px solid ${BORDER}`, fontWeight: 600 }}>
+                          ${c.rent.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '9px 0 9px 0', borderBottom: `1px solid ${BORDER}`, color: INK_MUTED }}>
+                          {c.distanceMi} mi
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Override input card */}
@@ -247,6 +333,38 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
             >
               {diffLabel}
             </p>
+          )}
+
+          {/* Override reasoning note */}
+          {overrideVal !== property.fmvEstimate && overrideVal > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="override-note"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, color: INK_MID, marginBottom: 6 }}
+              >
+                Why is your unit different? <span style={{ fontWeight: 400 }}>(optional)</span>
+              </label>
+              <textarea
+                id="override-note"
+                value={overrideNote}
+                onChange={(e) => setOverrideNote(e.target.value)}
+                placeholder="e.g. Recently renovated kitchen, private parking, larger floorplan than comps"
+                rows={3}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  border: `1.5px solid ${BORDER}`,
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontSize: 13,
+                  color: N,
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  resize: 'vertical',
+                  background: '#fff',
+                }}
+              />
+            </div>
           )}
 
           {/* Apply CTA */}
