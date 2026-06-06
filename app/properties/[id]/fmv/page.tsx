@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
+import { supabase } from '../../../lib/supabase';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -32,6 +33,14 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
   const [overrideRaw, setOverrideRaw] = useState<string>(String(property.fmvEstimate));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [showComps, setShowComps] = useState(false);
+  const [fmvData, setFmvData] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.from('properties').select('fmv_cache').eq('id', id).maybeSingle().then(({ data }) => {
+      if (data?.fmv_cache) setFmvData(data.fmv_cache);
+    });
+  }, [id]);
 
   const overrideVal = parseInt(overrideRaw.replace(/\D/g, ''), 10) || 0;
   const diff = overrideVal - property.fmvEstimate;
@@ -165,9 +174,51 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
             <span style={{ fontSize: 15, color: INK_MID }}>/mo</span>
           </div>
           <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
-            Based on {property.compsUsed} comparable units · estimated {property.estimatedAt}
+            Based on {fmvData?.reasoning?.length || property.compsUsed} factors · estimated {property.estimatedAt}
           </p>
-          {/* TODO: show comp breakdown / map link */}
+
+          {fmvData && (
+            <div style={{ marginTop: 16 }}>
+              <button onClick={() => setShowComps(!showComps)}
+                style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 600, color: TEAL_DARK, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                {showComps ? '▾ Hide analysis details' : '▸ Show analysis details'}
+              </button>
+              {showComps && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${TEAL}44` }}>
+                  {fmvData.market_rent_low && fmvData.market_rent_high && (
+                    <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: INK_MID }}>
+                        <span style={{ fontWeight: 600 }}>Range:</span> ${fmvData.market_rent_low.toLocaleString()} – ${fmvData.market_rent_high.toLocaleString()}/mo
+                      </div>
+                      {fmvData.data_confidence && (
+                        <div style={{ fontSize: 12, padding: '1px 8px', borderRadius: 10, background: fmvData.data_confidence === 'high' ? '#E8F8F0' : fmvData.data_confidence === 'medium' ? '#FFF8E0' : '#FFF0F0', color: fmvData.data_confidence === 'high' ? '#0F7040' : fmvData.data_confidence === 'medium' ? '#9A6500' : '#CC3333', fontWeight: 600 }}>
+                          {fmvData.data_confidence} confidence
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {fmvData.neighborhood_trends && (
+                    <p style={{ fontSize: 13, color: INK_MID, margin: '0 0 12px', lineHeight: 1.5 }}>
+                      <span style={{ fontWeight: 600 }}>Trends:</span> {fmvData.neighborhood_trends}
+                    </p>
+                  )}
+                  {fmvData.reasoning && fmvData.reasoning.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: N, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Key Factors</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: INK_MID, lineHeight: 1.7 }}>
+                        {fmvData.reasoning.map((r: string, i: number) => <li key={i}>{r}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {fmvData.confidence_reasoning && (
+                    <p style={{ fontSize: 12, color: INK_MUTED, margin: '12px 0 0', fontStyle: 'italic' }}>
+                      {fmvData.confidence_reasoning}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Override input card */}

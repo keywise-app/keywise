@@ -166,13 +166,31 @@ export default function SignPage() {
         )}
 
         {state === 'signed' && (
-          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 40, textAlign: 'center', boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%', background: T.greenLight, marginBottom: 20 }}>
-              <span style={{ fontSize: 32 }}>✓</span>
+          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 32, boxShadow: '0 2px 12px rgba(15,52,96,0.08)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%', background: T.greenLight, marginBottom: 16 }}>
+                <span style={{ fontSize: 32 }}>✓</span>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: T.navy, marginBottom: 8 }}>Document Signed</div>
+              <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
+                A confirmation email with the signed PDF is on its way.
+              </div>
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: T.navy, marginBottom: 8 }}>Document Signed!</div>
-            <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6 }}>
-              You'll receive a confirmation email shortly. Keep it for your records.
+
+            <div style={{ background: T.bg, borderRadius: 10, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 8 }}>What happens next</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.inkMid, lineHeight: 1.8 }}>
+                <li>Your signed copy will arrive via email within a few minutes</li>
+                <li>Your landlord receives a copy automatically</li>
+                <li>Both copies are stored securely in Keywise</li>
+              </ul>
+            </div>
+
+            <div style={{ background: '#FFF9E6', border: '1px solid #F5D67A', borderRadius: 10, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#7A5C00', marginBottom: 6 }}>Dispute window</div>
+              <div style={{ fontSize: 13, color: '#4A5068', lineHeight: 1.6 }}>
+                If you believe any part of this document is inaccurate, you have <strong>24 hours</strong> to contact your landlord to dispute. After that, the signed document is considered final. Reply to the confirmation email to raise a concern.
+              </div>
             </div>
           </div>
         )}
