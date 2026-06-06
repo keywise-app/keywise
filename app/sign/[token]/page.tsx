@@ -202,11 +202,14 @@ export default function SignPage() {
                       <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>{room.name}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {room.condition && (
-                          <span style={{
-                            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                            background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
-                            color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
-                          }}>{room.condition}</span>
+                          <>
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                              background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
+                              color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
+                            }}>{room.condition}</span>
+                            <span style={{ fontSize: 9, color: T.inkMuted, fontStyle: 'italic' }}>AI-assessed</span>
+                          </>
                         )}
                         <button
                           onClick={() => toggleRoom(room.name)}

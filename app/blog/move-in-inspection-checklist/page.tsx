@@ -141,6 +141,14 @@ export default function Page() {
           When you're done, Keywise generates a professional inspection report and sends it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later.
         </p>
 
+        <div style={{ marginTop: 32, marginBottom: 40, padding: 24, background: '#F0F4FF', border: '1px solid #E0E6F0', borderRadius: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: N, marginBottom: 8 }}>Ditch the paper checklist</div>
+          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16 }}>Run digital inspections with photos, notes, and e-signatures. Free for 1-2 units.</div>
+          <Link href="/?signup=true" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            Start free →
+          </Link>
+        </div>
+
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
           <Link href="/blog/security-deposit-laws" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Security Deposit Laws: What Every Landlord Needs to Know</Link>

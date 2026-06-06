@@ -56,6 +56,8 @@ export default function Home() {
   const [previewLeaseId, setPreviewLeaseId] = useState<string | null>(null);
   const [activeWizard, setActiveWizard] = useState<'onboard' | 'renewal' | 'fmv' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ category: string; icon: string; items: { label: string; sub: string; page: string }[] }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -630,9 +632,17 @@ export default function Home() {
         )}
 
         {/* Content */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
+        <div ref={contentRef} onScroll={(e) => setShowScrollTop((e.target as HTMLDivElement).scrollTop > 400)} style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
           {renderPage()}
         </div>
+
+        {/* Scroll to top — mobile only */}
+        {isMobile && showScrollTop && (
+          <button onClick={() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ position: 'fixed', bottom: 70, right: 16, zIndex: 199, width: 40, height: 40, borderRadius: '50%', background: T.navy, color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(15,52,96,0.3)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            ↑
+          </button>
+        )}
       </div>
 
       {/* Bottom tab bar — mobile only */}

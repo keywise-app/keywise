@@ -49,7 +49,10 @@ export default function Page() {
       </nav>
 
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px', lineHeight: 1.7 }}>
-        <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Legal · April 2026</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: INK_MUTED, marginBottom: 12 }}>
+          <span style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>Legal</span>
+          <span style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>Last reviewed: June 2026</span>
+        </div>
         <h1 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.2 }}>
           Security Deposit Laws: What Every Landlord Needs to Know
         </h1>
@@ -151,6 +154,14 @@ export default function Page() {
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           When a lease ends, Keywise surfaces the deposit return deadline based on your property&apos;s state so you never miss it. All inspection reports, lease terms, and communication history are stored in one place — no more digging through email threads and filing cabinets when a dispute arises.
         </p>
+
+        <div style={{ marginTop: 32, marginBottom: 40, padding: 24, background: '#F0F4FF', border: '1px solid #E0E6F0', borderRadius: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: N, marginBottom: 8 }}>Stop worrying about deposit deadlines</div>
+          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16 }}>Keywise tracks deposits, deadlines, and documentation automatically. Free for 1-2 units.</div>
+          <Link href="/?signup=true" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            Start free →
+          </Link>
+        </div>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
