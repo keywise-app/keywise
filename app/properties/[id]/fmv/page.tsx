@@ -337,6 +337,11 @@ export default function FmvOverridePage({ params }: { params: Promise<{ id: stri
               Set rent to ${overrideVal.toLocaleString()}/mo for {property.unit},{' '}
               {property.address}?
             </p>
+            {diff !== 0 && (
+              <p style={{ fontSize: 13, fontWeight: 600, color: diff > 0 ? '#9A6500' : TEAL_DARK, margin: '0 0 8px' }}>
+                {diff > 0 ? '↑' : '↓'} ${diffAbs.toLocaleString()}/mo {diff > 0 ? 'above' : 'below'} AI estimate (${property.fmvEstimate.toLocaleString()})
+              </p>
+            )}
             <p style={{ fontSize: 13, color: INK_MID, margin: '0 0 20px' }}>
               This won't notify tenants.
             </p>

@@ -49,7 +49,7 @@ export default function Page() {
       </nav>
 
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px', lineHeight: 1.7 }}>
-        <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Inspections · April 2026</div>
+        <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Inspections · 2026</div>
         <h1 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.2 }}>
           Move-In Inspection Checklist for Landlords (Free Download)
         </h1>
@@ -57,7 +57,17 @@ export default function Page() {
           A thorough move-in inspection is the single best thing you can do to protect both yourself and your tenant. It establishes the baseline condition of the property, documents what was already broken, and prevents the dreaded security deposit dispute when the tenant moves out.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Why move-in inspections matter</h2>
+        <nav style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px', marginBottom: 32 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>In this article</div>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <li><a href="#why" style={{ fontSize: 14, color: TEAL_DARK, textDecoration: 'none', fontWeight: 500 }}>Why move-in inspections matter</a></li>
+            <li><a href="#checklist" style={{ fontSize: 14, color: TEAL_DARK, textDecoration: 'none', fontWeight: 500 }}>The complete room-by-room checklist</a></li>
+            <li><a href="#tips" style={{ fontSize: 14, color: TEAL_DARK, textDecoration: 'none', fontWeight: 500 }}>Tips for a great inspection</a></li>
+            <li><a href="#keywise" style={{ fontSize: 14, color: TEAL_DARK, textDecoration: 'none', fontWeight: 500 }}>How Keywise makes inspections easier</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="why" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Why move-in inspections matter</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           Without a documented move-in inspection, you have no defensible record of what the property looked like before the tenant lived in it. If a wall has a hole when they leave, did the tenant make it? Or was it there when they moved in? A simple checklist with photos answers that question definitively.
         </p>
@@ -65,7 +75,7 @@ export default function Page() {
           Most security deposit disputes can be avoided entirely by doing a proper inspection on day one. Both you and your tenant should walk through the property together, document everything, and sign off on the final checklist. That signed document is gold if a disagreement ever arises.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>The complete room-by-room checklist</h2>
+        <h2 id="checklist" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>The complete room-by-room checklist</h2>
 
         <h3 style={{ fontSize: 18, fontWeight: 700, color: N, marginTop: 24, marginBottom: 8 }}>Living Room</h3>
         <ul style={{ fontSize: 15, color: INK_MID, paddingLeft: 24, marginBottom: 16 }}>
@@ -122,7 +132,7 @@ export default function Page() {
           <li>Mailbox accessible</li>
         </ul>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Tips for a great inspection</h2>
+        <h2 id="tips" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Tips for a great inspection</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           <strong>Take photos of everything.</strong> Even items in perfect condition. Photos are worth more than written notes when it's time to compare against move-out condition. Time-stamp them.
         </p>
@@ -133,7 +143,7 @@ export default function Page() {
           <strong>Get a signature.</strong> Both parties sign and date the completed checklist. Each gets a copy. If it ever comes to a dispute, this signed document is the strongest evidence you can have.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise makes inspections easier</h2>
+        <h2 id="keywise" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise makes inspections easier</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise is building an inspection tool (coming soon) that will walk you through the property room by room — tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place.
         </p>

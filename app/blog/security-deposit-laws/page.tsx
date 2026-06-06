@@ -65,7 +65,7 @@ export default function Page() {
           Every state sets its own rules on maximum security deposit amounts. Some states have no cap at all, while others limit deposits strictly. Here are some of the most common limits as of 2026:
         </p>
         <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 14, color: INK_MID }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 8, fontSize: 14, color: INK_MID }}>
             <div><strong>California:</strong> 1 month&apos;s rent (as of July 2024)</div>
             <div><strong>New York:</strong> 1 month&apos;s rent</div>
             <div><strong>Texas:</strong> No statutory limit</div>
@@ -114,7 +114,7 @@ export default function Page() {
           After the tenant moves out, you have a limited window to return the deposit with an itemized statement of deductions. Miss the deadline and you may forfeit the right to deduct anything — or owe penalties.
         </p>
         <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 14, color: INK_MID }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 8, fontSize: 14, color: INK_MID }}>
             <div><strong>California:</strong> 21 days</div>
             <div><strong>New York:</strong> 14 days</div>
             <div><strong>Texas:</strong> 30 days</div>
