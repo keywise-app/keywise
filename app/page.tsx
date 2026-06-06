@@ -440,6 +440,8 @@ export default function Home() {
 
   const openSearch = () => {
     setSearchOpen(true);
+    setFabOpen(false);
+    setNotifOpen(false);
     setSearchQuery('');
     setSearchResults([]);
     setTimeout(() => searchInputRef.current?.focus(), 40);
@@ -679,7 +681,7 @@ export default function Home() {
         {/* Scroll to top — mobile only */}
         {isMobile && showScrollTop && (
           <button onClick={() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            style={{ position: 'fixed', bottom: 70, right: 16, zIndex: 199, width: 40, height: 40, borderRadius: '50%', background: T.navy, color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(15,52,96,0.3)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            style={{ position: 'fixed', bottom: 72, left: 16, zIndex: 210, width: 36, height: 36, borderRadius: '50%', background: T.navy, color: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(15,52,96,0.3)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
             ↑
           </button>
         )}
@@ -731,7 +733,7 @@ export default function Home() {
 
       {/* ── QUICK ACTIONS FAB ── */}
       {userRole === 'landlord' && (
-        <div ref={fabRef} style={{ position: 'fixed', bottom: isMobile ? 96 : 32, right: 24, zIndex: 180, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+        <div ref={fabRef} style={{ position: 'fixed', bottom: isMobile ? 72 : 32, right: 24, zIndex: 250, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
           {fabOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
               {[

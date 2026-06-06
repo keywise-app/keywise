@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import PrintButton from './PrintButton';
 
 export const metadata: Metadata = {
   title: 'Free Lease Agreement Template for Small Landlords (2026) | Keywise',
@@ -102,21 +103,25 @@ export default function Page() {
           What happens if the tenant needs to break the lease early? Common options include a penalty fee (usually one or two months&apos; rent), a requirement to find a replacement tenant, or forfeiture of the security deposit. Without this clause, you may be stuck with an empty unit and no recourse.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Free lease agreement template</h2>
-        <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 24, fontSize: 14, color: INK, fontFamily: 'Georgia, serif', lineHeight: 1.8, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 40, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: N, margin: 0 }}>Free lease agreement template</h2>
+          <PrintButton />
+        </div>
+        <style>{`.lease-tpl b[data-fill] { background: #FFF3CD; border: 1px dashed #D4A843; border-radius: 3px; padding: 1px 4px; font-weight: 600; font-family: system-ui, sans-serif; font-size: 12px; color: #7A5C00; }`}</style>
+        <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 24, fontSize: 14, color: INK, fontFamily: 'Georgia, serif', lineHeight: 1.8, marginBottom: 24 }} className="lease-tpl">
           <p style={{ margin: '0 0 12px' }}><strong>RESIDENTIAL LEASE AGREEMENT</strong></p>
-          <p style={{ margin: '0 0 12px' }}>This Lease Agreement (&quot;Lease&quot;) is entered into on [Date] by and between:</p>
-          <p style={{ margin: '0 0 12px' }}><strong>Landlord:</strong> [Full Legal Name], [Address], [Phone], [Email]</p>
-          <p style={{ margin: '0 0 12px' }}><strong>Tenant(s):</strong> [Full Legal Name(s)]</p>
-          <p style={{ margin: '0 0 12px' }}><strong>Property:</strong> [Full Address Including Unit Number]</p>
-          <p style={{ margin: '0 0 16px' }}><strong>Lease Term:</strong> [Start Date] through [End Date], converting to month-to-month thereafter unless either party provides [30/60] days&apos; written notice.</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Monthly Rent:</strong> $[Amount], due on the [1st] of each month.</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Late Fee:</strong> $[Amount] if rent is not received within [X] days of the due date.</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Security Deposit:</strong> $[Amount], refundable within [X] days of move-out, less any lawful deductions.</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Utilities Included:</strong> [List or &quot;None — tenant is responsible for all utilities&quot;]</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Pets:</strong> [Allowed with $X deposit / Not permitted]</p>
-          <p style={{ margin: '0 0 8px' }}><strong>Smoking:</strong> [Prohibited / Permitted in designated areas only]</p>
-          <p style={{ margin: '0 0 16px' }}><strong>Early Termination:</strong> Tenant may terminate this lease early by providing [60] days&apos; notice and paying a fee of $[Amount].</p>
+          <p style={{ margin: '0 0 12px' }}>This Lease Agreement (&quot;Lease&quot;) is entered into on <b data-fill>Date</b> by and between:</p>
+          <p style={{ margin: '0 0 12px' }}><strong>Landlord:</strong> <b data-fill>Full Legal Name</b>, <b data-fill>Address</b>, <b data-fill>Phone</b>, <b data-fill>Email</b></p>
+          <p style={{ margin: '0 0 12px' }}><strong>Tenant(s):</strong> <b data-fill>Full Legal Name(s)</b></p>
+          <p style={{ margin: '0 0 12px' }}><strong>Property:</strong> <b data-fill>Full Address Including Unit Number</b></p>
+          <p style={{ margin: '0 0 16px' }}><strong>Lease Term:</strong> <b data-fill>Start Date</b> through <b data-fill>End Date</b>, converting to month-to-month thereafter unless either party provides <b data-fill>30/60</b> days&apos; written notice.</p>
+          <p style={{ margin: '0 0 8px' }}><strong>Monthly Rent:</strong> $<b data-fill>Amount</b>, due on the <b data-fill>1st</b> of each month.</p>
+          <p style={{ margin: '0 0 8px' }}><strong>Late Fee:</strong> $<b data-fill>Amount</b> if rent is not received within <b data-fill>X</b> days of the due date.</p>
+          <p style={{ margin: '0 0 8px' }}><strong>Security Deposit:</strong> $<b data-fill>Amount</b>, refundable within <b data-fill>X</b> days of move-out, less any lawful deductions.</p>
+          <p style={{ margin: '0 0 8px' }}><strong>Utilities Included:</strong> <b data-fill>List or &quot;None — tenant is responsible for all utilities&quot;</b></p>
+          <p style={{ margin: '0 0 8px' }}><strong>Pets:</strong> <b data-fill>Allowed with $X deposit / Not permitted</b></p>
+          <p style={{ margin: '0 0 8px' }}><strong>Smoking:</strong> <b data-fill>Prohibited / Permitted in designated areas only</b></p>
+          <p style={{ margin: '0 0 16px' }}><strong>Early Termination:</strong> Tenant may terminate this lease early by providing <b data-fill>60</b> days&apos; notice and paying a fee of $<b data-fill>Amount</b>.</p>
           <p style={{ margin: '0 0 16px' }}>Both parties agree to the terms outlined in this Lease and any attached addenda.</p>
           <p style={{ margin: '0 0 8px' }}>Landlord Signature: _________________________ Date: _________</p>
           <p style={{ margin: 0 }}>Tenant Signature: _________________________ Date: _________</p>

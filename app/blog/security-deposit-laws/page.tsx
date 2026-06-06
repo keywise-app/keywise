@@ -60,6 +60,10 @@ export default function Page() {
           Security deposits are one of the most litigated topics in landlord-tenant law. Get the rules wrong — even innocently — and you could owe your tenant double or triple the deposit in penalties, plus their attorney fees. Here is a practical guide to staying compliant.
         </p>
 
+        <div style={{ background: '#E0FAF5', border: '1px solid #00D4AA44', borderRadius: 10, padding: '14px 18px', marginBottom: 32, fontSize: 13, color: '#00A886' }}>
+          <strong>Tip:</strong> Use Ctrl+F (Cmd+F on Mac) and search for your state name to jump to the rules that apply to you.
+        </div>
+
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How much can you charge?</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           Every state sets its own rules on maximum security deposit amounts. Some states have no cap at all, while others limit deposits strictly. Here are some of the most common limits as of 2026:
