@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
+const TEAL_DARK = '#00A886';
 const BG = '#F0F4FF';
 const BORDER = '#E0E6F0';
 const INK = '#1A1A2E';
