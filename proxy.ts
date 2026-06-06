@@ -20,6 +20,22 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+// --- Bot detection for SSR landing page ---
+const BOT_UA_PATTERNS = [
+  'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+  'yandexbot', 'sogou', 'facebookexternalhit', 'facebot',
+  'twitterbot', 'linkedinbot', 'whatsapp', 'telegrambot',
+  'applebot', 'discordbot', 'pinterest', 'semrushbot',
+  'ahrefsbot', 'mj12bot', 'dotbot', 'petalbot',
+  'bytespider', 'gptbot', 'claudebot',
+];
+
+function isBot(ua: string): boolean {
+  const lower = ua.toLowerCase();
+  return BOT_UA_PATTERNS.some(pattern => lower.includes(pattern));
+}
+
+// --- Admin protection ---
 const PROTECTED_PAGE_PREFIXES = ["/admin/agents"];
 const PROTECTED_API_PREFIXES = ["/api/agents/"];
 
@@ -39,6 +55,13 @@ function isApiPath(pathname: string): boolean {
 
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  // Rewrite homepage to server-rendered bot page for crawlers
+  if (pathname === '/' && isBot(req.headers.get('user-agent') || '')) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/bot';
+    return NextResponse.rewrite(url);
+  }
 
   if (!isProtectedPath(pathname)) {
     return NextResponse.next();
@@ -79,5 +102,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/agents/:path*", "/api/agents/:path*"],
+  matcher: ["/", "/admin/agents/:path*", "/api/agents/:path*"],
 };
