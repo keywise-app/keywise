@@ -133,12 +133,15 @@ export default function Page() {
           <strong>Get a signature.</strong> Both parties sign and date the completed checklist. Each gets a copy. If it ever comes to a dispute, this signed document is the strongest evidence you can have.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise makes inspections easier</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>
+          How Keywise makes inspections easier{' '}
+          <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', background: TEAL, color: N, borderRadius: 4, padding: '2px 7px', verticalAlign: 'middle', marginLeft: 8 }}>Coming soon</span>
+        </h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise has a built-in inspection tool that walks you through the property room by room — you tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place.
+          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise is building a mobile inspection tool that walks you through the property room by room — tap to mark condition, add notes, and snap photos with your phone, all stored in one place.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          When you're done, Keywise generates a professional inspection report and sends it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later.
+          When you're done, it will generate a professional inspection report and send it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later. We'll let existing users know when it's live.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
@@ -151,7 +154,7 @@ export default function Page() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Run inspections in minutes, not hours</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Keywise's mobile inspection tool: room by room, photos, notes, and digital signatures.
+            Manage your leases, tenants, and rent collection in one place — mobile inspection tool coming soon.
           </p>
           <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →
