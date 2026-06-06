@@ -375,40 +375,59 @@ export default function Home() {
       }
     };
 
-    // Fast path: if we have a cached role, render immediately while auth verifies in background
+    // Fast path: if we have a cached role AND a stored session, render immediately
+    // without waiting for getSession() (which may do a slow token refresh)
     const cachedRole = localStorage.getItem('kw_role');
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session && cachedRole && !isTenantFlow && !isRecovery) {
-        // Instant render — role already known from prior session
-        setSession(session);
-        setLoading(false);
-        authResolved = true;
-        // Verify profile in background (non-blocking)
-        supabase.from('profiles').select('role, subscription_status, trial_ends_at')
-          .eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
-            if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
-            if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
-            if (profile?.role && profile.role !== cachedRole) setUserRole(profile.role);
-          });
-      } else if (session) {
-        await resolveAuth(session);
-      } else if (initialHash && initialHash.includes('access_token')) {
-        console.log('[auth] Waiting for session from hash token...');
-        setTimeout(() => {
-          if (!authResolved) { console.log('[auth] Hash token timeout'); setLoading(false); }
-        }, 8000);
-      } else {
-        setLoading(false);
-      }
-    }).catch(err => {
-      console.error('[auth] getSession error:', err);
+    const storedSession = (() => {
+      try {
+        const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (!key) return null;
+        const parsed = JSON.parse(localStorage.getItem(key) || '');
+        return parsed?.access_token ? parsed : null;
+      } catch { return null; }
+    })();
+
+    if (cachedRole && storedSession && !isTenantFlow && !isRecovery) {
+      // Instant render — we have enough to show the dashboard now
+      setSession({ user: { id: storedSession.user?.id, email: storedSession.user?.email }, access_token: storedSession.access_token });
       setLoading(false);
-    });
+      authResolved = true;
+      // Let getSession() refresh the token in the background
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setSession(session);
+          supabase.from('profiles').select('role, subscription_status, trial_ends_at')
+            .eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
+              if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
+              if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
+              if (profile?.role && profile.role !== cachedRole) setUserRole(profile.role);
+            });
+        }
+      });
+    } else {
+      // Slow path: no cached role, wait for getSession() to resolve
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
+          await resolveAuth(session);
+        } else if (initialHash && initialHash.includes('access_token')) {
+          console.log('[auth] Waiting for session from hash token...');
+          setTimeout(() => {
+            if (!authResolved) { console.log('[auth] Hash token timeout'); setLoading(false); }
+          }, 8000);
+        } else {
+          setLoading(false);
+        }
+      }).catch(err => {
+        console.error('[auth] getSession error:', err);
+        setLoading(false);
+      });
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('[auth] Auth state change:', _event, session?.user?.email || 'none');
       if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && session) {
-        await resolveAuth(session);
+        if (!authResolved) await resolveAuth(session);
+        else setSession(session); // Update session with refreshed token
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
         setUserRole(null);
