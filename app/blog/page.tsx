@@ -73,6 +73,20 @@ const POSTS = [
     date: '2026',
     tag: 'Software',
   },
+  {
+    slug: 'landlord-tenant-communication',
+    title: 'Landlord-Tenant Communication: How to Handle It Without Losing Your Mind',
+    description: 'Practical communication strategies for landlords: templates for rent reminders, maintenance updates, and difficult conversations.',
+    date: '2026',
+    tag: 'Management',
+  },
+  {
+    slug: 'security-deposit-deductions',
+    title: 'Security Deposit Deductions: What Landlords Can (and Can\'t) Charge For',
+    description: 'Know exactly what you can deduct from a security deposit and what crosses the line. State rules, common mistakes, and documentation tips.',
+    date: '2026',
+    tag: 'Legal',
+  },
 ];
 
 export const dynamic = 'force-dynamic';
