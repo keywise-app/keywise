@@ -52,7 +52,15 @@ export default function Home() {
   const [page, setPage] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stripeSuccess, setStripeSuccess] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRoleRaw] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('kw_role') as string | null;
+  });
+  const setUserRole = (role: string | null) => {
+    setUserRoleRaw(role);
+    if (role) localStorage.setItem('kw_role', role);
+    else localStorage.removeItem('kw_role');
+  };
   const [previewLeaseId, setPreviewLeaseId] = useState<string | null>(null);
   const [activeWizard, setActiveWizard] = useState<'onboard' | 'renewal' | 'fmv' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -94,10 +102,10 @@ export default function Home() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Loading timeout — show error state if stuck
+  // Loading timeout — show recovery options if stuck
   useEffect(() => {
     if (!loading) { setLoadingTimeout(false); return; }
-    const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 12000);
+    const timer = setTimeout(() => { if (loading) setLoadingTimeout(true); }, 20000);
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -296,7 +304,7 @@ export default function Home() {
 
     let authResolved = false;
     const resolveAuth = async (session: any) => {
-      if (authResolved) return; // Prevent double-resolve
+      if (authResolved) return;
       authResolved = true;
       try {
       setSession(session);
@@ -367,9 +375,22 @@ export default function Home() {
       }
     };
 
-    // Try existing session first
+    // Fast path: if we have a cached role, render immediately while auth verifies in background
+    const cachedRole = localStorage.getItem('kw_role');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
+      if (session && cachedRole && !isTenantFlow && !isRecovery) {
+        // Instant render — role already known from prior session
+        setSession(session);
+        setLoading(false);
+        authResolved = true;
+        // Verify profile in background (non-blocking)
+        supabase.from('profiles').select('role, subscription_status, trial_ends_at')
+          .eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
+            if (profile?.subscription_status) setSubscriptionStatus(profile.subscription_status);
+            if (profile?.trial_ends_at) setTrialEndsAt(profile.trial_ends_at);
+            if (profile?.role && profile.role !== cachedRole) setUserRole(profile.role);
+          });
+      } else if (session) {
         await resolveAuth(session);
       } else if (initialHash && initialHash.includes('access_token')) {
         console.log('[auth] Waiting for session from hash token...');
@@ -458,11 +479,11 @@ export default function Home() {
         <KeywiseLogo size={40} />
         {loadingTimeout ? (
           <>
-            <p style={{ color: T.coral, fontSize: 14, fontWeight: 600, marginTop: 16 }}>Something went wrong</p>
-            <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 4, maxWidth: 300 }}>The page took too long to load. This usually means a network issue.</p>
+            <p style={{ color: T.inkMid, fontSize: 14, fontWeight: 600, marginTop: 16 }}>Taking longer than usual…</p>
+            <p style={{ color: T.inkMuted, fontSize: 13, marginTop: 4, maxWidth: 300 }}>Your session is being verified. This can happen after a deploy or on slow connections.</p>
             <button onClick={() => window.location.reload()}
               style={{ marginTop: 16, background: T.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-              Reload Page
+              Reload
             </button>
           </>
         ) : (
