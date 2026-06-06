@@ -152,6 +152,16 @@ export default function Page() {
           When a lease ends, Keywise surfaces the deposit return deadline based on your property&apos;s state so you never miss it. All inspection reports, lease terms, and communication history are stored in one place — no more digging through email threads and filing cabinets when a dispute arises.
         </p>
 
+        <div style={{ border: `2px solid ${TEAL}`, borderRadius: 12, padding: '28px 32px', background: BG, marginTop: 32, marginBottom: 40 }}>
+          <h3 style={{ fontSize: 22, fontWeight: 700, color: N, marginBottom: 8 }}>Stop tracking deposits in a spreadsheet.</h3>
+          <p style={{ fontSize: 15, color: INK_MID, marginBottom: 20 }}>
+            Keywise is free for landlords with up to 3 units — no credit card required.
+          </p>
+          <Link href="/pricing" style={{ display: 'inline-block', background: TEAL, color: N, padding: '12px 28px', borderRadius: 8, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+            See plans →
+          </Link>
+        </div>
+
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
           <Link href="/blog/move-in-inspection-checklist" style={{ fontSize: 15, color: '#00A886', fontWeight: 600, textDecoration: 'none' }}>→ Move-In Inspection Checklist for Landlords (Free)</Link>
