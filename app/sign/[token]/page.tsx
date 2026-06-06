@@ -179,7 +179,7 @@ export default function SignPage() {
 
             <div style={{ background: T.bg, borderRadius: 10, padding: 16, marginBottom: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 8 }}>What happens next</div>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.inkMid, lineHeight: 1.8 }}>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#4A5068', lineHeight: 1.8 }}>
                 <li>Your signed copy will arrive via email within a few minutes</li>
                 <li>Your landlord receives a copy automatically</li>
                 <li>Both copies are stored securely in Keywise</li>
