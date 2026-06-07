@@ -31,12 +31,20 @@ export default function ApprovalCard({ approval }: { approval: any }) {
     <div className="border rounded-lg p-4 bg-amber-50 border-amber-200">
       <div className="flex justify-between items-start gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs uppercase tracking-wide text-amber-800 font-semibold">
               {approval.role}
             </span>
             <span className="text-xs text-gray-500">·</span>
             <span className="text-xs text-gray-700">{approval.tool}</span>
+            {approval.created_at && (
+              <>
+                <span className="text-xs text-gray-500">·</span>
+                <span className="text-xs text-gray-400">
+                  {new Date(approval.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+              </>
+            )}
           </div>
           <p className="mt-2 text-sm text-gray-900">{approval.reasoning}</p>
           {approval.estimated_impact && (
