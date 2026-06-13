@@ -75,6 +75,10 @@
     {
       "path": "/api/cron/compliance/increase-window-check",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/compliance/deposit-deadline-check",
+      "schedule": "0 14 * * *"
     }
   ],
   "functions": {
@@ -100,6 +104,10 @@
     },
     "app/api/cron/agents/dev/process_build_queue/route.ts": {
       "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/inspections/[id]/analyze/route.ts": {
+      "maxDuration": 120,
       "memory": 1024
     }
   },
