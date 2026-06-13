@@ -68,6 +68,11 @@ console.log('Exemptions:');
 }
 
 {
+  const r = calculateAB1482(makeInput({ propertyType: 'duplex', ownerType: 'individual' }));
+  assert(r.eligible === true, 'Non-owner-occupied duplex → NOT exempt (treated as multifamily)');
+}
+
+{
   const r = calculateAB1482(makeInput({ propertyType: 'duplex-owner-occupied', ownerType: 'individual' }));
   assert(r.eligible === false, 'Owner-occupied duplex individual → exempt');
 }

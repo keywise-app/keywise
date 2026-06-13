@@ -19,7 +19,7 @@ import { lookupZip } from './zip-to-region';
 export interface AB1482Input {
   zipCode: string;
   yearBuilt: number;
-  propertyType: 'single-family' | 'duplex-owner-occupied' | 'multifamily' | 'condo' | 'mobile-home';
+  propertyType: 'single-family' | 'duplex' | 'duplex-owner-occupied' | 'multifamily' | 'condo' | 'mobile-home';
   ownerType: 'individual' | 'llc-no-corp' | 'corporation';
   exemptionNoticeGiven?: boolean;
   currentRent: number;

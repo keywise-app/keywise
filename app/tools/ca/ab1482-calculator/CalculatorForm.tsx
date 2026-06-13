@@ -125,8 +125,9 @@ export default function CalculatorForm() {
               <label style={labelStyle}>Property type *</label>
               <select style={selectStyle} value={propertyType} onChange={e => setPropertyType(e.target.value as AB1482Input['propertyType'])}>
                 <option value="multifamily">Multifamily (3+ units)</option>
+                <option value="duplex">Duplex (not owner-occupied)</option>
+                <option value="duplex-owner-occupied">Duplex (I live in one unit)</option>
                 <option value="single-family">Single-family home</option>
-                <option value="duplex-owner-occupied">Duplex (owner-occupied)</option>
                 <option value="condo">Condo / Townhouse</option>
                 <option value="mobile-home">Mobile home</option>
               </select>
