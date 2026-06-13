@@ -142,14 +142,6 @@ export default function TableMode() {
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
   const [rows, setRows] = useState<RowData[]>([makeEmptyRow(), makeEmptyRow()]);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   const updateRow = useCallback((id: string, field: keyof RowData, value: string) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
@@ -196,157 +188,77 @@ export default function TableMode() {
         </div>
       </div>
 
-      {/* Table / Cards */}
-      <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
-        {!isMobile ? (
-          /* Desktop table */
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: BG }}>
-                  {['Nickname', 'Zip', 'Year Built', 'Type', 'Rent ($)', 'Effective Date', 'Last Increase', 'Last Amt ($)', 'Result', ''].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 8px', textAlign: 'left', fontWeight: 700, color: N, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${BORDER}`, whiteSpace: 'nowrap' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => {
-                  const rr = rowResults.get(row.id);
-                  const compact = rr ? formatCompactResult(rr.result) : null;
-                  const isExpanded = expandedRowId === row.id;
-                  return (
-                    <tr key={row.id} style={{ borderBottom: `1px solid ${BORDER}`, background: isExpanded ? TEAL_LIGHT + '44' : undefined }}>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, minWidth: 90 }} placeholder="Unit A" value={row.nickname} onChange={e => updateRow(row.id, 'nickname', e.target.value)} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 70 }} maxLength={5} inputMode="numeric" placeholder="92629" value={row.zip} onChange={e => updateRow(row.id, 'zip', e.target.value.replace(/\D/g, ''))} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 60 }} maxLength={4} inputMode="numeric" placeholder="1995" value={row.yearBuilt} onChange={e => updateRow(row.id, 'yearBuilt', e.target.value.replace(/\D/g, ''))} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <select style={{ ...cellSelect, minWidth: 100 }} value={row.propertyType} onChange={e => updateRow(row.id, 'propertyType', e.target.value)}>
-                          <option value="multifamily">Multifamily</option>
-                          <option value="duplex">Duplex</option>
-                          <option value="duplex-owner-occupied">Duplex (owner)</option>
-                          <option value="single-family">Single-family</option>
-                          <option value="condo">Condo</option>
-                          <option value="mobile-home">Mobile home</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 80 }} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 120 }} type="date" placeholder={effectiveDate} value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} title={row.effectiveDate ? '' : `Using default: ${effectiveDate}`} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 120 }} type="date" value={row.lastIncreaseDate} onChange={e => updateRow(row.id, 'lastIncreaseDate', e.target.value)} />
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <input style={{ ...cellInput, width: 70 }} inputMode="decimal" placeholder="150" value={row.lastIncreaseAmount} onChange={e => updateRow(row.id, 'lastIncreaseAmount', e.target.value.replace(/[^0-9.]/g, ''))} />
-                      </td>
-                      <td style={{ padding: '6px 8px', minWidth: 160 }}>
-                        {compact ? (
-                          <button
-                            onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: compact.color, textAlign: 'left', padding: 0 }}
-                          >
-                            {compact.text}
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: 12, color: INK_MUTED }}>Fill zip + year</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '6px 8px' }}>
-                        <button
-                          onClick={() => removeRow(row.id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: INK_MUTED, fontSize: 16, fontFamily: 'inherit', padding: '2px 6px' }}
-                          title="Remove row"
-                        >
-                          &times;
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* Mobile cards */
-          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {rows.map(row => {
-              const rr = rowResults.get(row.id);
-              const compact = rr ? formatCompactResult(rr.result) : null;
-              const isExpanded = expandedRowId === row.id;
-              return (
-                <div key={row.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: 14, background: isExpanded ? TEAL_LIGHT + '44' : '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <input style={{ ...cellInput, flex: 1, fontWeight: 600 }} placeholder="Nickname" value={row.nickname} onChange={e => updateRow(row.id, 'nickname', e.target.value)} />
-                    <button
-                      onClick={() => removeRow(row.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: INK_MUTED, fontSize: 18, fontFamily: 'inherit', marginLeft: 8 }}
-                    >
-                      &times;
-                    </button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Zip</label>
-                      <input style={cellInput} maxLength={5} inputMode="numeric" placeholder="92629" value={row.zip} onChange={e => updateRow(row.id, 'zip', e.target.value.replace(/\D/g, ''))} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Year Built</label>
-                      <input style={cellInput} maxLength={4} inputMode="numeric" placeholder="1995" value={row.yearBuilt} onChange={e => updateRow(row.id, 'yearBuilt', e.target.value.replace(/\D/g, ''))} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Type</label>
-                      <select style={cellSelect} value={row.propertyType} onChange={e => updateRow(row.id, 'propertyType', e.target.value as AB1482Input['propertyType'])}>
-                        <option value="multifamily">Multifamily</option>
-                        <option value="duplex">Duplex</option>
-                        <option value="duplex-owner-occupied">Duplex (owner)</option>
-                        <option value="single-family">Single-family</option>
-                        <option value="condo">Condo</option>
-                        <option value="mobile-home">Mobile home</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Rent ($)</label>
-                      <input style={cellInput} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Effective Date</label>
-                      <input style={cellInput} type="date" value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} placeholder={effectiveDate} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Increase</label>
-                      <input style={cellInput} type="date" value={row.lastIncreaseDate} onChange={e => updateRow(row.id, 'lastIncreaseDate', e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Amt ($)</label>
-                      <input style={cellInput} inputMode="decimal" placeholder="150" value={row.lastIncreaseAmount} onChange={e => updateRow(row.id, 'lastIncreaseAmount', e.target.value.replace(/[^0-9.]/g, ''))} />
-                    </div>
-                  </div>
-                  {compact && (
-                    <button
-                      onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
-                      style={{ marginTop: 10, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: compact.color, padding: 0 }}
-                    >
-                      {compact.text}
-                    </button>
-                  )}
-                  {!compact && (
-                    <div style={{ marginTop: 8, fontSize: 12, color: INK_MUTED }}>Fill zip + year to calculate</div>
-                  )}
+      {/* Property cards */}
+      <style>{`.ab1482-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } @media (min-width: 640px) { .ab1482-grid { grid-template-columns: repeat(4, 1fr); } }`}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map(row => {
+          const rr = rowResults.get(row.id);
+          const compact = rr ? formatCompactResult(rr.result) : null;
+          const isExpanded = expandedRowId === row.id;
+          return (
+            <div key={row.id} style={{ border: `1px solid ${isExpanded ? TEAL : BORDER}`, borderRadius: 12, padding: 16, background: isExpanded ? TEAL_LIGHT + '22' : '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <input style={{ ...cellInput, flex: 1, fontWeight: 600, fontSize: 14 }} placeholder="Property nickname (e.g. Unit A)" value={row.nickname} onChange={e => updateRow(row.id, 'nickname', e.target.value)} />
+                <button
+                  onClick={() => removeRow(row.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: INK_MUTED, fontSize: 18, fontFamily: 'inherit', marginLeft: 8, padding: '2px 6px' }}
+                  title="Remove"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="ab1482-grid">
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Zip Code</label>
+                  <input style={cellInput} maxLength={5} inputMode="numeric" placeholder="92629" value={row.zip} onChange={e => updateRow(row.id, 'zip', e.target.value.replace(/\D/g, ''))} />
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Year Built</label>
+                  <input style={cellInput} maxLength={4} inputMode="numeric" placeholder="1995" value={row.yearBuilt} onChange={e => updateRow(row.id, 'yearBuilt', e.target.value.replace(/\D/g, ''))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Property Type</label>
+                  <select style={cellSelect} value={row.propertyType} onChange={e => updateRow(row.id, 'propertyType', e.target.value as AB1482Input['propertyType'])}>
+                    <option value="multifamily">Multifamily</option>
+                    <option value="duplex">Duplex</option>
+                    <option value="duplex-owner-occupied">Duplex (owner-occupied)</option>
+                    <option value="single-family">Single-family</option>
+                    <option value="condo">Condo</option>
+                    <option value="mobile-home">Mobile home</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Current Rent ($)</label>
+                  <input style={cellInput} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Effective Date</label>
+                  <input style={cellInput} type="date" value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Increase Date</label>
+                  <input style={cellInput} type="date" value={row.lastIncreaseDate} onChange={e => updateRow(row.id, 'lastIncreaseDate', e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Increase ($)</label>
+                  <input style={cellInput} inputMode="decimal" placeholder="150" value={row.lastIncreaseAmount} onChange={e => updateRow(row.id, 'lastIncreaseAmount', e.target.value.replace(/[^0-9.]/g, ''))} />
+                </div>
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {compact ? (
+                  <button
+                    onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
+                    style={{ background: compact.color === GREEN_DARK ? GREEN_LIGHT : compact.color === CORAL ? '#FFEDED' : '#FFF9E6', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: compact.color, padding: '6px 14px', borderRadius: 8 }}
+                  >
+                    {compact.text} {isExpanded ? '▴' : '▾'}
+                  </button>
+                ) : (
+                  <span style={{ fontSize: 12, color: INK_MUTED }}>Fill zip + year built to calculate</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
 
         {/* Expanded detail for a row */}
         {expandedRowId && expandedResult && (
