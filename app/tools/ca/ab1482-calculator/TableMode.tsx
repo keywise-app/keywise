@@ -232,8 +232,8 @@ export default function TableMode() {
                   <input style={cellInput} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Effective Date</label>
-                  <input style={cellInput} type="date" value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} />
+                  <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Effective Date {!row.effectiveDate && effectiveDate ? <span style={{ fontWeight: 400 }}>(default)</span> : ''}</label>
+                  <input style={{ ...cellInput, color: row.effectiveDate ? INK : INK_MUTED }} type="date" value={row.effectiveDate || effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value === effectiveDate ? '' : e.target.value)} />
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Increase Date</label>
