@@ -232,7 +232,7 @@ export default function ComplianceSaveButton({ calculations, onSaved }: Props) {
   }
 
   // Signup form for anonymous users
-  if (status === 'signup') {
+  if (status === 'signup' || status === 'signing-up') {
     return (
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: N, marginBottom: 4 }}>Save your calculations</div>
