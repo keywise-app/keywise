@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '../../../lib/supabase';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
 import { RentCapResult } from '../../../../lib/compliance/types';
 import ComplianceSaveButton from './ComplianceSaveButton';
@@ -142,6 +143,38 @@ export default function TableMode() {
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
   const [rows, setRows] = useState<RowData[]>([makeEmptyRow(), makeEmptyRow()]);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Pre-populate from user's saved units (logged-in only)
+  useEffect(() => {
+    if (loaded) return;
+    setLoaded(true);
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: units } = await supabase
+        .from('properties')
+        .select('id, address, unit_number, year_built, current_rent, type, last_rent_increase_date, last_rent_increase_amount')
+        .eq('is_unit', true)
+        .order('address');
+      if (!units || units.length === 0) return;
+      const prefilled: RowData[] = units.map((u: any) => {
+        const zipMatch = (u.address || '').match(/\b(\d{5})\b/);
+        return {
+          id: u.id,
+          nickname: u.unit_number ? `Unit ${u.unit_number}` : (u.address?.split(',')[0] || ''),
+          zip: zipMatch ? zipMatch[1] : '',
+          yearBuilt: u.year_built ? String(u.year_built) : '',
+          propertyType: (u.type === 'single_family' ? 'single-family' : u.type === 'condo' ? 'condo' : 'multifamily') as AB1482Input['propertyType'],
+          currentRent: u.current_rent ? String(u.current_rent) : '',
+          effectiveDate: '',
+          lastIncreaseDate: u.last_rent_increase_date || '',
+          lastIncreaseAmount: u.last_rent_increase_amount ? String(u.last_rent_increase_amount) : '',
+        };
+      });
+      setRows([...prefilled, makeEmptyRow()]);
+    })();
+  }, [loaded]);
 
   const updateRow = useCallback((id: string, field: keyof RowData, value: string) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
