@@ -23,6 +23,7 @@ interface Inspection {
 interface Unit {
   id: string;
   address: string;
+  unit_number?: string;
 }
 
 interface DepositItemization {
@@ -106,9 +107,10 @@ export default function InspectionsPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       supabase
-        .from('units')
-        .select('id, address')
-        .eq('user_id', user.id),
+        .from('properties')
+        .select('id, address, unit_number')
+        .eq('is_unit', true)
+        .order('address'),
       supabase
         .from('deposit_itemizations')
         .select('id, unit_id, move_out_date, deadline_at, status')
@@ -297,19 +299,48 @@ export default function InspectionsPage() {
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state — show units with action buttons */}
         {!loading && inspections.length === 0 && (
-          <div style={{ ...card, textAlign: 'center', padding: 48 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>&#128247;</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: 6 }}>
-              No inspections yet
-            </div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
-              Create a move-in inspection to establish baseline documentation per AB 2801.
-            </div>
-            <button style={btn.teal} onClick={() => setShowNewModal(true)}>
-              + New Inspection
-            </button>
+          <div>
+            {units.length === 0 ? (
+              <div style={{ ...card, textAlign: 'center', padding: 48 }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>&#128247;</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: 6 }}>
+                  No units found
+                </div>
+                <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>
+                  Add properties in your Portfolio first, then come back to create inspections.
+                </div>
+                <a href="/" style={{ ...btn.primary, textDecoration: 'none', display: 'inline-block' }}>
+                  Go to Dashboard
+                </a>
+              </div>
+            ) : (
+              <>
+                <div style={{ ...card, padding: 16, marginBottom: 16, background: T.tealLight, border: `1px solid ${T.teal}44` }}>
+                  <div style={{ fontSize: 13, color: T.tealDark, lineHeight: 1.5 }}>
+                    <strong>AB 2801 requires photo documentation</strong> of your rental units at move-in and move-out. Start by creating a move-in inspection for each unit.
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 10 }}>Your Units</div>
+                {units.map(u => {
+                  const label = (u as any).unit_number ? `Unit ${(u as any).unit_number} — ${u.address?.split(',')[0]}` : u.address?.split(',')[0] || u.address;
+                  return (
+                    <div key={u.id} style={{ ...card, padding: 16, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: T.navy }}>{label}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <a href={`/inspections/${u.id}/new?type=move_in`} style={{ ...btn.teal, textDecoration: 'none', fontSize: 12, padding: '6px 14px' }}>
+                          Move-In Photos
+                        </a>
+                        <a href={`/inspections/${u.id}/new?type=move_out_pre_repair`} style={{ ...btn.ghost, textDecoration: 'none', fontSize: 12, padding: '6px 14px' }}>
+                          Move-Out Photos
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
 
