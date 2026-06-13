@@ -74,6 +74,7 @@ interface RowData {
   yearBuilt: string;
   propertyType: AB1482Input['propertyType'];
   currentRent: string;
+  effectiveDate: string;
   lastIncreaseDate: string;
   lastIncreaseAmount: string;
 }
@@ -91,12 +92,13 @@ function makeEmptyRow(): RowData {
     yearBuilt: '',
     propertyType: 'multifamily',
     currentRent: '',
+    effectiveDate: '',
     lastIncreaseDate: '',
     lastIncreaseAmount: '',
   };
 }
 
-function computeRow(row: RowData, ownerType: AB1482Input['ownerType'], effectiveDate: string): RowResult | null {
+function computeRow(row: RowData, ownerType: AB1482Input['ownerType'], defaultEffectiveDate: string): RowResult | null {
   if (!row.zip || row.zip.length !== 5 || !row.yearBuilt) return null;
   const input: AB1482Input = {
     zipCode: row.zip,
@@ -104,7 +106,7 @@ function computeRow(row: RowData, ownerType: AB1482Input['ownerType'], effective
     propertyType: row.propertyType,
     ownerType,
     currentRent: parseFloat(row.currentRent.replace(/[^0-9.]/g, '')) || 0,
-    effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+    effectiveDate: row.effectiveDate || defaultEffectiveDate || new Date().toISOString().split('T')[0],
     lastIncreaseDate: row.lastIncreaseDate || null,
     lastIncreaseAmount: row.lastIncreaseAmount ? (parseFloat(row.lastIncreaseAmount) || null) : null,
   };
@@ -187,8 +189,9 @@ export default function TableMode() {
             </select>
           </div>
           <div style={{ flex: '1 1 200px' }}>
-            <label style={labelStyle}>Effective date</label>
+            <label style={labelStyle}>Default effective date</label>
             <input style={sharedInput} type="date" value={effectiveDate} onChange={e => setEffectiveDate(e.target.value)} />
+            <div style={{ fontSize: 11, color: INK_MUTED, marginTop: 4 }}>Per-property dates override this default</div>
           </div>
         </div>
       </div>
@@ -201,7 +204,7 @@ export default function TableMode() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: BG }}>
-                  {['Nickname', 'Zip', 'Year Built', 'Type', 'Rent ($)', 'Last Increase', 'Last Amt ($)', 'Result', ''].map((h, i) => (
+                  {['Nickname', 'Zip', 'Year Built', 'Type', 'Rent ($)', 'Effective Date', 'Last Increase', 'Last Amt ($)', 'Result', ''].map((h, i) => (
                     <th key={i} style={{ padding: '10px 8px', textAlign: 'left', fontWeight: 700, color: N, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${BORDER}`, whiteSpace: 'nowrap' }}>
                       {h}
                     </th>
@@ -236,6 +239,9 @@ export default function TableMode() {
                       </td>
                       <td style={{ padding: '6px 8px' }}>
                         <input style={{ ...cellInput, width: 80 }} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
+                      </td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <input style={{ ...cellInput, width: 120 }} type="date" placeholder={effectiveDate} value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} title={row.effectiveDate ? '' : `Using default: ${effectiveDate}`} />
                       </td>
                       <td style={{ padding: '6px 8px' }}>
                         <input style={{ ...cellInput, width: 120 }} type="date" value={row.lastIncreaseDate} onChange={e => updateRow(row.id, 'lastIncreaseDate', e.target.value)} />
@@ -311,6 +317,10 @@ export default function TableMode() {
                     <div>
                       <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Rent ($)</label>
                       <input style={cellInput} inputMode="decimal" placeholder="2500" value={row.currentRent} onChange={e => updateRow(row.id, 'currentRent', e.target.value.replace(/[^0-9.]/g, ''))} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Effective Date</label>
+                      <input style={cellInput} type="date" value={row.effectiveDate} onChange={e => updateRow(row.id, 'effectiveDate', e.target.value)} placeholder={effectiveDate} />
                     </div>
                     <div>
                       <label style={{ fontSize: 11, color: INK_MUTED, fontWeight: 600 }}>Last Increase</label>
