@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, btn, card } from '../lib/theme';
 import FmvRefineModal, { type FmvContext } from './FmvRefineModal';
+import ComplianceWidget from './ComplianceWidget';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -1227,6 +1228,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
               </div>
             )}
           </div>
+
+          {/* 6. COMPLIANCE — collapsed */}
+          <ComplianceWidget />
         </>
       )}
     </div>

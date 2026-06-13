@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import CalculatorForm from './CalculatorForm';
+import CalculatorSection from './CalculatorSection';
 
 export const metadata: Metadata = {
   title: 'Free California Rent Cap Calculator (AB 1482) | Keywise',
@@ -62,7 +62,7 @@ export default function AB1482CalculatorPage() {
 
       {/* Calculator */}
       <div style={{ padding: '32px 24px 60px' }}>
-        <CalculatorForm />
+        <CalculatorSection />
       </div>
 
       {/* FAQ section for SEO */}

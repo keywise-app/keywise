@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
 import { RentCapResult } from '../../../../lib/compliance/types';
+import ComplianceSaveButton from './ComplianceSaveButton';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -368,6 +369,24 @@ export default function CalculatorForm() {
               <button onClick={handleReset} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, color: N, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'flex-start' }}>
                 ← Calculate again
               </button>
+
+              {/* Save calculation */}
+              <ComplianceSaveButton
+                calculations={[{
+                  input: {
+                    zipCode,
+                    yearBuilt: parseInt(yearBuilt, 10) || 0,
+                    propertyType,
+                    ownerType,
+                    exemptionNoticeGiven: (propertyType === 'single-family' || propertyType === 'condo') ? exemptionNotice : undefined,
+                    currentRent: parseFloat(currentRent.replace(/[^0-9.]/g, '')) || 0,
+                    effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+                    lastIncreaseDate: isFirstIncrease ? null : (lastIncreaseDate || null),
+                    lastIncreaseAmount: isFirstIncrease ? null : (parseFloat(lastIncreaseAmount) || null),
+                  },
+                  result,
+                }]}
+              />
             </div>
           )}
         </div>

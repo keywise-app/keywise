@@ -67,6 +67,14 @@
     {
       "path": "/api/cron/agents/dev/process_build_queue",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/compliance/annual-cpi-update",
+      "schedule": "0 16 2 1 *"
+    },
+    {
+      "path": "/api/cron/compliance/increase-window-check",
+      "schedule": "0 15 * * *"
     }
   ],
   "functions": {

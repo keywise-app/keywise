@@ -23,7 +23,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const [deleteText, setDeleteText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
-  const [notifications, setNotifications] = useState({ notify_payment: true, notify_overdue: true, notify_renewal: true });
+  const [notifications, setNotifications] = useState({ notify_payment: true, notify_overdue: true, notify_renewal: true, notify_compliance: true });
 
   useEffect(() => { fetchProfile(); }, []);
 
@@ -63,6 +63,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
         notify_payment: data.notify_payment !== false,
         notify_overdue: data.notify_overdue !== false,
         notify_renewal: data.notify_renewal !== false,
+        notify_compliance: data.notify_compliance !== false,
       });
     }
     setLoading(false);
@@ -394,6 +395,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
           { key: 'notify_payment', label: 'Payment received', desc: 'Get notified when a tenant makes a payment' },
           { key: 'notify_overdue', label: 'Rent overdue', desc: 'Get notified when rent is past due' },
           { key: 'notify_renewal', label: 'Lease expiring', desc: 'Get notified when a lease expires within 60 days' },
+          { key: 'notify_compliance', label: 'Compliance alerts', desc: 'AB 1482 CPI updates and rent increase window reminders' },
         ].map(n => (
           <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${T.border}` }}>
             <div>
