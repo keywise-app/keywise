@@ -43,7 +43,7 @@ async function getUser(req: Request) {
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,7 +54,7 @@ export async function GET(
   const { data: inspection } = await supabase
     .from('inspections')
     .select('unit_id')
-    .eq('id', params.id)
+    .eq('id', (await params).id)
     .eq('user_id', user.id)
     .single();
 
@@ -77,7 +77,7 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -89,7 +89,7 @@ export async function POST(
   const { data: inspection } = await supabase
     .from('inspections')
     .select('unit_id')
-    .eq('id', params.id)
+    .eq('id', (await params).id)
     .eq('user_id', user.id)
     .single();
 
@@ -153,7 +153,7 @@ export async function POST(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -165,7 +165,7 @@ export async function PATCH(
   const { data: inspection } = await supabase
     .from('inspections')
     .select('unit_id')
-    .eq('id', params.id)
+    .eq('id', (await params).id)
     .eq('user_id', user.id)
     .single();
 

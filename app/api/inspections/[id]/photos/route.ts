@@ -43,13 +43,13 @@ async function getUser(req: Request) {
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = getSupabase();
-  const inspectionId = params.id;
+  const { id: inspectionId } = await params;
 
   // Verify ownership
   const { data: inspection } = await supabase
@@ -78,13 +78,13 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = getSupabase();
-  const inspectionId = params.id;
+  const { id: inspectionId } = await params;
 
   // Verify ownership
   const { data: inspection } = await supabase
@@ -167,13 +167,13 @@ export async function POST(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = getSupabase();
-  const inspectionId = params.id;
+  const { id: inspectionId } = await params;
   const { searchParams } = new URL(req.url);
   const photoId = searchParams.get('photoId');
 
