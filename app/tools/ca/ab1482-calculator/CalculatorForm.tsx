@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
 import { RentCapResult } from '../../../../lib/compliance/types';
 import ComplianceSaveButton from './ComplianceSaveButton';
+import LegalDisclaimer from '../../../components/compliance/LegalDisclaimer';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -102,6 +103,7 @@ export default function CalculatorForm() {
 
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
+      <LegalDisclaimer variant="acknowledgment" toolId="ab1482" />
 
       {/* STEP 1: ELIGIBILITY */}
       {step === 'eligibility' && (
@@ -184,7 +186,7 @@ export default function CalculatorForm() {
           </div>
 
           <div style={{ background: GREEN_LIGHT, borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: GREEN_DARK }}>
-            ✓ Your property is subject to AB 1482 rent caps.
+            ✓ Based on your inputs, this property appears subject to AB 1482 rent caps.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -241,6 +243,8 @@ export default function CalculatorForm() {
 
       {/* RESULT */}
       {step === 'result' && result && (
+        <>
+        <LegalDisclaimer variant="prominent" />
         <div>
           {/* Eligibility result */}
           {!result.eligible ? (
@@ -272,7 +276,7 @@ export default function CalculatorForm() {
               {/* Main result card */}
               <div style={{ background: TEAL_LIGHT, border: `1.5px solid ${TEAL}`, borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>
-                  {result.localOverrides ? `${result.localOrdinance?.city} Rent Control` : 'AB 1482 Maximum'}
+                  {result.localOverrides ? `${result.localOrdinance?.city} Rent Control` : 'AB 1482 Estimated Maximum'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 42, fontWeight: 800, color: N, letterSpacing: '-1px' }}>
@@ -347,11 +351,8 @@ export default function CalculatorForm() {
               </div>
 
               {/* Legal disclaimer */}
-              <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Legal Disclaimer</div>
-                <p style={{ fontSize: 12, color: INK_MUTED, lineHeight: 1.6, margin: 0 }}>
-                  This calculator provides estimates for informational purposes only. It is not legal advice. Rent cap rules are complex and depend on factors this tool may not capture, including local amendments, individual lease terms, and recent legislative changes. Consult a California real estate attorney before making rent increase decisions.
-                </p>
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <LegalDisclaimer variant="inline" />
               </div>
 
               {/* CTA */}
@@ -390,6 +391,7 @@ export default function CalculatorForm() {
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   );

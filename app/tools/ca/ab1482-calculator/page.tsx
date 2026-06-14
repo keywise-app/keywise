@@ -4,11 +4,11 @@ import CalculatorSection from './CalculatorSection';
 
 export const metadata: Metadata = {
   title: 'Free California Rent Cap Calculator (AB 1482) | Keywise',
-  description: 'Calculate the maximum legal rent increase for your California rental property under AB 1482. Free tool with current 2026 CPI rates from BLS.',
+  description: 'Estimate the maximum allowable rent increase for your California rental property under AB 1482. Free tool with current 2026 CPI rates from BLS.',
   alternates: { canonical: 'https://keywise.app/tools/ca/ab1482-calculator' },
   openGraph: {
     title: 'Free California Rent Cap Calculator (AB 1482) | Keywise',
-    description: 'Calculate the maximum legal rent increase for your California rental property under AB 1482.',
+    description: 'Estimate the maximum allowable rent increase for your California rental property under AB 1482.',
     url: 'https://keywise.app/tools/ca/ab1482-calculator',
     siteName: 'Keywise',
     type: 'website',
@@ -56,7 +56,7 @@ export default function AB1482CalculatorPage() {
           California Rent Cap Calculator
         </h1>
         <p style={{ fontSize: 16, color: INK_MID, margin: '0 auto', maxWidth: 520, lineHeight: 1.6 }}>
-          Calculate the maximum legal rent increase for your California rental property under AB 1482 (Tenant Protection Act). Updated with 2026 CPI data from the Bureau of Labor Statistics.
+          Estimate the maximum allowable rent increase for your California rental property under AB 1482 (Tenant Protection Act). Updated with 2026 CPI data from the Bureau of Labor Statistics.
         </p>
       </div>
 

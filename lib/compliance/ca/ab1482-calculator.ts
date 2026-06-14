@@ -205,9 +205,9 @@ export function calculateAB1482(input: AB1482Input): RentCapResult {
   // --- STEP 10: Plain English ---
   let plainEnglish: string;
   if (localOverrides && localOrd) {
-    plainEnglish = `Your property is in ${localOrd.city}, which has local rent control limiting increases to ${localOrd.rate}% (${localOrd.note}). This is stricter than AB 1482's ${roundedCap}% cap, so the local rate applies. You can raise rent by up to $${maxIncreaseDollars.toLocaleString()}/month. You must give your tenant at least ${noticeRequired} days written notice.`;
+    plainEnglish = `Your property is in ${localOrd.city}, which has local rent control limiting increases to ${localOrd.rate}% (${localOrd.note}). This is stricter than AB 1482's ${roundedCap}% cap, so the local rate applies. Based on these inputs, the estimated maximum increase is up to $${maxIncreaseDollars.toLocaleString()}/month. California law typically requires at least ${noticeRequired} days written notice.`;
   } else {
-    plainEnglish = `Based on the ${regionLabel || region} CPI of ${effectiveCpi}% (${periodLabel}), you can raise rent by up to ${roundedCap}% — that's $${maxIncreaseDollars.toLocaleString()}/month, for a new rent of $${maxNewRent.toLocaleString()}/month. You must give your tenant at least ${noticeRequired} days written notice.`;
+    plainEnglish = `Based on the ${regionLabel || region} CPI of ${effectiveCpi}% (${periodLabel}), the estimated maximum increase is ${roundedCap}% — that's up to $${maxIncreaseDollars.toLocaleString()}/month, for an estimated new rent of $${maxNewRent.toLocaleString()}/month. California law typically requires at least ${noticeRequired} days written notice.`;
   }
 
   if (doubleIncreaseWarning) {

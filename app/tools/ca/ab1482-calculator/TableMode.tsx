@@ -329,7 +329,7 @@ export default function TableMode() {
                 {/* Main result */}
                 <div style={{ background: TEAL_LIGHT, border: `1.5px solid ${TEAL}`, borderRadius: 10, padding: '16px 20px' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
-                    {expandedResult.result.localOverrides ? `${expandedResult.result.localOrdinance?.city} Rent Control` : 'AB 1482 Maximum'}
+                    {expandedResult.result.localOverrides ? `${expandedResult.result.localOrdinance?.city} Rent Control` : 'AB 1482 Estimated Maximum'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span style={{ fontSize: 32, fontWeight: 800, color: N }}>${expandedResult.result.maxNewRent?.toLocaleString()}</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import LegalDisclaimer from '../../../components/compliance/LegalDisclaimer';
 
 const N = '#0F3460';
 const TEAL_DARK = '#00A886';
@@ -140,6 +141,7 @@ export default function NoticePreview({
         }}>
           {noticeText}
         </pre>
+        <LegalDisclaimer variant="document_footer" />
       </div>
 
       {/* Action buttons */}

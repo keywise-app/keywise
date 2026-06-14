@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
+import LegalDisclaimer, { DISCLAIMER_TEXTS } from '../../../components/compliance/LegalDisclaimer';
 import {
   NOTICE_TYPES,
   AT_FAULT_TYPES,
   NO_FAULT_TYPES,
-  DISCLAIMER_TEXT,
   ATTORNEY_REFERRAL_URL,
   type NoticeType,
 } from '../../../../lib/compliance/ca/just-cause-config';
@@ -368,7 +368,7 @@ export default function EvictionWizard() {
   const disclaimerBanner = (
     <div style={{ background: '#FFF0F0', border: `1px solid ${CORAL}33`, borderRadius: 10, padding: '10px 14px', marginBottom: 20 }}>
       <p style={{ fontSize: 12, color: CORAL, margin: 0, fontWeight: 600 }}>
-        {DISCLAIMER_TEXT}{' '}
+        {DISCLAIMER_TEXTS.prominent}{' '}
         <a href={ATTORNEY_REFERRAL_URL} target="_blank" rel="noopener noreferrer" style={{ color: TEAL_DARK, textDecoration: 'underline' }}>
           Find a California Attorney
         </a>
@@ -453,7 +453,7 @@ export default function EvictionWizard() {
     <div>
       <h2 style={{ fontSize: 20, fontWeight: 700, color: N, margin: '0 0 4px' }}>Step 2: Select Notice Type</h2>
       <p style={{ fontSize: 14, color: INK_MID, margin: '0 0 6px' }}>
-        You must select the appropriate notice type. This tool does NOT recommend which notice to use.
+        Select the notice type that applies to your situation. This tool does NOT recommend which notice to use.
       </p>
       <p style={{ fontSize: 13, color: CORAL, fontWeight: 600, margin: '0 0 20px' }}>
         Not sure which notice type applies?{' '}
@@ -958,6 +958,7 @@ export default function EvictionWizard() {
   /* ── Main render ── */
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <LegalDisclaimer variant="acknowledgment" toolId="just_cause" />
       {disclaimerBanner}
       {progressBar}
 
@@ -1017,7 +1018,7 @@ export default function EvictionWizard() {
 
       {/* Bottom disclaimer */}
       <div style={{ marginTop: 20, textAlign: 'center' }}>
-        <p style={{ fontSize: 12, color: INK_MUTED, margin: '0 0 4px' }}>{DISCLAIMER_TEXT}</p>
+        <p style={{ fontSize: 12, color: INK_MUTED, margin: '0 0 4px' }}>{DISCLAIMER_TEXTS.prominent}</p>
         <a
           href={ATTORNEY_REFERRAL_URL}
           target="_blank"
