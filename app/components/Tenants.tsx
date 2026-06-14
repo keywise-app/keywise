@@ -1735,7 +1735,6 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
         </div>
       )}
     </div>
-      )}
 
       {/* FMV Refine Modal */}
       {showFmvRefine && selected && (
