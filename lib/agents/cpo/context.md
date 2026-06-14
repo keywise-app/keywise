@@ -46,7 +46,6 @@ UI is largely not built yet.
 - `/login`, `/reset-password` — landlord auth (page exists; account creation flow
   may live inside `/login` or as a modal — call `read_route_files` to verify)
 - `/tenant-login`, `/tenant` — tenant portal entry + dashboard
-- `/apply/[id]` — tenant application flow
 - `/sign/[token]` — document signing flow
 
 **Internal routes the CPO should usually skip:**
@@ -120,9 +119,6 @@ like in practice on each:
   reversibility (back button, draft preservation on validation error)
 - **`/blog/[slug]` and specific blog posts** — readability, internal-link
   navigation (intuitive flows), no dead-ends on related-posts links
-- **`/apply/[id]`** — intuitive flows (clear what step the tenant is on),
-  reversibility (back button on multi-step), error recovery (form preserves
-  input on validation errors), flexibility (tenant can correct fields)
 - **`/sign/[token]`** — reversibility (can the tenant exit and resume?), error
   recovery (what if the link expired or was tampered with?)
 - **`/tenant-login`, `/login`, `/reset-password`** — intuitive flows (single
