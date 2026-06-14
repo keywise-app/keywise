@@ -67,6 +67,13 @@ const POSTS = [
     tag: 'Legal',
   },
   {
+    slug: 'california-ab-1482-explained-2026',
+    title: 'California AB 1482 in 2026: The Small Landlord\'s Guide',
+    description: 'Everything California landlords need to know about AB 1482 rent caps. Free calculator, CPI rates, exemptions, local overrides, and common mistakes.',
+    date: '2026',
+    tag: 'Compliance',
+  },
+  {
     slug: 'property-management-software-comparison',
     title: 'Best Property Management Software for Small Landlords (2026)',
     description: 'Honest comparison of Avail, RentRedi, TurboTenant, Apartments.com, and Keywise for 1-10 unit portfolios.',

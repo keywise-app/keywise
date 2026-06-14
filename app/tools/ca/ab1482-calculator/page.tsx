@@ -3,12 +3,12 @@ import Link from 'next/link';
 import CalculatorSection from './CalculatorSection';
 
 export const metadata: Metadata = {
-  title: 'Free California Rent Cap Calculator (AB 1482) | Keywise',
-  description: 'Estimate the maximum allowable rent increase for your California rental property under AB 1482. Free tool with current 2026 CPI rates from BLS.',
+  title: 'AB 1482 California Rent Cap Calculator (2026) | Free Tool | Keywise',
+  description: 'Free calculator for California\'s AB 1482 rent cap. Estimate your max allowable increase in 60 seconds. Multi-property support, account saving, CPI auto-updates.',
   alternates: { canonical: 'https://keywise.app/tools/ca/ab1482-calculator' },
   openGraph: {
-    title: 'Free California Rent Cap Calculator (AB 1482) | Keywise',
-    description: 'Estimate the maximum allowable rent increase for your California rental property under AB 1482.',
+    title: 'AB 1482 California Rent Cap Calculator (2026) | Free Tool | Keywise',
+    description: 'Free calculator for California\'s AB 1482 rent cap. Estimate your max allowable increase in 60 seconds.',
     url: 'https://keywise.app/tools/ca/ab1482-calculator',
     siteName: 'Keywise',
     type: 'website',
@@ -124,6 +124,18 @@ export default function AB1482CalculatorPage() {
           </div>
         </div>
       </div>
+
+      {/* SoftwareApplication structured data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'AB 1482 California Rent Cap Calculator',
+        applicationCategory: 'FinanceApplication',
+        operatingSystem: 'Web',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        description: 'Free calculator for California AB 1482 rent cap limits.',
+        url: 'https://keywise.app/tools/ca/ab1482-calculator',
+      }) }} />
 
       {/* Structured data for SEO */}
       <script

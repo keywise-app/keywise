@@ -488,6 +488,7 @@ export default function Landing() {
           <Logo size={30} />
           <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
             <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Blog</a>
+            <a href="/tools" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Free Tools</a>
             <a href="/tenant" style={{ color: INK_MUTED, fontSize: 13, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Tenant Login</a>
             <button onClick={openLogin} className="landing-btn-ghost"
               style={{ background: 'transparent', color: INK_MID, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
@@ -508,6 +509,10 @@ export default function Landing() {
         </div>
         {mobileMenuOpen && (
           <div className="landing-mobile-menu" style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <a href="/tools"
+              style={{ display: 'block', background: 'transparent', color: N, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+              Free Tools
+            </a>
             <button onClick={openLogin}
               style={{ background: 'transparent', color: N, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               Log In
@@ -595,6 +600,51 @@ export default function Landing() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <DashboardMockup />
+          </div>
+        </div>
+      </section>
+
+      {/* AB 1482 CALCULATOR PROMO */}
+      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
+        <div className="landing-hero-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '5px 14px', marginBottom: 20 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Free Tool</span>
+            </div>
+            <h2 style={{ fontSize: 32, fontWeight: 800, color: N, lineHeight: 1.15, letterSpacing: '-0.5px', margin: '0 0 14px' }}>
+              California AB 1482<br />Rent Cap Calculator
+            </h2>
+            <p style={{ fontSize: 16, color: INK_MID, lineHeight: 1.6, margin: '0 0 20px' }}>
+              Check your max allowable rent increase in 60 seconds. No signup needed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+              {['Current 2026 CPI rates', 'Multi-property support', 'Local ordinance detection'].map(item => (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: INK_MID }}>
+                  <span style={{ color: TEAL, fontSize: 16, fontWeight: 700 }}>&#10003;</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+              <a href="/tools/ca/ab1482-calculator" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+                Use the Calculator &rarr;
+              </a>
+              <a href="/blog/california-ab-1482-explained-2026" style={{ fontSize: 13, color: TEAL_DARK, fontWeight: 600, textDecoration: 'none' }}>
+                Learn how AB 1482 works &rarr;
+              </a>
+            </div>
+            <p style={{ fontSize: 12, color: INK_MUTED, marginTop: 20 }}>
+              Built by a California landlord. Verified against current BLS data.
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ background: `linear-gradient(160deg, ${TEAL} 0%, ${TEAL_DARK} 100%)`, borderRadius: 16, padding: 32, width: '100%', maxWidth: 340, boxShadow: '0 8px 32px rgba(0,212,170,0.18)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Maximum Allowable Rent</div>
+              <div style={{ fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>$4,674<span style={{ fontSize: 18, fontWeight: 600 }}>/mo</span></div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 8 }}>8.7% increase</div>
+              <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.2)', margin: '16px 0' }} />
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Los Angeles region &middot; Post-Aug 2026</div>
+            </div>
           </div>
         </div>
       </section>
@@ -953,6 +1003,23 @@ export default function Landing() {
                   { label: 'Free Lease Template', href: '/blog/free-lease-agreement-template' },
                   { label: 'Late Rent Notice Template', href: '/blog/late-rent-notice' },
                   { label: 'Move-In Inspection Checklist', href: '/blog/move-in-inspection-checklist' },
+                ].map(link => (
+                  <a key={link.label} href={link.href}
+                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Compliance Tools</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { label: 'AB 1482 Calculator', href: '/tools/ca/ab1482-calculator' },
+                  { label: 'Move-Out Inspections', href: '/inspections' },
+                  { label: 'Eviction Notice Wizard', href: '/tools/ca/eviction-notice' },
                 ].map(link => (
                   <a key={link.label} href={link.href}
                     style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}

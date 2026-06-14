@@ -143,6 +143,12 @@ export default function Page() {
           <strong>Downsides:</strong> Newer platform, so the user community is still growing. No tenant screening yet (planned). The $2 per-transaction fee for online payments, while competitive, adds up for landlords collecting many payments.
         </p>
 
+        <div style={{ background: '#E0FAF5', border: '1px solid #00D4AA44', borderRadius: 10, padding: '16px 20px', marginTop: 24, marginBottom: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: N }}>California landlords &mdash; try our free AB 1482 Rent Cap Calculator</div>
+          <div style={{ fontSize: 13, color: INK_MID, marginTop: 4 }}>Check your max allowable increase in 60 seconds. No signup needed.</div>
+          <a href="/tools/ca/ab1482-calculator" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, fontWeight: 700, color: '#00A886', textDecoration: 'none' }}>Use the calculator &rarr;</a>
+        </div>
+
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Comparison at a glance</h2>
         <div style={{ overflowX: 'auto', marginBottom: 24 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, color: INK_MID }}>
