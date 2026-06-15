@@ -87,6 +87,7 @@ export default function InspectionsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [itemizations, setItemizations] = useState<DepositItemization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(true); // default true to avoid flash
   const [showNewModal, setShowNewModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState('');
   const [selectedType, setSelectedType] = useState('move_in');
@@ -98,7 +99,7 @@ export default function InspectionsPage() {
   async function loadData() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoggedIn(false); setLoading(false); return; }
 
     const [inspRes, unitRes, itemRes] = await Promise.all([
       supabase
@@ -296,6 +297,28 @@ export default function InspectionsPage() {
         {loading && (
           <div style={{ textAlign: 'center', padding: 40, color: T.inkMuted, fontSize: 14 }}>
             Loading inspections...
+          </div>
+        )}
+
+        {/* Anonymous preview */}
+        {!loading && !loggedIn && (
+          <div style={{ ...card, textAlign: 'center', padding: 48 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📸</div>
+            <div style={{ fontWeight: 700, fontSize: 20, color: T.navy, marginBottom: 8 }}>
+              Move-In & Move-Out Photo Documentation
+            </div>
+            <div style={{ fontSize: 14, color: T.inkMuted, lineHeight: 1.6, maxWidth: 440, margin: '0 auto 8px' }}>
+              California AB 2801 requires landlords to photograph rental units at move-in and move-out. This tool helps you capture, organize, and compare photos room by room — with AI-assisted condition analysis and deposit itemization.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', marginTop: 20 }}>
+              <div style={{ fontSize: 13, color: T.inkMuted }}>
+                ✓ Room-by-room photo capture &nbsp;·&nbsp; ✓ AI condition comparison &nbsp;·&nbsp; ✓ 21-day deadline tracker
+              </div>
+            </div>
+            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <a href="/?login=true" style={{ ...btn.primary, textDecoration: 'none', display: 'inline-block' }}>Log in to start →</a>
+              <a href="/?signup=true" style={{ ...btn.teal, textDecoration: 'none', display: 'inline-block' }}>Create free account</a>
+            </div>
           </div>
         )}
 

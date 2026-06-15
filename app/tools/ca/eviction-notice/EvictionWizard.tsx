@@ -99,6 +99,7 @@ export default function EvictionWizard() {
   const [step, setStep] = useState<Step>('unit');
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<UnitOption | null>(null);
   const [selectedType, setSelectedType] = useState<NoticeType | null>(null);
 
@@ -148,7 +149,7 @@ export default function EvictionWizard() {
     async function fetchUnits() {
       setLoadingUnits(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoadingUnits(false); return; }
+      if (!user) { setLoggedIn(false); setLoadingUnits(false); return; }
 
       const { data: props } = await supabase
         .from('properties')
@@ -956,6 +957,33 @@ export default function EvictionWizard() {
   };
 
   /* ── Main render ── */
+
+  if (!loggedIn && !loadingUnits) {
+    return (
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚖</div>
+          <div style={{ fontWeight: 700, fontSize: 20, color: N, marginBottom: 8 }}>
+            California Just-Cause Eviction Notice Wizard
+          </div>
+          <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6, maxWidth: 440, margin: '0 auto 8px' }}>
+            Generate legally-cited eviction notices for California rental properties. The wizard checks for 13 common procedural defects before you serve, and calculates notice periods including weekends and judicial holidays.
+          </div>
+          <div style={{ fontSize: 13, color: INK_MUTED, marginTop: 12 }}>
+            ✓ 12 notice types &nbsp;·&nbsp; ✓ Defect checker &nbsp;·&nbsp; ✓ Deadline calculator &nbsp;·&nbsp; ✓ PDF generation
+          </div>
+          <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <a href="/?login=true" style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Log in to start →</a>
+            <a href="/?signup=true" style={{ background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Create free account</a>
+          </div>
+          <div style={{ fontSize: 11, color: INK_MUTED, marginTop: 12 }}>
+            Free for 1-2 units. No credit card required.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <LegalDisclaimer variant="acknowledgment" toolId="just_cause" />
