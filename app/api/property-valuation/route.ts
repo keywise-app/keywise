@@ -53,7 +53,7 @@ Base your estimates on typical US residential real estate metrics for the proper
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6-20250620',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       }),
