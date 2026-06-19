@@ -108,7 +108,7 @@ export async function analyzeInspection(photoPairs: PhotoPair[]): Promise<Findin
 
     try {
       const response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6-20250620',
         max_tokens: 2048,
         messages: [
           {

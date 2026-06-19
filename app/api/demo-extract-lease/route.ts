@@ -74,7 +74,7 @@ If a field is not found use empty string. Return only the JSON object.`,
         'anthropic-beta': 'pdfs-2024-09-25',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6-20250620',
         max_tokens: 512,
         messages: [{ role: 'user', content }],
       }),

@@ -31,7 +31,7 @@ repair_receipt: 'Summarize this repair receipt for a landlord. Include: what was
         'anthropic-beta': 'pdfs-2024-09-25',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6-20250620',
         max_tokens: 1024,
         messages: [{ role: 'user', content }],
       }),
