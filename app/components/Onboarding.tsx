@@ -294,6 +294,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         const blob = await fetch('data:' + fileStatus.file.type + ';base64,' + base64).then(r => r.blob());
         await supabase.storage.from('documents').upload(filePath, blob);
 
+        let createdLeaseId: string | null = null;
         if (r.document_type === 'lease' && (r.building_address || r.property_address)) {
           const unitNum = r.unit_number || '';
           const buildingAddress = r.building_address ||
@@ -346,6 +347,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               log.push('✗ Could not create lease: ' + leaseError.message);
             } else {
               allLeases.push({ id: newLeaseData.id, tenant_name: r.tenant_name });
+              createdLeaseId = newLeaseData.id;
               log.push('✓ Created lease: ' + r.tenant_name);
 
               // Generate payment schedule from today forward
@@ -394,6 +396,11 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         }
 
         const ownership = r.tenant_name ? 'tenant' : r.property_address ? 'property' : 'portfolio';
+        // If this is a lease doc but we didn't just create one (it already existed), find the existing lease ID
+        if (r.document_type === 'lease' && !createdLeaseId && r.tenant_name) {
+          const existing = allLeases.find((l: any) => l.tenant_name?.toLowerCase() === r.tenant_name.toLowerCase());
+          if (existing) createdLeaseId = existing.id;
+        }
         await supabase.from('documents').insert({
           user_id: user.id,
           name: r.tenant_name
@@ -403,6 +410,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           ownership_level: ownership,
           property: r.property_address || '',
           tenant_name: r.tenant_name || '',
+          lease_id: createdLeaseId || null,
           file_path: filePath, file_url: '',
           summary: r.summary || '',
           expiry_date: r.expiry_date || null,
