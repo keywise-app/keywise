@@ -79,6 +79,7 @@ export default function Leases() {
   });
   const [editingLease, setEditingLease] = useState<Lease | null>(null);
   const [editForm, setEditForm] = useState<any>(null);
+  const [leaseFile, setLeaseFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newLease, setNewLease] = useState({
@@ -114,6 +115,11 @@ export default function Leases() {
   };
 
   const extractLeaseData = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setExtractError('File too large. Maximum size is 10 MB.');
+      return;
+    }
+    setLeaseFile(file);
     setExtracting(true);
     setExtractError('');
     try {
@@ -180,7 +186,24 @@ export default function Leases() {
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
-    const { error } = await supabase.from('leases').insert({
+
+    // Upload lease file to storage if one was provided
+    let filePath = '';
+    let fileSize = '';
+    if (leaseFile) {
+      const ext = leaseFile.name.split('.').pop();
+      filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, leaseFile);
+      if (uploadError) {
+        alert('File upload failed: ' + uploadError.message);
+        setSaving(false);
+        return;
+      }
+      fileSize = (leaseFile.size / 1024).toFixed(0) + ' KB';
+    }
+
+    // Create lease record
+    const { data: leaseData, error } = await supabase.from('leases').insert({
       user_id: user.id,
       tenant_name: newLease.tenant_name,
       property: newLease.property,
@@ -197,12 +220,31 @@ export default function Leases() {
       late_fee_days: +newLease.late_fee_days || 3,
       late_fee_type: newLease.late_fee_type || 'percent',
       lease_terms_raw: newLease.lease_terms_raw || '',
-    });
+    }).select().single();
+
     if (error) {
+      // Clean up uploaded file if lease insert failed
+      if (filePath) await supabase.storage.from('documents').remove([filePath]);
       alert('Error saving: ' + error.message);
     } else {
+      // Create document record linking file to lease
+      if (filePath && leaseData) {
+        await supabase.from('documents').insert({
+          user_id: user.id,
+          name: newLease.tenant_name + ' — Lease Agreement',
+          type: 'lease',
+          ownership_level: 'tenant',
+          property: newLease.property,
+          tenant_name: newLease.tenant_name,
+          lease_id: leaseData.id,
+          file_path: filePath,
+          file_url: '',
+          size: fileSize,
+        });
+      }
       await fetchLeases();
       setShowAdd(false);
+      setLeaseFile(null);
       setNewLease({ tenant_name: '', property: '', rent: '', deposit: '', start_date: '', end_date: '', email: '', phone: '', payment_day: '1', payment_frequency: 'monthly', late_fee_percent: '5', late_fee_days: '3', late_fee_type: 'percent', lease_terms_raw: '' });
       setExtractError('');
     }
@@ -592,7 +634,7 @@ export default function Leases() {
       {/* Add Lease Modal */}
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAdd(false); setExtractError(''); }}>
+          onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}>
           <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: T.shadowMd }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Add Lease</div>
@@ -601,11 +643,16 @@ export default function Leases() {
             <div onClick={() => fileInputRef.current?.click()}
               onDrop={e => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) extractLeaseData(file); }}
               onDragOver={e => e.preventDefault()}
-              style={{ border: '2px dashed ' + T.border, borderRadius: T.radius, padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: extracting ? T.tealLight : T.bg }}>
+              style={{ border: '2px dashed ' + T.border, borderRadius: T.radius, padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: extracting ? T.tealLight : leaseFile ? T.greenLight : T.bg }}>
               <input ref={fileInputRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }}
                 onChange={e => { const file = e.target.files?.[0]; if (file) extractLeaseData(file); }} />
               {extracting
                 ? <div style={{ color: T.navy, fontSize: 13, fontWeight: 600 }}>✦ Reading lease including payment terms… just a moment</div>
+                : leaseFile
+                ? <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.greenDark }}>📄 {leaseFile.name}</div>
+                    <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>File will be saved with lease · Click to replace</div>
+                  </div>
                 : <>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
                     <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Upload Lease PDF or Photo</div>
@@ -635,7 +682,7 @@ export default function Leases() {
               <button onClick={addLease} disabled={saving} style={{ ...btn.primary }}>
                 {saving ? 'Saving…' : 'Save Lease'}
               </button>
-              <button onClick={() => { setShowAdd(false); setExtractError(''); }}
+              <button onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}
                 style={{ ...btn.ghost }}>Cancel</button>
             </div>
           </div>
