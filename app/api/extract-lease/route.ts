@@ -5,11 +5,7 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const { fileUrl, fileType } = await req.json();
-
-    if (!fileUrl) {
-      return NextResponse.json({ error: 'No file URL received.' });
-    }
+    const { fileUrl, base64: rawBase64, fileType } = await req.json();
 
     const isImage = fileType?.startsWith('image/');
     const isPDF = fileType === 'application/pdf';
@@ -18,12 +14,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please upload a PDF or image file.' });
     }
 
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      return NextResponse.json({ error: 'Could not fetch uploaded file: ' + fileResponse.status });
+    let base64: string;
+    if (rawBase64) {
+      base64 = rawBase64;
+    } else if (fileUrl) {
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) {
+        return NextResponse.json({ error: 'Could not fetch uploaded file: ' + fileResponse.status });
+      }
+      const buffer = await fileResponse.arrayBuffer();
+      base64 = Buffer.from(buffer).toString('base64');
+    } else {
+      return NextResponse.json({ error: 'No file provided.' });
     }
-    const buffer = await fileResponse.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
 
     const content: any[] = [];
 
