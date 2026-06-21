@@ -35,6 +35,20 @@ export default function PricingPage() {
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      <style>{`
+        .pricing-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          max-width: 720px;
+          margin: 0 auto;
+        }
+        @media (max-width: 640px) {
+          .pricing-grid { grid-template-columns: 1fr; }
+          .pricing-card-free { order: 2; }
+          .pricing-card-pro { order: 1; }
+        }
+      `}</style>
 
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 40px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
