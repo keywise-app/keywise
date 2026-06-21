@@ -42,6 +42,13 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
   const [pdfError, setPdfError] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [addingNewProperty, setAddingNewProperty] = useState(false);
+  const [showInlineUnitForm, setShowInlineUnitForm] = useState(false);
+  const [inlineUnitNumber, setInlineUnitNumber] = useState('');
+  const [inlineUnitBeds, setInlineUnitBeds] = useState('1');
+  const [inlineUnitBaths, setInlineUnitBaths] = useState('1');
+  const [inlineUnitSqft, setInlineUnitSqft] = useState('');
+  const [inlineUnitDuplicate, setInlineUnitDuplicate] = useState(false);
+  const [creatingUnit, setCreatingUnit] = useState(false);
   const [setupPayments, setSetupPayments] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('external');
   const [inviteMethod, setInviteMethod] = useState<'email' | 'sms' | 'both' | 'skip'>('both');
@@ -178,11 +185,15 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
         return;
       }
 
-      upd({
+      const extractedAddress = data.building_address || data.property || '';
+      const extractedUnit = data.unit_number || '';
+
+      const patch: Partial<typeof emptyForm> = {
         tenant_name: data.tenant_name || '',
         email: data.email || '',
         phone: data.phone || '',
-        address: data.property || '',
+        address: extractedAddress,
+        unit_number: extractedUnit,
         rent: data.rent ? data.rent + '' : '',
         monthly_rent: data.rent ? data.rent + '' : '',
         deposit: data.deposit ? data.deposit + '' : '',
@@ -196,7 +207,40 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
         beds: data.beds ? data.beds + '' : '1',
         baths: data.baths ? data.baths + '' : '1',
         sqft: data.sqft ? data.sqft + '' : '',
-      });
+      };
+
+      // Auto-match extracted address to existing buildings/units
+      if (extractedAddress && buildings.length > 0) {
+        const addrKey = extractedAddress.split(',')[0].toLowerCase().trim();
+        const matchedBuilding = buildings.find((b: any) =>
+          b.address?.toLowerCase().includes(addrKey) || b.name?.toLowerCase().includes(addrKey)
+        );
+        if (matchedBuilding) {
+          patch.building_id = matchedBuilding.id;
+          // Try to match unit within the building
+          if (extractedUnit) {
+            const matchedUnit = units.find((u: any) =>
+              u.building_id === matchedBuilding.id &&
+              u.unit_number?.toLowerCase() === extractedUnit.toLowerCase()
+            );
+            if (matchedUnit) {
+              patch.property_id = matchedUnit.id;
+            }
+          } else {
+            // No unit number — check if building has exactly one unit
+            const buildingUnits = units.filter((u: any) => u.building_id === matchedBuilding.id);
+            if (buildingUnits.length === 1) {
+              patch.property_id = buildingUnits[0].id;
+            }
+          }
+        }
+      }
+
+      upd(patch);
+
+      // Pre-fill inline unit form from extracted data
+      if (extractedUnit) setInlineUnitNumber(extractedUnit);
+
       setPdfExtracting(false);
       setMethod('pdf');
       setStep(preselectedUnit ? 2 : 1);
@@ -557,38 +601,184 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
                       <div>
                         <label style={label}>Unit</label>
                         <select style={input} value={form.property_id}
-                          onChange={e => upd({ property_id: e.target.value })}>
+                          onChange={e => {
+                            if (e.target.value === '__new') {
+                              upd({ property_id: '' });
+                              setShowInlineUnitForm(true);
+                              setInlineUnitDuplicate(false);
+                              if (form.unit_number) setInlineUnitNumber(form.unit_number);
+                            } else {
+                              upd({ property_id: e.target.value });
+                              setShowInlineUnitForm(false);
+                            }
+                          }}>
                           <option value="">— Select a unit —</option>
                           {buildingUnits.map(u => (
                             <option key={u.id} value={u.id}>
-                              Unit {u.unit_number || '—'}{u.beds ? ` · ${u.beds}bd/${u.baths || '1'}ba` : ''}{u.current_rent ? ` · $${u.current_rent}/mo` : ''}
+                              {u.unit_number ? 'Unit ' + u.unit_number : u.address || 'Unit'}{u.beds ? ` · ${u.beds}bd/${u.baths || '1'}ba` : ''}{u.current_rent ? ` · $${u.current_rent}/mo` : ''}
                             </option>
                           ))}
+                          <option value="__new">+ Create new unit</option>
                         </select>
+                        {showInlineUnitForm && (
+                          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: 14, marginTop: 10 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <div>
+                                <label style={label}>Unit # (leave blank for single-family)</label>
+                                <input style={input} value={inlineUnitNumber} placeholder="e.g. A, 101, 1B"
+                                  onChange={e => { setInlineUnitNumber(e.target.value); setInlineUnitDuplicate(false); }} />
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={label}>Beds</label>
+                                  <select style={input} value={inlineUnitBeds} onChange={e => setInlineUnitBeds(e.target.value)}>
+                                    <option value="0">Studio</option>
+                                    {['1','2','3','4','5'].map(b => <option key={b} value={b}>{b}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={label}>Baths</label>
+                                  <select style={input} value={inlineUnitBaths} onChange={e => setInlineUnitBaths(e.target.value)}>
+                                    {BATH_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={label}>Sqft</label>
+                                  <input style={input} type="number" value={inlineUnitSqft} placeholder="950" onChange={e => setInlineUnitSqft(e.target.value)} />
+                                </div>
+                              </div>
+                              {inlineUnitDuplicate && (
+                                <div style={{ fontSize: 12, color: T.coral, fontWeight: 600 }}>
+                                  Unit {inlineUnitNumber} already exists at this building.
+                                </div>
+                              )}
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button disabled={creatingUnit} onClick={async () => {
+                                  const { data: { user } } = await supabase.auth.getUser();
+                                  if (!user) return;
+                                  if (inlineUnitNumber) {
+                                    const existing = units.find(u =>
+                                      u.building_id === form.building_id &&
+                                      u.unit_number?.toLowerCase() === inlineUnitNumber.toLowerCase()
+                                    );
+                                    if (existing) { setInlineUnitDuplicate(true); return; }
+                                  }
+                                  setCreatingUnit(true);
+                                  const bld = buildings.find(b => b.id === form.building_id);
+                                  const unitAddr = (bld?.address || '') + (inlineUnitNumber ? ', Unit ' + inlineUnitNumber : '');
+                                  const { data: newUnit } = await supabase.from('properties').insert({
+                                    user_id: user.id,
+                                    building_id: form.building_id,
+                                    address: unitAddr,
+                                    unit_number: inlineUnitNumber || null,
+                                    is_unit: true,
+                                    beds: +inlineUnitBeds || 1,
+                                    baths: parseFloat(inlineUnitBaths) || 1,
+                                    sqft: +inlineUnitSqft || null,
+                                    current_rent: +(form.monthly_rent || form.rent) || 0,
+                                  }).select('id').single();
+                                  if (newUnit) {
+                                    await fetchProperties();
+                                    upd({ property_id: newUnit.id, unit_number: inlineUnitNumber });
+                                  }
+                                  setCreatingUnit(false);
+                                  setShowInlineUnitForm(false);
+                                }} style={{ ...btn.teal, fontSize: 12, padding: '6px 14px', opacity: creatingUnit ? 0.6 : 1 }}>
+                                  {creatingUnit ? 'Creating...' : '✓ Create Unit'}
+                                </button>
+                                <button onClick={() => setShowInlineUnitForm(false)}
+                                  style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ background: T.amberLight, border: `1px solid ${T.amber}55`, borderRadius: T.radiusSm, padding: 14 }}>
                         <div style={{ fontWeight: 700, color: T.amberDark, fontSize: 13, marginBottom: 4 }}>No units in this building yet</div>
-                        <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 10 }}>Add a unit now, or go to Portfolio to set up your building first.</div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button onClick={async () => {
-                            const { data: { user } } = await supabase.auth.getUser();
-                            if (!user) return;
-                            const bld = buildings.find(b => b.id === form.building_id);
-                            const { data: newUnit } = await supabase.from('properties').insert({
-                              user_id: user.id, building_id: form.building_id,
-                              address: (bld?.address || '') + ', Unit A',
-                              unit_number: 'A', is_unit: true, beds: 1, baths: 1,
-                            }).select('id').single();
-                            if (newUnit) { await fetchProperties(); upd({ property_id: newUnit.id }); }
-                          }} style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>
-                            + Add Unit A
+                        <div style={{ fontSize: 12, color: T.inkMuted, marginBottom: 10 }}>Create a unit to continue.</div>
+                        {!showInlineUnitForm ? (
+                          <button onClick={() => { setShowInlineUnitForm(true); setInlineUnitDuplicate(false); if (form.unit_number) setInlineUnitNumber(form.unit_number); }}
+                            style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>
+                            + Create Unit
                           </button>
-                          <button onClick={() => window.dispatchEvent(new CustomEvent('kw:navigate', { detail: 'portfolio' }))}
-                            style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
-                            Go to Portfolio →
-                          </button>
-                        </div>
+                        ) : (
+                          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: 14, marginTop: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <div>
+                                <label style={label}>Unit # (leave blank for single-family)</label>
+                                <input style={input} value={inlineUnitNumber} placeholder="e.g. A, 101, 1B"
+                                  onChange={e => { setInlineUnitNumber(e.target.value); setInlineUnitDuplicate(false); }} />
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={label}>Beds</label>
+                                  <select style={input} value={inlineUnitBeds} onChange={e => setInlineUnitBeds(e.target.value)}>
+                                    <option value="0">Studio</option>
+                                    {['1','2','3','4','5'].map(b => <option key={b} value={b}>{b}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={label}>Baths</label>
+                                  <select style={input} value={inlineUnitBaths} onChange={e => setInlineUnitBaths(e.target.value)}>
+                                    {BATH_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={label}>Sqft</label>
+                                  <input style={input} type="number" value={inlineUnitSqft} placeholder="950" onChange={e => setInlineUnitSqft(e.target.value)} />
+                                </div>
+                              </div>
+                              {inlineUnitDuplicate && (
+                                <div style={{ fontSize: 12, color: T.coral, fontWeight: 600 }}>
+                                  Unit {inlineUnitNumber} already exists at this building.
+                                </div>
+                              )}
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button disabled={creatingUnit} onClick={async () => {
+                                  const { data: { user } } = await supabase.auth.getUser();
+                                  if (!user) return;
+                                  // Duplicate check
+                                  if (inlineUnitNumber) {
+                                    const existing = units.find(u =>
+                                      u.building_id === form.building_id &&
+                                      u.unit_number?.toLowerCase() === inlineUnitNumber.toLowerCase()
+                                    );
+                                    if (existing) { setInlineUnitDuplicate(true); return; }
+                                  }
+                                  setCreatingUnit(true);
+                                  const bld = buildings.find(b => b.id === form.building_id);
+                                  const unitAddr = (bld?.address || '') + (inlineUnitNumber ? ', Unit ' + inlineUnitNumber : '');
+                                  const { data: newUnit } = await supabase.from('properties').insert({
+                                    user_id: user.id,
+                                    building_id: form.building_id,
+                                    address: unitAddr,
+                                    unit_number: inlineUnitNumber || null,
+                                    is_unit: true,
+                                    beds: +inlineUnitBeds || 1,
+                                    baths: parseFloat(inlineUnitBaths) || 1,
+                                    sqft: +inlineUnitSqft || null,
+                                    current_rent: +(form.monthly_rent || form.rent) || 0,
+                                  }).select('id').single();
+                                  if (newUnit) {
+                                    await fetchProperties();
+                                    upd({ property_id: newUnit.id, unit_number: inlineUnitNumber });
+                                  }
+                                  setCreatingUnit(false);
+                                  setShowInlineUnitForm(false);
+                                }} style={{ ...btn.teal, fontSize: 12, padding: '6px 14px', opacity: creatingUnit ? 0.6 : 1 }}>
+                                  {creatingUnit ? 'Creating...' : '✓ Create Unit'}
+                                </button>
+                                <button onClick={() => setShowInlineUnitForm(false)}
+                                  style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
