@@ -62,7 +62,7 @@ export default function PricingPage() {
 
         <div className="pricing-grid">
           {/* Free */}
-          <div style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+          <div className="pricing-card-free" style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
               <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
