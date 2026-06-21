@@ -68,7 +68,7 @@ export default function PricingPage() {
           <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No contracts. Cancel anytime.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
+        <div className="pricing-grid" style={{ display: 'grid', gap: 20, maxWidth: 720, margin: '0 auto' }}>
           {/* Free */}
           <div style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
