@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import CalculatorForm from './CalculatorForm';
 import TableMode from './TableMode';
 
@@ -53,7 +53,7 @@ export default function CalculatorSection() {
         </div>
       </div>
 
-      {mode === 'single' ? <CalculatorForm /> : <TableMode />}
+      {mode === 'single' ? <Suspense><CalculatorForm /></Suspense> : <TableMode />}
     </div>
   );
 }

@@ -712,11 +712,55 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                   ))}
                 </div>
                 {selected.lease_terms_raw && (
-                  <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 14 }}>
+                  <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 14, marginBottom: 16 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: T.tealDark, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Late Fee — Contract Language</div>
                     <div style={{ fontSize: 12, color: T.inkMid, fontStyle: 'italic', lineHeight: 1.6 }}>"{selected.lease_terms_raw}"</div>
                   </div>
                 )}
+
+                {/* Compliance Actions */}
+                <div style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '14px 16px', marginTop: 16 }}>
+                  <div style={{ fontWeight: 700, fontSize: 11, color: T.navy, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Compliance Actions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <a href={`/tools/ca/ab1482-calculator`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, textDecoration: 'none', color: T.ink, cursor: 'pointer', transition: 'border-color 0.12s' }}>
+                      <span style={{ fontSize: 16 }}>✦</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>Calculate Rent Cap</div>
+                        <div style={{ fontSize: 11, color: T.inkMuted }}>AB 1482 maximum allowable increase</div>
+                      </div>
+                      <span style={{ color: T.inkMuted, fontSize: 12 }}>→</span>
+                    </a>
+                    <a href={`/tools/ca/eviction-notice`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, textDecoration: 'none', color: T.ink, cursor: 'pointer', transition: 'border-color 0.12s' }}>
+                      <span style={{ fontSize: 16 }}>⚖</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>Generate Eviction Notice</div>
+                        <div style={{ fontSize: 11, color: T.inkMuted }}>California just-cause compliant notices</div>
+                      </div>
+                      <span style={{ color: T.inkMuted, fontSize: 12 }}>→</span>
+                    </a>
+                    {(() => {
+                      const daysLeft = selected.end_date ? Math.ceil((new Date(selected.end_date).getTime() - Date.now()) / 86400000) : null;
+                      const showMoveOut = daysLeft !== null && daysLeft <= 90;
+                      return (
+                        <a href={`/inspections`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, textDecoration: 'none', color: T.ink, cursor: 'pointer', transition: 'border-color 0.12s' }}>
+                          <span style={{ fontSize: 16 }}>📋</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>
+                              {showMoveOut ? 'Start Move-Out Inspection' : 'Inspections'}
+                            </div>
+                            <div style={{ fontSize: 11, color: showMoveOut ? T.amberDark : T.inkMuted }}>
+                              {showMoveOut ? `Lease ends in ${daysLeft} days — document unit condition` : 'AB 2801 move-in/out documentation'}
+                            </div>
+                          </div>
+                          <span style={{ color: T.inkMuted, fontSize: 12 }}>→</span>
+                        </a>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             )}
 

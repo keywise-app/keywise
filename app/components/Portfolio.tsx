@@ -745,6 +745,25 @@ export default function Portfolio() {
                           )}
                         </div>
 
+                        {/* Compliance */}
+                        <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 10, paddingTop: 10 }}>
+                          <div style={{ fontWeight: 700, color: T.navy, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: 6 }}>Compliance</div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <a href={`/tools/ca/ab1482-calculator?unit_id=${unit.id}`}
+                              style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, color: T.navy, textDecoration: 'none', cursor: 'pointer' }}>
+                              ✦ Rent Cap
+                            </a>
+                            <a href={`/tools/ca/eviction-notice`}
+                              style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, color: T.navy, textDecoration: 'none', cursor: 'pointer' }}>
+                              ⚖ Eviction
+                            </a>
+                            <a href={`/inspections/${unit.id}/new`}
+                              style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, color: T.navy, textDecoration: 'none', cursor: 'pointer' }}>
+                              📋 Inspect
+                            </a>
+                          </div>
+                        </div>
+
                         {isMobile && (
                           <div style={{ display: 'flex', gap: 8, marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
                             <button onClick={() => { setWizardUnit(unit); setShowWizard(true); }}
