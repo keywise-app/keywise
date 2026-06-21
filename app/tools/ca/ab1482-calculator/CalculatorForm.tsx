@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
 import { RentCapResult } from '../../../../lib/compliance/types';
 import ComplianceSaveButton from './ComplianceSaveButton';
@@ -57,6 +58,27 @@ export default function CalculatorForm() {
   const [lastIncreaseDate, setLastIncreaseDate] = useState('');
   const [lastIncreaseAmount, setLastIncreaseAmount] = useState('');
   const [isFirstIncrease, setIsFirstIncrease] = useState(false);
+
+  const searchParams = useSearchParams();
+
+  // Pre-fill from unit_id URL param (logged-in users only)
+  useEffect(() => {
+    const unitId = searchParams.get('unit_id');
+    if (!unitId) return;
+    (async () => {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return; // anonymous — don't prefill
+      const { data: unit } = await supabase.from('properties').select('address, zip_code, year_built, current_rent').eq('id', unitId).eq('user_id', user.id).single();
+      if (!unit) return;
+      if (unit.zip_code) setZipCode(unit.zip_code);
+      if (unit.year_built) setYearBuilt(String(unit.year_built));
+      if (unit.current_rent) setCurrentRent(String(unit.current_rent));
+    })();
+  }, [searchParams]);
 
   const showExemptionNotice = propertyType === 'single-family' || propertyType === 'condo';
 

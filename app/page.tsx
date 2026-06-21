@@ -575,6 +575,24 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+            {/* Compliance Tools */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 12 }}>
+              <div style={{ padding: '0 20px 8px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Compliance Tools</div>
+              {[
+                { href: '/tools/ca/ab1482-calculator', label: 'Rent Cap Calculator', icon: '✦' },
+                { href: '/tools/ca/eviction-notice', label: 'Eviction Notices', icon: '⚖' },
+                { href: '/inspections', label: 'Inspections', icon: '📋' },
+              ].map(t => (
+                <a key={t.href} href={t.href}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, transition: 'all 0.12s', textDecoration: 'none' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = '#fff'}
+                  onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.5)'}>
+                  <span style={{ fontSize: 13, opacity: 0.7, width: 18, textAlign: 'center' }}>{t.icon}</span>
+                  {t.label}
+                </a>
+              ))}
+            </div>
           </div>
           <div style={{ padding: '16px 20px', borderTop: `1px solid rgba(255,255,255,0.08)`, display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 10 }}>
             <button onClick={() => setShowFeedback(true)}
