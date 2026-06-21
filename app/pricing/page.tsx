@@ -90,7 +90,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pro */}
-          <div style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2)`, position: 'relative', overflow: 'hidden' }}>
+          <div className="card-pro" style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2)`, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `${TEAL}12` }} />
             <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: `${TEAL}08` }} />
             <div style={{ position: 'relative' }}>
