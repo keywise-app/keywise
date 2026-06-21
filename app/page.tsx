@@ -727,7 +727,7 @@ export default function Home() {
           {NAV.map(item => {
             const active = page === item.id;
             return (
-              <button key={item.id} onClick={() => setPage(item.id)}
+              <button key={item.id} onClick={() => navigateTo(item.id)}
                 style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'transparent', cursor: 'pointer', borderTop: active ? `2px solid ${T.navy}` : '2px solid transparent' }}>
                 <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
                 <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, color: active ? T.navy : T.inkMuted, letterSpacing: '0.1px' }}>{item.label}</span>
