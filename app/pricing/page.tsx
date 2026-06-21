@@ -35,6 +35,14 @@ export default function PricingPage() {
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      <style>{`
+        .pricing-grid { grid-template-columns: 1fr 1fr; }
+        @media (max-width: 640px) {
+          .pricing-grid { grid-template-columns: 1fr !important; }
+          .pricing-grid .card-free { order: 2; }
+          .pricing-grid .card-pro { order: 1; }
+        }
+      `}</style>
 
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 40px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -60,9 +68,9 @@ export default function PricingPage() {
           <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No contracts. Cancel anytime.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
+        <div className="pricing-grid" style={{ display: 'grid', gap: 20, maxWidth: 720, margin: '0 auto' }}>
           {/* Free */}
-          <div style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+          <div className="card-free" style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
               <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
@@ -82,7 +90,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pro */}
-          <div style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2)`, position: 'relative', overflow: 'hidden' }}>
+          <div className="card-pro" style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2)`, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `${TEAL}12` }} />
             <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: `${TEAL}08` }} />
             <div style={{ position: 'relative' }}>
