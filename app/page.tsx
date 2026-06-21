@@ -709,6 +709,16 @@ export default function Home() {
 
         {/* Content */}
         <div ref={contentRef} onScroll={(e) => setShowScrollTop((e.target as HTMLDivElement).scrollTop > 400)} style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
+          {page !== 'dashboard' && (
+            <button
+              onClick={() => navigateTo('dashboard')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, color: T.inkMuted, fontFamily: 'inherit', fontWeight: 500 }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = T.navy}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = T.inkMuted}
+            >
+              ← Dashboard
+            </button>
+          )}
           {renderPage()}
         </div>
 
