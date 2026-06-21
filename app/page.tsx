@@ -109,11 +109,27 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading]);
 
+  // Navigate with history integration — use this instead of bare setPage()
+  const navigateTo = useCallback((target: string) => {
+    setPage(target);
+    window.history.pushState({ page: target }, '', target === 'dashboard' ? '/' : `/?page=${target}`);
+  }, []);
+
   // Allow child components to navigate via custom event
   useEffect(() => {
-    const handler = (e: Event) => setPage((e as CustomEvent).detail);
+    const handler = (e: Event) => navigateTo((e as CustomEvent).detail);
     window.addEventListener('kw:navigate', handler);
     return () => window.removeEventListener('kw:navigate', handler);
+  }, [navigateTo]);
+
+  // Browser Back / Forward button support
+  useEffect(() => {
+    const handler = (e: PopStateEvent) => {
+      const target = e.state?.page ?? new URLSearchParams(window.location.search).get('page') ?? 'dashboard';
+      setPage(target);
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
   }, []);
 
   // Load read IDs from localStorage on mount
