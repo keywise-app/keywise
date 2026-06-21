@@ -558,7 +558,7 @@ export default function Home() {
             {NAV.map(item => {
               const active = page === item.id;
               return (
-                <div key={item.id} onClick={() => setPage(item.id)}
+                <div key={item.id} onClick={() => navigateTo(item.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 20px', cursor: 'pointer',
