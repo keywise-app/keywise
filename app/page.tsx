@@ -501,7 +501,7 @@ export default function Home() {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard onNavigate={setPage} />;
+      case 'dashboard': return <Dashboard onNavigate={navigateTo} />;
       case 'portfolio': return <Portfolio />;
       case 'tenants': return <Tenants autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
       case 'operations': return <Operations />;
