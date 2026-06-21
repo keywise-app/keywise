@@ -32,6 +32,20 @@ const INK_MUTED = '#8892A4';
 
 const POSTS = [
   {
+    slug: 'onboard-tenant-from-lease',
+    title: 'How to Onboard a Tenant in 60 Seconds With a Lease PDF',
+    description: 'Upload your lease and let AI create the building, unit, tenant, and payment schedule automatically. No retyping, no data entry.',
+    date: '2026',
+    tag: 'Product',
+  },
+  {
+    slug: 'california-compliance-tools-landlords',
+    title: '3 Free Compliance Tools Every California Landlord Needs in 2026',
+    description: 'AB 1482 rent cap calculator, just-cause eviction notice wizard, and AB 2801 move-out inspections — all free, all built for small landlords.',
+    date: '2026',
+    tag: 'Compliance',
+  },
+  {
     slug: 'late-rent-notice',
     title: 'How to Write a Late Rent Notice (Free Template)',
     description: 'A step-by-step guide to writing professional late rent notices, plus a free template you can use today.',
