@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import PricingCards from './PricingCards';
 
 export const metadata: Metadata = {
   title: 'Pricing | Keywise',
-  description: 'Simple pricing for independent landlords. Free for 1-2 units, $19/mo for unlimited. No contracts, cancel anytime.',
+  description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
   alternates: { canonical: 'https://keywise.app/pricing' },
   openGraph: {
     title: 'Pricing | Keywise',
-    description: 'Simple pricing for independent landlords. Free for 1-2 units, $19/mo for unlimited. No contracts, cancel anytime.',
+    description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
     url: 'https://keywise.app/pricing',
     siteName: 'Keywise',
     type: 'website',
@@ -16,16 +17,14 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing | Keywise',
-    description: 'Simple pricing for independent landlords. Free for 1-2 units, $19/mo for unlimited.',
+    description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited.',
   },
   robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
-const TEAL_DARK = '#00A886';
 const BG = '#F0F4FF';
-const SURFACE = '#FFFFFF';
 const BORDER = '#E0E6F0';
 const INK = '#1A1A2E';
 const INK_MID = '#4A5068';
@@ -36,7 +35,6 @@ export default function PricingPage() {
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-      {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: '0 40px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: N, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -51,76 +49,32 @@ export default function PricingPage() {
         <Link href="/" style={{ fontSize: 13, color: INK_MID, textDecoration: 'none', fontWeight: 500 }}>← Back to home</Link>
       </nav>
 
-      {/* Pricing */}
-      <main style={{ maxWidth: 800, margin: '0 auto', padding: '60px 24px 80px' }}>
+      <main style={{ maxWidth: 1060, margin: '0 auto', padding: '60px 24px 80px' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Pricing</div>
           <h1 style={{ fontSize: 40, fontWeight: 800, color: N, letterSpacing: '-1px', margin: '0 0 12px' }}>
-            Simple pricing that grows with you.
+            Built for California landlords.<br />Priced for serious operators.
           </h1>
-          <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No contracts. Cancel anytime.</p>
+          <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Free compliance tools for everyone. Pro features for landlords who want to automate everything.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
-          {/* Free */}
-          <div style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-              <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
-              <span style={{ fontSize: 14, color: INK_MUTED }}>/forever</span>
-            </div>
-            <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>Up to 2 units</div>
-            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 28 }}>
-              {['Lease tracking', 'Document storage', 'AI communications', 'Tenant portal', 'Move-in/out inspections', 'Document signing'].map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID }}>
-                  <span style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 16 }}>✓</span> {f}
-                </div>
-              ))}
-            </div>
-            <Link href="/?signup=true" style={{ display: 'block', textAlign: 'center', background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-              Get started free →
-            </Link>
-          </div>
-
-          {/* Pro */}
-          <div style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2)`, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `${TEAL}12` }} />
-            <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: `${TEAL}08` }} />
-            <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Pro</span>
-                <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$19</span>
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
-              </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20, marginBottom: 28 }}>
-                {['Everything in Free', 'Online rent collection', 'Payment reminders', 'Maintenance tracking', 'AI lease extraction', 'Priority support'].map(f => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
-                    <span style={{ color: TEAL, fontWeight: 700, fontSize: 16 }}>✓</span> {f}
-                  </div>
-                ))}
-              </div>
-              <Link href="/?signup=true" style={{ display: 'block', textAlign: 'center', background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-                Start free trial →
-              </Link>
-            </div>
-          </div>
-        </div>
+        <PricingCards />
 
         <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
-          $2 per online payment transaction. No hidden fees.
+          $2 per online rent payment transaction. No hidden fees. · <Link href="/" style={{ color: INK_MID, fontWeight: 600, textDecoration: 'none' }}>Already a customer? Sign in</Link>
         </p>
 
         {/* FAQ */}
         <div style={{ maxWidth: 600, margin: '60px auto 0' }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: N, textAlign: 'center', marginBottom: 24 }}>Common questions</h2>
           {[
-            { q: 'Is it really free for 1-2 units?', a: 'Yes. Free forever — no credit card, no trial that expires. You only pay if you upgrade to Pro for unlimited units and online rent collection.' },
+            { q: "What's the founding member deal?", a: "The first 100 California landlords who subscribe get $29/mo locked in for life. The only condition: maintain a continuous subscription. If you cancel, you lose the founding rate and would resubscribe at the current price ($49/mo)." },
+            { q: 'What happens to existing customers?', a: "If you're already subscribed, your rate is grandfathered. Nothing changes unless you cancel." },
+            { q: 'Is there a free trial?', a: 'Yes. 14 days, full Pro features, no credit card required to start.' },
             { q: 'What does the $2 transaction fee cover?', a: 'Each online rent payment processed through Keywise costs $2 flat — not a percentage of rent. A $3,000 payment costs the same as a $1,000 one.' },
-            { q: 'Can I cancel Pro anytime?', a: 'Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period.' },
-            { q: 'What payment methods do tenants use?', a: 'Credit card, debit card, or saved card with auto-pay. Payments go directly to your bank account via Stripe.' },
+            { q: 'Can I switch from monthly to annual?', a: 'Yes, anytime from your billing settings. Annual saves $198/year vs monthly.' },
+            { q: 'What if founding member spots fill up?', a: "The founding member offer disappears. You can still subscribe at the standard $49/mo or $390/yr price." },
+            { q: 'Can I cancel anytime?', a: 'Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period.' },
           ].map((item, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${BORDER}`, padding: '16px 0' }}>
               <div style={{ fontWeight: 600, fontSize: 15, color: N, marginBottom: 6 }}>{item.q}</div>
@@ -133,7 +87,7 @@ export default function PricingPage() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Ready to manage smarter?</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Free for up to 2 units. No credit card required.
+            Free for 1 unit. 14-day Pro trial. No credit card required.
           </p>
           <Link href="/?signup=true" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →
@@ -141,7 +95,6 @@ export default function PricingPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: '32px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <span style={{ fontSize: 13, color: INK_MUTED }}>© {new Date().getFullYear()} Keywise. All rights reserved.</span>
         <div style={{ display: 'flex', gap: 24 }}>

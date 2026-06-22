@@ -108,7 +108,7 @@ export default function Page() {
           Late fees are calculated automatically based on your lease terms. Receipts are sent to the tenant the moment payment clears. The whole transaction history is exportable for taxes. And you only pay $2 per online payment — not a percentage of rent, so a $3,000 monthly rent costs the same as a $1,000 one.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          For landlords with 1-2 units, the free plan covers everything except online payments. If you upgrade to Pro ($19/mo), you unlock unlimited units plus the full payment system.
+          For landlords with 1-2 units, the free plan covers everything except online payments. If you upgrade to Pro ($49/mo), you unlock unlimited units plus the full payment system.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>

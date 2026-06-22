@@ -20,7 +20,7 @@ async function runIntelligence(supabase: any) {
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{
         role: 'user',
-        content: `You are a product strategist for Keywise, an AI property management SaaS for small landlords ($19/mo, free for 1-2 units).
+        content: `You are a product strategist for Keywise, an AI property management SaaS for small landlords ($49/mo, free for 1-2 units).
 
 Search the web for:
 1. Recent updates from competitors: Buildium, AppFolio, Innago, DoorLoop, Baselane, TurboTenant, Rentec Direct

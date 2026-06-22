@@ -98,11 +98,71 @@ export async function POST(req: Request) {
       // Handle subscription checkout
       if (session.mode === 'subscription') {
         const userId = session.metadata?.user_id;
+        const plan = session.metadata?.plan;
         if (userId) {
-          await supabase.from('profiles').update({
+          const patch: Record<string, any> = {
             subscription_status: 'active',
             stripe_customer_id: session.customer as string,
-          }).eq('id', userId);
+          };
+
+          if (plan === 'founding') {
+            // Claim next founding member number
+            const { count } = await supabase
+              .from('profiles')
+              .select('id', { count: 'exact', head: true })
+              .eq('is_founding_member', true)
+              .eq('founding_member_continuous', true);
+            const nextNumber = (count ?? 0) + 1;
+            if (nextNumber <= 100) {
+              patch.is_founding_member = true;
+              patch.founding_member_number = nextNumber;
+              patch.founding_member_locked_at = new Date().toISOString();
+              patch.founding_member_continuous = true;
+              patch.price_tier = 'founding_29';
+            } else {
+              patch.price_tier = 'standard_49';
+            }
+          } else if (plan === 'annual') {
+            patch.price_tier = 'annual_390';
+          } else {
+            patch.price_tier = 'standard_49';
+          }
+
+          await supabase.from('profiles').update(patch).eq('id', userId);
+
+          // Send founding member welcome email
+          if (plan === 'founding' && patch.founding_member_number) {
+            const profile = await getProfileByCustomer(session.customer as string);
+            if (profile?.email) {
+              await resend.emails.send({
+                from: 'Keywise <noreply@keywise.app>',
+                to: profile.email,
+                subject: `Welcome, Founding Member #${patch.founding_member_number}!`,
+                html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+  <div style="font-size:22px;font-weight:700;color:#0F3460;margin-bottom:24px;">Keywise</div>
+  <h2 style="font-size:22px;font-weight:700;color:#0F3460;margin:0 0 16px;">Welcome, Founding Member #${patch.founding_member_number}!</h2>
+  <p style="font-size:15px;color:#4A5068;line-height:1.7;margin:0 0 16px;">
+    Hi${profile.full_name ? ' ' + profile.full_name : ''},<br><br>
+    You're one of the first 100 California landlords building Keywise with us. Your founding member rate of <strong>$29/month</strong> is locked in for life — as long as you maintain a continuous subscription.
+  </p>
+  <div style="background:#F0F4FF;border:1px solid #E0E6F0;border-radius:10px;padding:16px 20px;margin:0 0 24px;">
+    <div style="font-size:13px;font-weight:700;color:#0F3460;margin-bottom:8px;">Your founding member terms:</div>
+    <ul style="font-size:13px;color:#4A5068;line-height:1.7;padding-left:18px;margin:0;">
+      <li>$29/mo for life with continuous subscription</li>
+      <li>All Pro features — unlimited units, compliance tools, AI extraction</li>
+      <li>If you cancel, you'll resubscribe at the current standard price ($49/mo)</li>
+    </ul>
+  </div>
+  <a href="https://keywise.app/?page=dashboard" style="display:inline-block;background:#00D4AA;color:#0F3460;text-decoration:none;font-size:15px;font-weight:700;padding:13px 32px;border-radius:8px;">
+    Go to Dashboard →
+  </a>
+  <p style="margin:32px 0 0;font-size:12px;color:#8892A4;">
+    Questions? Reply to this email or contact us at <a href="mailto:hello@keywise.app" style="color:#00A886;">hello@keywise.app</a>
+  </p>
+</div>`,
+              });
+            }
+          }
         }
       }
 
@@ -176,9 +236,46 @@ export async function POST(req: Request) {
     // ── Subscription deleted/cancelled ─────────────────────────────────────
     if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object as Stripe.Subscription;
-      await updateProfileByCustomer(sub.customer as string, {
-        subscription_status: 'cancelled',
-      });
+      const customerId = sub.customer as string;
+
+      // Check if this was a founding member — release their spot
+      const { data: cancelProfile } = await supabase
+        .from('profiles')
+        .select('is_founding_member, founding_member_number, email, full_name')
+        .eq('stripe_customer_id', customerId)
+        .single();
+
+      const patch: Record<string, any> = { subscription_status: 'cancelled' };
+      if (cancelProfile?.is_founding_member) {
+        patch.founding_member_continuous = false;
+        patch.founding_member_number = null;
+
+        // Notify them they lost their founding rate
+        if (cancelProfile.email) {
+          await resend.emails.send({
+            from: 'Keywise <noreply@keywise.app>',
+            to: cancelProfile.email,
+            subject: "You've lost your founding member rate",
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+  <div style="font-size:22px;font-weight:700;color:#0F3460;margin-bottom:24px;">Keywise</div>
+  <h2 style="font-size:20px;font-weight:700;color:#0F3460;margin:0 0 16px;">Your founding member rate has ended</h2>
+  <p style="font-size:15px;color:#4A5068;line-height:1.7;margin:0 0 24px;">
+    Hi${cancelProfile.full_name ? ' ' + cancelProfile.full_name : ''},<br><br>
+    Your Keywise subscription has been cancelled and your founding member rate of $29/month is no longer active.
+    If you resubscribe in the future, you'll pay the current standard price.
+  </p>
+  <a href="https://keywise.app/?page=settings" style="display:inline-block;background:#0F3460;color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 32px;border-radius:8px;">
+    Resubscribe →
+  </a>
+  <p style="margin:32px 0 0;font-size:12px;color:#8892A4;">
+    Questions? Contact us at <a href="mailto:hello@keywise.app" style="color:#00A886;">hello@keywise.app</a>
+  </p>
+</div>`,
+          });
+        }
+      }
+
+      await updateProfileByCustomer(customerId, patch);
     }
 
     // ── Trial ending soon (3 days warning from Stripe) ─────────────────────

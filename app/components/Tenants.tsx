@@ -1768,7 +1768,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
               } catch (err: any) { alert(err.message || 'Error'); }
             }}
               style={{ ...btn.primary, width: '100%', padding: '14px', fontSize: 15, marginBottom: 10 }}>
-              Upgrade to Pro — $19/month →
+              Upgrade to Pro — \$49/month →
             </button>
             <button onClick={() => setShowUpgradeModal(false)}
               style={{ ...btn.ghost, width: '100%', fontSize: 13 }}>
