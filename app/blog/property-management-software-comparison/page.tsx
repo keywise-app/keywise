@@ -128,7 +128,7 @@ export default function Page() {
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Keywise</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          <strong>Price:</strong> Free for up to 2 units; Pro is $19/month for unlimited units + online payments.
+          <strong>Price:</strong> Free for 1 unit; Pro is $49/month for unlimited units + online payments.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           <strong>Best for:</strong> Landlords who want AI-powered automation and a modern interface.
@@ -137,7 +137,7 @@ export default function Page() {
           Keywise is the newest entrant on this list, built specifically for independent landlords managing 1-10 units. The differentiator is AI: upload a lease PDF and Keywise extracts all the terms automatically — rent amount, dates, tenant info, deposit, late fees. Draft a late rent notice or contractor email in one click. The AI also analyzes your maintenance history to surface potential issues before they become expensive.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          The free tier includes lease tracking, document storage, AI communications, tenant portal, and inspections for up to 2 units. The Pro tier unlocks unlimited units, online rent collection ($2 flat per transaction — not a percentage), payment reminders, and full maintenance tracking.
+          The free tier includes lease tracking, document storage, AI communications, tenant portal, and inspections for 1 unit. The Pro tier unlocks unlimited units, online rent collection ($2 flat per transaction — not a percentage), payment reminders, and full maintenance tracking.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           <strong>Downsides:</strong> Newer platform, so the user community is still growing. No tenant screening yet (planned). The $2 per-transaction fee for online payments, while competitive, adds up for landlords collecting many payments.
@@ -201,7 +201,7 @@ export default function Page() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>See what AI-powered property management looks like</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Keywise automates lease extraction, rent reminders, and maintenance tracking. Free for up to 2 units.
+            Keywise automates lease extraction, rent reminders, and maintenance tracking. Free for 1 unit.
           </p>
           <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →

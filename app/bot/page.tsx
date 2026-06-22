@@ -17,7 +17,7 @@ export default function BotLandingPage() {
         <h1>Keywise — AI Property Management for Small Landlords</h1>
         <p>
           Property management, done in 10 seconds. Upload your lease. AI does the rest.
-          Collect rent, sign documents, manage tenants — all in one place. Free for 1-2 units.
+          Collect rent, sign documents, manage tenants — all in one place. Free for 1 unit.
         </p>
       </header>
 
@@ -66,7 +66,7 @@ export default function BotLandingPage() {
           <thead>
             <tr>
               <th>Feature</th>
-              <th>Keywise ($19/mo)</th>
+              <th>Keywise ($49/mo)</th>
               <th>Buildium ($50+/mo)</th>
               <th>AppFolio ($280+/mo)</th>
               <th>Innago (Free*)</th>
@@ -89,9 +89,9 @@ export default function BotLandingPage() {
         <h2>Pricing</h2>
         <ul>
           <li><strong>Free</strong> — 1-2 units. AI lease extraction, rent collection, document signing, tenant portal.</li>
-          <li><strong>Pro ($19/month)</strong> — Unlimited units. Everything in Free plus maintenance tracking, portfolio analytics, priority support.</li>
+          <li><strong>Pro ($49/month)</strong> — Unlimited units. Everything in Free plus maintenance tracking, portfolio analytics, priority support.</li>
         </ul>
-        <p>No credit card required. Free for 1-2 units forever.</p>
+        <p>No credit card required. Free for 1 unit forever.</p>
       </section>
 
       <section>
@@ -110,7 +110,7 @@ export default function BotLandingPage() {
           <dd>All data is encrypted at rest and in transit. We use Supabase (built on PostgreSQL) with row-level security. Your data is never shared or sold.</dd>
 
           <dt>What if I have more than 2 units?</dt>
-          <dd>The Pro plan at $19/month covers unlimited units with all features included.</dd>
+          <dd>The Pro plan at $49/month covers unlimited units with all features included.</dd>
         </dl>
       </section>
 

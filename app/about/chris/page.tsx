@@ -84,7 +84,7 @@ export default function ChrisPage() {
 
           <p>From there: online rent collection via Stripe ($2 flat per transaction, not a percentage), built-in document signing, AI-drafted communications, tenant portal with auto-pay, and move-in/out inspections with photos and digital signatures.</p>
 
-          <p>Free for 1-2 units. $19/month for unlimited.</p>
+          <p>Free for 1 unit. $49/month for unlimited.</p>
 
           <h2 style={{ fontSize: 22, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>What I write about</h2>
 
@@ -93,7 +93,7 @@ export default function ChrisPage() {
 
         <div style={{ marginTop: 48, padding: 24, background: BG, borderRadius: 12, border: `1px solid ${BORDER}` }}>
           <div style={{ fontWeight: 700, color: N, fontSize: 15, marginBottom: 8 }}>Try Keywise</div>
-          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16, lineHeight: 1.6 }}>Free for 1-2 units. No credit card required.</div>
+          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16, lineHeight: 1.6 }}>Free for 1 unit. No credit card required.</div>
           <Link href="/?signup=true" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
             Start free →
           </Link>

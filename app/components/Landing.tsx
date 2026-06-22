@@ -328,7 +328,7 @@ function StickyBottomCTA({ onSignupClick }: { onSignupClick: () => void }) {
       animation: 'kw-slideUp 0.3s',
     }}>
       <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
-        Free for 1-2 units · No credit card required
+        Free for 1 unit · No credit card required
       </div>
       <button onClick={onSignupClick}
         style={{ background: TEAL, color: N, border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
@@ -538,7 +538,7 @@ export default function Landing() {
               <span style={{ color: TEAL_DARK }}>done in 10 seconds.</span>
             </h1>
             <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 480 }}>
-              Upload your lease. AI does the rest. Collect rent, sign documents, manage tenants — all in one place. Free for 1-2 units.
+              Upload your lease. AI does the rest. Collect rent, sign documents, manage tenants — all in one place. Free for 1 unit.
             </p>
 
             {/* Inline magic link signup */}
@@ -583,7 +583,7 @@ export default function Landing() {
 
             {!showHeroInput && !heroSent && (
               <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
-                No credit card · Cancel anytime · 1-2 units free forever
+                No credit card · Cancel anytime · 1 unit free forever
               </div>
             )}
 
@@ -668,7 +668,7 @@ export default function Landing() {
               style={{ background: N, color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
               Try It Free →
             </button>
-            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>No credit card · 1-2 units free forever</div>
+            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>No credit card · 1 unit free forever</div>
           </div>
         </div>
       </section>
@@ -710,7 +710,7 @@ export default function Landing() {
 
           <div style={{ textAlign: 'center', marginTop: 40 }}>
             <div style={{ color: N, fontSize: 18, fontWeight: 600 }}>
-              Keywise solves all of this — for free if you have 1-2 units.
+              Keywise solves all of this — for free if you have 1 unit.
             </div>
           </div>
         </div>
@@ -822,7 +822,7 @@ export default function Landing() {
                   <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 160 }}>Feature</th>
                   <th style={{ padding: '16px', textAlign: 'center', background: N, color: '#fff', fontWeight: 700, borderRadius: '12px 12px 0 0', minWidth: 120 }}>
                     Keywise
-                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$19/mo</div>
+                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$49/mo</div>
                   </th>
                   <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
                     Buildium
@@ -881,7 +881,7 @@ export default function Landing() {
               Start Free in 30 Seconds →
             </button>
             <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>
-              No credit card · Cancel anytime · 1-2 units free forever
+              No credit card · Cancel anytime · 1 unit free forever
             </div>
           </div>
         </div>
@@ -904,7 +904,7 @@ export default function Landing() {
                 <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
                 <span style={{ fontSize: 14, color: INK_MUTED }}>/forever</span>
               </div>
-              <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>Up to 2 units</div>
+              <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>1 unit</div>
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 28 }}>
                 {['Lease tracking', 'Document storage', 'AI communications', 'Tenant portal'].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID }}>
@@ -927,7 +927,7 @@ export default function Landing() {
                   <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$19</span>
+                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$49</span>
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>
@@ -959,10 +959,10 @@ export default function Landing() {
               Frequently asked questions
             </h2>
           </div>
-          <FAQItem q="Is it really free?" a="Yes. 1-2 units are free forever — no credit card required, no trial that expires. You only pay if you upgrade to Pro for unlimited units and online rent collection." />
+          <FAQItem q="Is it really free?" a="Yes. 1 unit is free forever — no credit card required, no trial that expires. You only pay if you upgrade to Pro for unlimited units and online rent collection." />
           <FAQItem q="Do I need technical skills?" a="Not at all. Keywise is designed for landlords, not IT departments. If you can attach a file to an email, you can use Keywise. Upload a lease PDF and AI handles the rest." />
           <FAQItem q="Can I import my existing lease?" a="Yes. Upload any lease PDF and Keywise's AI extracts all the key terms — tenant name, rent amount, dates, late fees, deposit — automatically. No manual data entry." />
-          <FAQItem q="What if I have more than 2 units?" a="Upgrade to Pro for $19/month — unlimited units, online rent collection, payment reminders, and priority support. No per-unit fees." />
+          <FAQItem q="What if I have more than 1 unit?" a="Upgrade to Pro for $49/month — unlimited units, online rent collection, payment reminders, and priority support. No per-unit fees." />
           <FAQItem q="Can I cancel anytime?" a="Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period." />
           <FAQItem q="Is my data secure?" a="Yes. Keywise uses Supabase for database and authentication (enterprise-grade encryption at rest and in transit), Stripe for payments (PCI-DSS Level 1 certified), and all connections are over HTTPS/TLS." />
         </div>
@@ -984,7 +984,7 @@ export default function Landing() {
             style={{ background: TEAL, color: N, border: 'none', borderRadius: 14, padding: '16px 40px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 8px 32px ${TEAL}44` }}>
             Start Free in 30 Seconds →
           </button>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>No credit card · Cancel anytime · 1-2 units free forever</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>No credit card · Cancel anytime · 1 unit free forever</p>
         </div>
       </section>
 
