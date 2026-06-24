@@ -109,11 +109,27 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading]);
 
+  // Navigate with history integration — use this instead of bare setPage()
+  const navigateTo = useCallback((target: string) => {
+    setPage(target);
+    window.history.pushState({ page: target }, '', target === 'dashboard' ? '/' : `/?page=${target}`);
+  }, []);
+
   // Allow child components to navigate via custom event
   useEffect(() => {
-    const handler = (e: Event) => setPage((e as CustomEvent).detail);
+    const handler = (e: Event) => navigateTo((e as CustomEvent).detail);
     window.addEventListener('kw:navigate', handler);
     return () => window.removeEventListener('kw:navigate', handler);
+  }, [navigateTo]);
+
+  // Browser Back / Forward button support
+  useEffect(() => {
+    const handler = (e: PopStateEvent) => {
+      const target = e.state?.page ?? new URLSearchParams(window.location.search).get('page') ?? 'dashboard';
+      setPage(target);
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
   }, []);
 
   // Load read IDs from localStorage on mount
@@ -485,7 +501,7 @@ export default function Home() {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard onNavigate={setPage} />;
+      case 'dashboard': return <Dashboard onNavigate={navigateTo} />;
       case 'portfolio': return <Portfolio />;
       case 'tenants': return <Tenants autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
       case 'operations': return <Operations />;
@@ -542,7 +558,7 @@ export default function Home() {
             {NAV.map(item => {
               const active = page === item.id;
               return (
-                <div key={item.id} onClick={() => setPage(item.id)}
+                <div key={item.id} onClick={() => navigateTo(item.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 20px', cursor: 'pointer',
@@ -693,6 +709,16 @@ export default function Home() {
 
         {/* Content */}
         <div ref={contentRef} onScroll={(e) => setShowScrollTop((e.target as HTMLDivElement).scrollTop > 400)} style={{ flex: 1, padding: isMobile ? '16px' : '28px 32px', overflowY: 'auto', paddingBottom: isMobile ? 88 : undefined }}>
+          {page !== 'dashboard' && (
+            <button
+              onClick={() => navigateTo('dashboard')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, color: T.inkMuted, fontFamily: 'inherit', fontWeight: 500 }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = T.navy}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = T.inkMuted}
+            >
+              ← Dashboard
+            </button>
+          )}
           {renderPage()}
         </div>
 
@@ -711,7 +737,7 @@ export default function Home() {
           {NAV.map(item => {
             const active = page === item.id;
             return (
-              <button key={item.id} onClick={() => setPage(item.id)}
+              <button key={item.id} onClick={() => navigateTo(item.id)}
                 style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'transparent', cursor: 'pointer', borderTop: active ? `2px solid ${T.navy}` : '2px solid transparent' }}>
                 <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
                 <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, color: active ? T.navy : T.inkMuted, letterSpacing: '0.1px' }}>{item.label}</span>
