@@ -9,66 +9,6 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/agents/cmo/daily_audit",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/agents/cmo/daily_forum_scan",
-      "schedule": "30 14 * * *"
-    },
-    {
-      "path": "/api/cron/agents/cmo/weekly_content",
-      "schedule": "0 14 * * 1"
-    },
-    {
-      "path": "/api/cron/agents/cmo/weekly_budget_review",
-      "schedule": "0 15 * * 1"
-    },
-    {
-      "path": "/api/cron/agents/cmo/weekly_outreach",
-      "schedule": "0 16 * * 2"
-    },
-    {
-      "path": "/api/cron/agents/cmo/weekly_linkable_asset_audit",
-      "schedule": "0 13 * * 3"
-    },
-    {
-      "path": "/api/cron/agents/cmo/weekly_content_refresh",
-      "schedule": "0 13 * * 4"
-    },
-    {
-      "path": "/api/cron/agents/cmo/monthly_pseo",
-      "schedule": "0 14 1 * *"
-    },
-    {
-      "path": "/api/cron/agents/cmo/monthly_tool_proposal",
-      "schedule": "0 14 2 * *"
-    },
-    {
-      "path": "/api/cron/agents/cpo/daily_flow_audit",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/agents/cpo/weekly_friction_synthesis",
-      "schedule": "0 16 * * 1"
-    },
-    {
-      "path": "/api/cron/agents/cpo/weekly_ai_human_balance_review",
-      "schedule": "0 16 * * 2"
-    },
-    {
-      "path": "/api/cron/agents/cpo/monthly_competitive_ux_audit",
-      "schedule": "0 16 1 * *"
-    },
-    {
-      "path": "/api/cron/agents/notifications/daily_digest",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/agents/dev/process_build_queue",
-      "schedule": "0 16 * * *"
-    },
-    {
       "path": "/api/cron/compliance/annual-cpi-update",
       "schedule": "0 16 2 1 *"
     },
