@@ -12,9 +12,9 @@ const inter = Inter({
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Keywise — AI Property Management for Small Landlords",
+  title: "Keywise — California Landlord Compliance, Done Right",
   description:
-    "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
+    "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
   metadataBase: new URL("https://keywise.app"),
   alternates: { canonical: "https://keywise.app" },
   robots: {
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   openGraph: {
-    title: "Keywise — AI Property Management for Small Landlords",
+    title: "Keywise — California Landlord Compliance, Done Right",
     description:
-      "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
+      "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
     url: "https://keywise.app",
     siteName: "Keywise",
     images: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 628,
-        alt: "Keywise — AI Property Management for Small Landlords",
+        alt: "Keywise — California Landlord Compliance, Done Right",
       },
     ],
     locale: "en_US",
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Keywise — AI Property Management for Small Landlords",
+    title: "Keywise — California Landlord Compliance, Done Right",
     description:
-      "Free property management for 1-2 units. AI lease extraction, online rent collection, document signing. Built for independent landlords.",
+      "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -87,7 +87,7 @@ gtag('config', 'AW-18070985639');`}
               operatingSystem: "Web",
               offers: {
                 "@type": "Offer",
-                price: "19.00",
+                price: "29.00",
                 priceCurrency: "USD",
               },
               description:

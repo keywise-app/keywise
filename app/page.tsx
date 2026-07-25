@@ -21,6 +21,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
   { id: 'portfolio', label: 'Portfolio', icon: '⌂' },
   { id: 'tenants', label: 'Tenants', icon: '◈' },
+  { id: 'compliance', label: 'Compliance', icon: '⚖️' },
   { id: 'operations', label: 'Operations', icon: '⚙' },
   { id: 'settings', label: 'Settings', icon: '○' },
 ];
@@ -29,9 +30,37 @@ const PAGE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
   portfolio: 'Portfolio',
   tenants: 'Tenants',
+  compliance: 'Compliance',
   operations: 'Operations',
   settings: 'Settings',
 };
+
+function CompliancePlaceholder() {
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 0' }}>
+      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: 'center', boxShadow: T.shadow }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚖️</div>
+        <div style={{ fontWeight: 700, fontSize: 22, color: T.navy, marginBottom: 12 }}>Compliance Tools Coming This Week</div>
+        <div style={{ fontSize: 15, color: T.inkMuted, lineHeight: 1.7, maxWidth: 480, margin: '0 auto 32px' }}>
+          AB 1482 rent cap calculator, just-cause eviction notice builder, and AB 2801 inspection compliance — all launching shortly. You'll be notified when they're live.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
+          {[
+            { icon: '📊', title: 'AB 1482 Rent Cap Calculator', href: '/tools/ca/ab1482-calculator' },
+            { icon: '⚖️', title: 'Just-Cause Eviction Notice Builder', href: '/tools/ca/eviction-notice' },
+            { icon: '🔍', title: 'AB 2801 Move-Out Inspections', href: '/inspections' },
+          ].map(tool => (
+            <a key={tool.href} href={tool.href}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none', color: T.navy, fontWeight: 600, fontSize: 14 }}>
+              <span style={{ fontSize: 20 }}>{tool.icon}</span>
+              {tool.title} →
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function KeywiseLogo({ size = 32 }: { size?: number }) {
   return (
@@ -488,6 +517,7 @@ export default function Home() {
       case 'dashboard': return <Dashboard onNavigate={setPage} />;
       case 'portfolio': return <Portfolio />;
       case 'tenants': return <Tenants autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
+      case 'compliance': return <CompliancePlaceholder />;
       case 'operations': return <Operations />;
       case 'settings': return <Profile onImport={() => setShowOnboarding(true)} />;
       default: return <Dashboard onNavigate={setPage} />;
@@ -534,7 +564,7 @@ export default function Home() {
               <KeywiseLogo size={28} />
               <div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>Keywise</div>
-                <div style={{ fontSize: 9, color: T.teal, letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 1 }}>Property AI</div>
+                <div style={{ fontSize: 9, color: T.teal, letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 1 }}>CA Compliance</div>
               </div>
             </div>
           </div>

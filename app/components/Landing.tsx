@@ -60,7 +60,7 @@ function DashboardMockup() {
             { icon: '⊞', label: 'Dashboard', active: true },
             { icon: '⌂', label: 'Portfolio', active: false },
             { icon: '◈', label: 'Tenants', active: false },
-            { icon: '⚙', label: 'Operations', active: false },
+            { icon: '⚖', label: 'Compliance', active: false },
             { icon: '○', label: 'Settings', active: false },
           ].map(item => (
             <div key={item.label} style={{
@@ -328,7 +328,7 @@ function StickyBottomCTA({ onSignupClick }: { onSignupClick: () => void }) {
       animation: 'kw-slideUp 0.3s',
     }}>
       <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
-        Free for 1 unit · No credit card required
+        Free for 1-2 units · No credit card required
       </div>
       <button onClick={onSignupClick}
         style={{ background: TEAL, color: N, border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
@@ -354,7 +354,7 @@ export default function Landing() {
   const [heroLoading, setHeroLoading] = useState(false);
   const [heroSent, setHeroSent] = useState(false);
   const [heroError, setHeroError] = useState('');
-  const [showHeroInput, setShowHeroInput] = useState(false);
+  const [showHeroInput, setShowHeroInput] = useState(true);
 
   // Exit intent
   const [showExitIntent, setShowExitIntent] = useState(false);
@@ -531,15 +531,27 @@ export default function Landing() {
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '5px 14px', marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, display: 'inline-block' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: TEAL_DARK }}>Built for independent landlords</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.6px' }}>For California Landlords</span>
             </div>
             <h1 className="landing-h1" style={{ fontSize: 52, fontWeight: 800, color: N, lineHeight: 1.08, letterSpacing: '-1.5px', margin: '0 0 20px' }}>
-              Property management,<br />
-              <span style={{ color: TEAL_DARK }}>done in 10 seconds.</span>
+              Don't lose your next eviction over a paperwork mistake.
             </h1>
-            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 36px', maxWidth: 480 }}>
-              Upload your lease. AI does the rest. Collect rent, sign documents, manage tenants — all in one place. Free for 1 unit.
+            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 24px', maxWidth: 500 }}>
+              California has the strictest landlord laws in the country. One missed notice can cost you $10,000+ in penalties or your entire eviction case. Keywise catches the mistakes before they cost you.
             </p>
+            <div style={{ marginBottom: 28 }}>
+              {[
+                'Are you charging legal rent under AB 1482?',
+                'Did you serve the right just-cause eviction notice?',
+                'Did your move-out inspection follow AB 2801?',
+                'Are your late fee terms actually enforceable?',
+              ].map(item => (
+                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID, lineHeight: 1.5 }}>
+                  <span style={{ color: CORAL, fontSize: 15, flexShrink: 0, marginTop: 1 }}>⚠</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
 
             {/* Inline magic link signup */}
             {heroSent ? (
@@ -562,11 +574,11 @@ export default function Landing() {
                   <button onClick={() => sendMagicLink(heroEmail, setHeroLoading, setHeroSent, setHeroError)} disabled={heroLoading || !heroEmail}
                     className="landing-btn-primary"
                     style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 700, cursor: !heroEmail || heroLoading ? 'default' : 'pointer', opacity: !heroEmail || heroLoading ? 0.6 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const, transition: 'all 0.15s' }}>
-                    {heroLoading ? 'Sending…' : 'Continue →'}
+                    {heroLoading ? 'Sending…' : 'Start Free →'}
                   </button>
                 </div>
                 {heroError && <div style={{ color: CORAL, fontSize: 13, marginTop: 8 }}>{heroError}</div>}
-                <div style={{ fontSize: 12, color: INK_MUTED, marginTop: 8 }}>We'll send a magic link — no password needed</div>
+                <div style={{ fontSize: 12, color: INK_MUTED, marginTop: 8 }}>Free for 1-2 units · No credit card · Built for California</div>
               </div>
             ) : (
               <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
@@ -583,7 +595,7 @@ export default function Landing() {
 
             {!showHeroInput && !heroSent && (
               <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
-                No credit card · Cancel anytime · 1 unit free forever
+                Free for 1-2 units · No credit card · Cancel anytime
               </div>
             )}
 
@@ -668,7 +680,7 @@ export default function Landing() {
               style={{ background: N, color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
               Try It Free →
             </button>
-            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>No credit card · 1 unit free forever</div>
+            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>Free for 1-2 units · No credit card · Built for California</div>
           </div>
         </div>
       </section>
@@ -775,28 +787,41 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+      {/* COMPLIANCE FEATURES */}
       <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <div style={{ display: 'inline-block', background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '4px 14px', marginBottom: 16 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Compliance Tools</span>
+            </div>
             <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Up and running in minutes.
+              California compliance, built in.
             </h2>
-            <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No setup calls. No migration headaches. Just sign up and go.</p>
+            <p style={{ fontSize: 16, color: INK_MUTED, margin: '0 auto', maxWidth: 560 }}>Every tool you need to stay on the right side of California landlord law.</p>
           </div>
-          <div className="landing-steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
-            <div className="landing-steps-connector" style={{ position: 'absolute', top: 36, left: '16.67%', right: '16.67%', height: 2, background: `linear-gradient(90deg, ${TEAL}44, ${TEAL}, ${TEAL}44)`, zIndex: 0 }} />
+          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {[
-              { num: '1', title: 'Import your documents', desc: 'Drop your existing leases and documents. Keywise reads them and sets everything up — tenant names, rent amounts, lease dates, late fees.' },
-              { num: '2', title: 'Invite your tenants', desc: 'Send a magic link in one click. Tenants get access to their portal where they can view their lease and pay rent online.' },
-              { num: '3', title: 'Manage everything in one place', desc: 'Dashboard, communications, maintenance, payments — all connected, all organized, no more scattered apps.' },
-            ].map(step => (
-              <div key={step.num} style={{ textAlign: 'center', padding: '0 28px', position: 'relative', zIndex: 1 }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: N, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: `0 0 0 6px ${TEAL_LIGHT}, 0 8px 24px rgba(15,52,96,0.2)` }}>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: TEAL }}>{step.num}</span>
-                </div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: N, marginBottom: 10 }}>{step.title}</div>
-                <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.65 }}>{step.desc}</div>
+              {
+                icon: '📊',
+                title: 'AB 1482 Rent Cap Calculator',
+                desc: 'Calculate the maximum legal rent increase for any property. Auto-pulls current CPI. Flags exemptions. Generates the required 30-day or 90-day notice.',
+              },
+              {
+                icon: '⚖️',
+                title: 'Just-Cause Eviction Notice Builder',
+                desc: 'Walk through the correct notice for your situation. Notice periods, required language, cure-or-quit options — done right the first time, with a chain of custody log.',
+              },
+              {
+                icon: '🔍',
+                title: 'AB 2801 Move-Out Inspections',
+                desc: 'Photo-documented inspections that meet California\'s 21-day itemized deduction rules. Small-claims defensible. Signed by both parties digitally.',
+              },
+            ].map(f => (
+              <div key={f.title} className="landing-feature-card"
+                style={{ background: BG, borderRadius: 14, padding: '28px 24px', border: `1px solid ${BORDER}`, transition: 'all 0.2s', boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
+                <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: N, marginBottom: 10, lineHeight: 1.3 }}>{f.title}</div>
+                <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6 }}>{f.desc}</div>
               </div>
             ))}
           </div>
@@ -808,10 +833,10 @@ export default function Landing() {
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <h2 className="landing-h2" style={{ fontSize: 36, fontWeight: 800, color: N, marginBottom: 12, letterSpacing: '-0.8px' }}>
-              Why landlords choose Keywise
+              Why California landlords choose Keywise
             </h2>
             <p style={{ color: INK_MUTED, fontSize: 16, maxWidth: 500, margin: '0 auto' }}>
-              Professional property management tools at a fraction of the cost.
+              Generic apps don't know California law. Spreadsheets don't catch compliance mistakes.
             </p>
           </div>
 
@@ -819,49 +844,42 @@ export default function Landing() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 160 }}>Feature</th>
+                  <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 200 }}>Feature</th>
                   <th style={{ padding: '16px', textAlign: 'center', background: N, color: '#fff', fontWeight: 700, borderRadius: '12px 12px 0 0', minWidth: 120 }}>
                     Keywise
-                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$49/mo</div>
+                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$29/mo</div>
                   </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    Buildium
-                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>$50+/mo</div>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 140 }}>
+                    Generic Landlord Apps
                   </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    AppFolio
-                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>$280+/mo</div>
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    Innago
-                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2 }}>Free*</div>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 140 }}>
+                    DIY Spreadsheets
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: 'AI Lease PDF Extraction', keywise: true, buildium: false, appfolio: false, innago: false },
-                  { feature: 'AI Smart Actions (proactive)', keywise: true, buildium: false, appfolio: false, innago: false },
-                  { feature: 'AI Transparency (shows its work)', keywise: true, buildium: false, appfolio: false, innago: false },
-                  { feature: 'Free for 1-2 Units', keywise: true, buildium: false, appfolio: false, innago: true },
-                  { feature: 'Online Rent Collection', keywise: true, buildium: true, appfolio: true, innago: true },
-                  { feature: 'Native Document Signing', keywise: true, buildium: false, appfolio: false, innago: false },
-                  { feature: 'Move-In/Out Inspections', keywise: true, buildium: true, appfolio: true, innago: false },
-                  { feature: 'Tenant Auto-Pay', keywise: true, buildium: true, appfolio: true, innago: true },
-                  { feature: 'AI Communications', keywise: true, buildium: false, appfolio: false, innago: false },
-                  { feature: 'Tenant Portal', keywise: true, buildium: true, appfolio: true, innago: true },
-                  { feature: 'Maintenance Tracking', keywise: true, buildium: true, appfolio: true, innago: true },
-                  { feature: 'No Per-Unit Fees', keywise: true, buildium: false, appfolio: false, innago: false },
+                  { feature: 'California-specific compliance', keywise: true, generic: false, diy: false },
+                  { feature: 'AB 1482 rent cap calculator', keywise: true, generic: false, diy: false },
+                  { feature: 'Just-cause eviction notices', keywise: true, generic: false, diy: false },
+                  { feature: 'AB 2801 inspection compliance', keywise: true, generic: false, diy: false },
+                  { feature: 'Online rent collection', keywise: true, generic: true, diy: false },
+                  { feature: 'Document signing', keywise: true, generic: 'Sometimes', diy: false },
+                  { feature: 'Free for small landlords', keywise: true, generic: false, diy: 'Free but painful' },
                 ].map((row, i) => {
                   const Check = () => <span style={{ color: '#00A86B', fontSize: 18, fontWeight: 700 }}>✓</span>;
                   const X = () => <span style={{ color: '#FF6B6B', fontSize: 18 }}>✗</span>;
+                  const Cell = ({ val }: { val: boolean | string }) => {
+                    if (val === true) return <Check />;
+                    if (val === false) return <X />;
+                    return <span style={{ color: INK_MID, fontSize: 13 }}>{val}</span>;
+                  };
                   return (
                     <tr key={i} style={{ background: i % 2 === 0 ? BG : '#fff' }}>
                       <td style={{ padding: '14px 16px', color: INK, fontWeight: 500 }}>{row.feature}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center', background: i % 2 === 0 ? '#E8F0FF' : '#F0F4FF' }}>{row.keywise ? <Check /> : <X />}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.buildium ? <Check /> : <X />}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.appfolio ? <Check /> : <X />}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>{row.innago ? <Check /> : <X />}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center', background: i % 2 === 0 ? '#E8F0FF' : '#F0F4FF' }}><Cell val={row.keywise} /></td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.generic} /></td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.diy} /></td>
                     </tr>
                   );
                 })}
@@ -869,19 +887,14 @@ export default function Landing() {
             </table>
           </div>
 
-          <p style={{ color: INK_MUTED, fontSize: 12, marginTop: 16, textAlign: 'center' }}>
-            *Innago is free but charges higher transaction fees. Competitor pricing based on publicly available information.
-          </p>
-
           <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={() => setShowHeroInput(true)}
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               className="landing-btn-primary"
-              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-              onMouseEnter={e => { window.scrollTo({ top: 0, behavior: 'smooth' }); setShowHeroInput(true); }}>
-              Start Free in 30 Seconds →
+              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+              Start Free →
             </button>
             <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>
-              No credit card · Cancel anytime · 1 unit free forever
+              Free for 1-2 units · No credit card · Built for California
             </div>
           </div>
         </div>
@@ -904,7 +917,7 @@ export default function Landing() {
                 <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
                 <span style={{ fontSize: 14, color: INK_MUTED }}>/forever</span>
               </div>
-              <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>1 unit</div>
+              <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>1-2 units</div>
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 28 }}>
                 {['Lease tracking', 'Document storage', 'AI communications', 'Tenant portal'].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID }}>
@@ -927,12 +940,12 @@ export default function Landing() {
                   <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$49</span>
+                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$29</span>
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20, marginBottom: 28 }}>
-                  {['Everything in Free', 'Online rent collection', 'Payment reminders', 'Maintenance tracking', 'Priority support'].map(f => (
+                  {['Everything in Free', 'All compliance tools', 'Online rent collection', 'Document signing', 'Priority support'].map(f => (
                     <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
                       <span style={{ color: TEAL, fontWeight: 700, fontSize: 16 }}>✓</span> {f}
                     </div>
@@ -946,7 +959,7 @@ export default function Landing() {
             </div>
           </div>
           <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
-            $2 per online payment transaction. No hidden fees.
+            Free forever for 1-2 units · $29/month for unlimited units + compliance tools · $2 per online payment transaction.
           </p>
         </div>
       </section>
@@ -959,12 +972,14 @@ export default function Landing() {
               Frequently asked questions
             </h2>
           </div>
-          <FAQItem q="Is it really free?" a="Yes. 1 unit is free forever — no credit card required, no trial that expires. You only pay if you upgrade to Pro for unlimited units and online rent collection." />
-          <FAQItem q="Do I need technical skills?" a="Not at all. Keywise is designed for landlords, not IT departments. If you can attach a file to an email, you can use Keywise. Upload a lease PDF and AI handles the rest." />
-          <FAQItem q="Can I import my existing lease?" a="Yes. Upload any lease PDF and Keywise's AI extracts all the key terms — tenant name, rent amount, dates, late fees, deposit — automatically. No manual data entry." />
-          <FAQItem q="What if I have more than 1 unit?" a="Upgrade to Pro for $49/month — unlimited units, online rent collection, payment reminders, and priority support. No per-unit fees." />
-          <FAQItem q="Can I cancel anytime?" a="Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period." />
-          <FAQItem q="Is my data secure?" a="Yes. Keywise uses Supabase for database and authentication (enterprise-grade encryption at rest and in transit), Stripe for payments (PCI-DSS Level 1 certified), and all connections are over HTTPS/TLS." />
+          <FAQItem q="Is Keywise legal advice?" a="No. Keywise is a compliance tool, not a law firm. We help you follow current California law correctly, but for complex situations you should consult a landlord attorney. Our calculators and notice templates reflect current statute but do not replace legal counsel." />
+          <FAQItem q="How does the AB 1482 calculator work?" a="Enter your property address and current rent. Keywise checks whether the property is exempt, pulls the current CPI for your region, calculates the maximum legal increase, and generates the required notice. Takes about 30 seconds." />
+          <FAQItem q="What if I'm not a California landlord?" a="Keywise is built specifically for California landlords right now. If you're outside California, our general property management features work, but the compliance tools are California-specific." />
+          <FAQItem q="Do I need a credit card to start?" a="No. Free for 1-2 units, no credit card required." />
+          <FAQItem q="How much does it cost after the free tier?" a="$29/month for unlimited units. Includes all compliance tools, online rent collection ($2 per transaction), document signing, and inspections." />
+          <FAQItem q="Can I cancel anytime?" a="Yes, no contracts. Downgrade to the free tier or cancel entirely whenever you want." />
+          <FAQItem q="Is my tenant data secure?" a="Yes. Enterprise-grade encryption via Supabase and Stripe. Your data is stored in US-based data centers and never sold or shared." />
+          <FAQItem q="Will this help me win an eviction case?" a="Keywise creates a defensible paper trail — proper notices with delivery logs, inspection reports with photos and signatures, and lease documentation with signed timestamps. This is exactly what small claims and eviction courts look for. It doesn't guarantee outcomes, but it dramatically improves your position." />
         </div>
       </section>
 
@@ -984,7 +999,7 @@ export default function Landing() {
             style={{ background: TEAL, color: N, border: 'none', borderRadius: 14, padding: '16px 40px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 8px 32px ${TEAL}44` }}>
             Start Free in 30 Seconds →
           </button>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>No credit card · Cancel anytime · 1 unit free forever</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>Free for 1-2 units · No credit card · Cancel anytime</p>
         </div>
       </section>
 
@@ -994,7 +1009,7 @@ export default function Landing() {
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32, marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <div>
               <Logo size={24} dark />
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>AI property management for independent landlords.</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>Compliance-first property management for California landlords.</div>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Resources</div>
@@ -1058,7 +1073,7 @@ export default function Landing() {
             </div>
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
-            © 2026 Keywise. Property management, made intelligent.
+            © 2026 Keywise. California Landlord Compliance, Done Right.
           </div>
         </div>
       </footer>

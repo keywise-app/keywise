@@ -466,7 +466,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <div style={{ fontSize: 26, fontWeight: 700, color: T.navy, marginBottom: 12, letterSpacing: '-0.4px' }}>
               {profileComplete
                 ? <>Import more documents<br />to your portfolio</>
-                : <>Property management,<br />made intelligent.</>
+                : <>California Landlord Compliance,<br />Done Right.</>
               }
             </div>
             <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 32, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 32px' }}>

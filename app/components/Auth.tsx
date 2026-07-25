@@ -205,7 +205,7 @@ export default function Auth() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: T.inkMuted, marginTop: 20 }}>
-          Property management, made intelligent.
+          California Landlord Compliance, Done Right.
         </p>
       </div>
     </div>
