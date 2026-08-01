@@ -37,26 +37,44 @@ const PAGE_TITLES: Record<string, string> = {
 
 function CompliancePlaceholder() {
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 0' }}>
-      <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: 'center', boxShadow: T.shadow }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚖️</div>
-        <div style={{ fontWeight: 700, fontSize: 22, color: T.navy, marginBottom: 12 }}>Compliance Tools Coming This Week</div>
-        <div style={{ fontSize: 15, color: T.inkMuted, lineHeight: 1.7, maxWidth: 480, margin: '0 auto 32px' }}>
-          AB 1482 rent cap calculator, just-cause eviction notice builder, and AB 2801 inspection compliance — all launching shortly. You'll be notified when they're live.
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
-          {[
-            { icon: '📊', title: 'AB 1482 Rent Cap Calculator', href: '/tools/ca/ab1482-calculator' },
-            { icon: '⚖️', title: 'Just-Cause Eviction Notice Builder', href: '/tools/ca/eviction-notice' },
-            { icon: '🔍', title: 'AB 2801 Move-Out Inspections', href: '/inspections' },
-          ].map(tool => (
-            <a key={tool.href} href={tool.href}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 18px', textDecoration: 'none', color: T.navy, fontWeight: 600, fontSize: 14 }}>
-              <span style={{ fontSize: 20 }}>{tool.icon}</span>
-              {tool.title} →
-            </a>
-          ))}
-        </div>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 0' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontWeight: 700, fontSize: 22, color: T.navy, marginBottom: 8 }}>Compliance Tools</div>
+        <div style={{ fontSize: 14, color: T.inkMuted }}>California-specific tools to keep your landlord practice legally sound.</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+        <a href="/ab1482-calculator" target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
+          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14, padding: 24, cursor: 'pointer', boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 32 }}>📊</div>
+              <span style={{ background: T.tealLight, color: T.tealDark, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Active</span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 6 }}>AB 1482 Rent Cap Calculator</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.6 }}>Calculate the maximum legal rent increase for any CA property.</div>
+          </div>
+        </a>
+        <a href="/compliance/rent-calculations" target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
+          <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14, padding: 24, cursor: 'pointer', boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 32 }}>📋</div>
+              <span style={{ background: T.tealLight, color: T.tealDark, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Active</span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 6 }}>Rent Calculation History</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.6 }}>All your saved AB 1482 calculations, organized by property.</div>
+          </div>
+        </a>
+        {[
+          { icon: '⚖️', title: 'Just-Cause Eviction Notice Builder' },
+          { icon: '🔍', title: 'AB 2801 Move-Out Inspections' },
+        ].map(t => (
+          <div key={t.title} style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14, padding: 24, opacity: 0.55, boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 32 }}>{t.icon}</div>
+              <span style={{ background: T.bg, color: T.inkMuted, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Coming Soon</span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>{t.title}</div>
+          </div>
+        ))}
       </div>
     </div>
   );

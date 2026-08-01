@@ -999,6 +999,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
   const [showFinancials, setShowFinancials] = useState(false);
   const [showOccupancy, setShowOccupancy] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
+  const [recentCalcs, setRecentCalcs] = useState<any[]>([]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -1028,6 +1029,12 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
       if (eRes.data) setExpenses(eRes.data);
       if (uRes.data) setUnits(uRes.data);
       if (bRes.data) setBuildings(bRes.data);
+      // Fetch recent compliance calculations (best-effort, non-blocking)
+      supabase.from('rent_calculations')
+        .select('id, created_at, address, current_rent, max_legal_rent, max_increase_percent, is_exempt, property_type')
+        .order('created_at', { ascending: false })
+        .limit(3)
+        .then(({ data }) => { if (data) setRecentCalcs(data); });
     } catch (err) {
       console.error('[dashboard] fetchAll error:', err);
     } finally {
@@ -1231,6 +1238,35 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
 
           {/* 6. COMPLIANCE — collapsed */}
           <ComplianceWidget />
+
+          {/* 7. RECENT COMPLIANCE ACTIVITY */}
+          {recentCalcs.length > 0 && (
+            <div style={{ ...card }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>Recent Compliance Activity</div>
+                <a href="/compliance/rent-calculations" style={{ fontSize: 12, color: T.teal, fontWeight: 600, textDecoration: 'none' }}>See all →</a>
+              </div>
+              {recentCalcs.map((c: any) => (
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.navy }}>
+                      {c.address || c.property_type || 'AB 1482 Check'}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.inkMuted }}>
+                      {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {c.is_exempt ? (
+                      <span style={{ fontSize: 12, color: '#7A5500', fontWeight: 600 }}>Exempt</span>
+                    ) : (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>${(c.max_legal_rent ?? 0).toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

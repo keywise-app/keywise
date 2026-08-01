@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -14,7 +15,6 @@ const INK_MUTED = '#8892A4';
 const CORAL = '#FF6B6B';
 const CORAL_LIGHT = '#FFF0F0';
 
-// CPI values by region (2025-2026 approximate)
 const CPI_BY_REGION: Record<string, number> = {
   'los-angeles': 4.0,
   'bay-area': 3.7,
@@ -37,6 +37,8 @@ interface CalcInputs {
   ownershipType: string;
   exemptionNoticeGiven: string;
   region: string;
+  address: string;
+  selectedPropertyId: string;
 }
 
 interface CalcResult {
@@ -50,10 +52,16 @@ interface CalcResult {
   currentRent: number;
 }
 
+interface Property {
+  id: string;
+  address: string;
+  unit_number?: string;
+  building_id?: string;
+}
+
 function isExemptBuilding(yearBuilt: string): boolean {
   const year = parseInt(yearBuilt);
   if (isNaN(year)) return false;
-  // 15-year rolling window: 2026 - 15 = 2011
   return year > (new Date().getFullYear() - 15);
 }
 
@@ -63,15 +71,11 @@ function calculate(inputs: CalcInputs): CalcResult | null {
 
   const cpi = CPI_BY_REGION[inputs.region] || 3.5;
 
-  // Check exemptions
   if (inputs.yearBuilt && isExemptBuilding(inputs.yearBuilt)) {
     return {
       isExempt: true,
       exemptionReason: `Building built in ${inputs.yearBuilt} is less than 15 years old and exempt from AB 1482 rent caps.`,
-      cpi,
-      maxIncreasePercent: 0,
-      maxIncreaseDollar: 0,
-      maxNewRent: 0,
+      cpi, maxIncreasePercent: 0, maxIncreaseDollar: 0, maxNewRent: 0,
       noticeRequired: 'N/A — exempt from AB 1482 cap (notice still required)',
       currentRent,
     };
@@ -79,16 +83,13 @@ function calculate(inputs: CalcInputs): CalcResult | null {
 
   if (
     (inputs.propertyType === 'sfh' || inputs.propertyType === 'condo') &&
-    (inputs.ownershipType === 'individual') &&
+    inputs.ownershipType === 'individual' &&
     inputs.exemptionNoticeGiven === 'yes'
   ) {
     return {
       isExempt: true,
       exemptionReason: 'Single-family home / condo owned by an individual with written exemption notice given to tenant — exempt from AB 1482 rent cap.',
-      cpi,
-      maxIncreasePercent: 0,
-      maxIncreaseDollar: 0,
-      maxNewRent: 0,
+      cpi, maxIncreasePercent: 0, maxIncreaseDollar: 0, maxNewRent: 0,
       noticeRequired: 'N/A — exempt from AB 1482 cap (notice still required)',
       currentRent,
     };
@@ -98,42 +99,26 @@ function calculate(inputs: CalcInputs): CalcResult | null {
     return {
       isExempt: true,
       exemptionReason: 'Owner-occupied duplex, triplex, or fourplex — exempt from AB 1482 rent cap.',
-      cpi,
-      maxIncreasePercent: 0,
-      maxIncreaseDollar: 0,
-      maxNewRent: 0,
+      cpi, maxIncreasePercent: 0, maxIncreaseDollar: 0, maxNewRent: 0,
       noticeRequired: 'N/A — exempt from AB 1482 cap (notice still required)',
       currentRent,
     };
   }
 
-  // Covered by AB 1482
   const rawMax = 5 + cpi;
   const maxIncreasePercent = Math.min(rawMax, 10);
   const maxIncreaseDollar = Math.round(currentRent * (maxIncreasePercent / 100) * 100) / 100;
   const maxNewRent = Math.round((currentRent + maxIncreaseDollar) * 100) / 100;
   const noticeRequired = maxIncreasePercent >= 10 ? '90-day written notice required' : '30-day written notice required';
 
-  return {
-    isExempt: false,
-    cpi,
-    maxIncreasePercent,
-    maxIncreaseDollar,
-    maxNewRent,
-    noticeRequired,
-    currentRent,
-  };
+  return { isExempt: false, cpi, maxIncreasePercent, maxIncreaseDollar, maxNewRent, noticeRequired, currentRent };
 }
 
 export default function AB1482Calculator() {
   const [inputs, setInputs] = useState<CalcInputs>({
-    currentRent: '',
-    lastIncreaseDate: '',
-    yearBuilt: '',
-    propertyType: '',
-    ownershipType: 'individual',
-    exemptionNoticeGiven: 'no',
-    region: 'los-angeles',
+    currentRent: '', lastIncreaseDate: '', yearBuilt: '', propertyType: '',
+    ownershipType: 'individual', exemptionNoticeGiven: 'no', region: 'los-angeles',
+    address: '', selectedPropertyId: '',
   });
   const [result, setResult] = useState<CalcResult | null>(null);
   const [email, setEmail] = useState('');
@@ -142,7 +127,57 @@ export default function AB1482Calculator() {
   const [emailError, setEmailError] = useState('');
   const [calculated, setCalculated] = useState(false);
 
+  // Auth state
+  const [userId, setUserId] = useState<string | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [saveToast, setSaveToast] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        // Pre-fill email for the notice form
+        setEmail(user.email ?? '');
+        // Load user's properties
+        supabase.from('properties').select('id, address, unit_number, building_id')
+          .eq('is_unit', true).order('address').then(({ data }) => {
+            if (data) setProperties(data);
+          });
+      }
+    });
+  }, []);
+
   const set = (k: keyof CalcInputs, v: string) => setInputs(prev => ({ ...prev, [k]: v }));
+
+  const saveCalculation = async (r: CalcResult) => {
+    if (!userId) return;
+    try {
+      const { data } = await supabase.from('rent_calculations').insert({
+        user_id: userId,
+        property_id: inputs.selectedPropertyId || null,
+        address: inputs.address || null,
+        current_rent: r.currentRent,
+        max_legal_rent: r.isExempt ? null : r.maxNewRent,
+        max_increase_percent: r.isExempt ? null : r.maxIncreasePercent,
+        max_increase_amount: r.isExempt ? null : r.maxIncreaseDollar,
+        cpi_used: r.cpi,
+        region: inputs.region,
+        is_exempt: r.isExempt,
+        exemption_reason: r.exemptionReason ?? null,
+        property_type: inputs.propertyType,
+        ownership_type: inputs.ownershipType,
+        year_built: inputs.yearBuilt ? parseInt(inputs.yearBuilt) : null,
+        last_increase_date: inputs.lastIncreaseDate || null,
+        notice_type: r.noticeRequired,
+      }).select('id').single();
+      if (data) setSavedId(data.id);
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 4000);
+    } catch (err) {
+      console.error('[ab1482] save error:', err);
+    }
+  };
 
   const handleCalculate = () => {
     const r = calculate(inputs);
@@ -150,6 +185,8 @@ export default function AB1482Calculator() {
     setCalculated(true);
     setEmailSent(false);
     setEmailError('');
+    setSavedId(null);
+    if (r && userId) saveCalculation(r);
   };
 
   const handleSendNotice = async () => {
@@ -162,7 +199,7 @@ export default function AB1482Calculator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          address: '',
+          address: inputs.address || '',
           currentRent: result?.currentRent,
           newRent: result?.maxNewRent,
           increasePercent: result?.maxIncreasePercent,
@@ -184,30 +221,40 @@ export default function AB1482Calculator() {
   };
 
   const inputStyle = {
-    width: '100%',
-    background: BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 10,
-    padding: '11px 14px',
-    fontSize: 14,
-    fontFamily: 'inherit',
-    color: INK,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
+    width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10,
+    padding: '11px 14px', fontSize: 14, fontFamily: 'inherit', color: INK,
+    outline: 'none', boxSizing: 'border-box' as const,
   };
 
   const labelStyle = {
-    fontSize: 11,
-    color: INK_MUTED,
-    fontWeight: 700,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.4px',
-    display: 'block',
-    marginBottom: 6,
+    fontSize: 11, color: INK_MUTED, fontWeight: 700,
+    textTransform: 'uppercase' as const, letterSpacing: '0.4px',
+    display: 'block', marginBottom: 6,
   };
 
   return (
     <div>
+      {/* Auth badge */}
+      {userId && (
+        <div style={{ background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: TEAL_DARK, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>✓</span>
+          <span>Signed in — this calculation will be saved to your account</span>
+        </div>
+      )}
+
+      {/* Save toast */}
+      {saveToast && (
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 9999,
+          background: '#0F7040', color: '#fff', borderRadius: 10, padding: '12px 20px',
+          fontSize: 14, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span>✓ Saved to your compliance history</span>
+          <a href="/compliance/rent-calculations" style={{ color: '#86EFAC', fontSize: 13, fontWeight: 700 }}>View history →</a>
+        </div>
+      )}
+
       {/* Calculator Card */}
       <div style={{ background: SURFACE, borderRadius: 20, border: `1px solid ${BORDER}`, padding: 32, boxShadow: '0 4px 24px rgba(15,52,96,0.10)', marginBottom: 24 }}>
         <div style={{ fontWeight: 700, fontSize: 18, color: N, marginBottom: 24 }}>Calculate Your Maximum Rent Increase</div>
@@ -220,7 +267,7 @@ export default function AB1482Calculator() {
           </div>
           <div>
             <label style={labelStyle}>Year Property Was Built</label>
-            <input type="number" min="1900" max="2026" placeholder="e.g. 1998" value={inputs.yearBuilt}
+            <input type="number" min="1900" max="2030" placeholder="e.g. 1998" value={inputs.yearBuilt}
               onChange={e => set('yearBuilt', e.target.value)} style={inputStyle} />
           </div>
           <div>
@@ -255,6 +302,28 @@ export default function AB1482Calculator() {
               <option value="trust">Trust</option>
             </select>
           </div>
+
+          {/* Property address field */}
+          <div>
+            <label style={labelStyle}>Property Address (optional)</label>
+            <input type="text" placeholder="e.g. 123 Main St, Unit 4" value={inputs.address}
+              onChange={e => set('address', e.target.value)} style={inputStyle} />
+          </div>
+
+          {/* Property picker for logged-in users */}
+          {userId && properties.length > 0 && (
+            <div>
+              <label style={labelStyle}>Save to property (optional)</label>
+              <select value={inputs.selectedPropertyId} onChange={e => set('selectedPropertyId', e.target.value)} style={inputStyle}>
+                <option value="">— don&apos;t link to a property —</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.address}{p.unit_number ? ` #${p.unit_number}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {(inputs.propertyType === 'sfh' || inputs.propertyType === 'condo') && inputs.ownershipType === 'individual' && (
@@ -274,9 +343,11 @@ export default function AB1482Calculator() {
 
         <button onClick={handleCalculate} disabled={!inputs.currentRent || !inputs.propertyType}
           style={{
-            marginTop: 24, background: !inputs.currentRent || !inputs.propertyType ? '#ccc' : N,
+            marginTop: 24,
+            background: !inputs.currentRent || !inputs.propertyType ? '#ccc' : N,
             color: '#fff', border: 'none', borderRadius: 12, padding: '14px 32px',
-            fontSize: 15, fontWeight: 700, cursor: !inputs.currentRent || !inputs.propertyType ? 'default' : 'pointer',
+            fontSize: 15, fontWeight: 700,
+            cursor: !inputs.currentRent || !inputs.propertyType ? 'default' : 'pointer',
             fontFamily: 'inherit', width: '100%',
           }}>
           Calculate Maximum Rent Increase →
@@ -301,19 +372,22 @@ export default function AB1482Calculator() {
               <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.65 }}>
                 Note: Even if your property is exempt from the AB 1482 rent cap, California Civil Code 827 still requires you to serve proper written notice of any rent increase (30 days for increases under 10%, 90 days for 10% or more). Local rent control ordinances may also still apply in your city.
               </div>
+              {!userId && (
+                <div style={{ marginTop: 16, fontSize: 13, color: INK_MUTED }}>
+                  <a href="/?login=true" style={{ color: TEAL, fontWeight: 600 }}>Sign in to save this calculation</a>
+                </div>
+              )}
             </div>
           ) : (
             <div>
               <div style={{ fontWeight: 700, fontSize: 20, color: N, marginBottom: 24 }}>Results for Your Property</div>
 
-              {/* Big number */}
               <div style={{ background: `linear-gradient(135deg, ${TEAL_LIGHT}, #F0F4FF)`, border: `1px solid ${TEAL}33`, borderRadius: 16, padding: '24px 28px', marginBottom: 24, textAlign: 'center' }}>
                 <div style={{ fontSize: 13, color: TEAL_DARK, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Maximum Legal New Rent</div>
                 <div style={{ fontSize: 52, fontWeight: 800, color: N, letterSpacing: '-2px' }}>${result.maxNewRent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 <div style={{ fontSize: 14, color: INK_MID, marginTop: 8 }}>per month</div>
               </div>
 
-              {/* Math breakdown table */}
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
                 <tbody>
                   {[
@@ -331,11 +405,22 @@ export default function AB1482Calculator() {
                 </tbody>
               </table>
 
-              {/* Notice requirement */}
               <div style={{ background: '#F0F4FF', border: `1px solid ${N}22`, borderRadius: 12, padding: '16px 20px', marginBottom: 24 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: N, marginBottom: 4 }}>⚖️ Notice Requirement</div>
                 <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6 }}>{result.noticeRequired}. California Civil Code Section 827.</div>
               </div>
+
+              {!userId && (
+                <div style={{ marginBottom: 16, fontSize: 13, color: INK_MUTED }}>
+                  <a href="/?login=true" style={{ color: TEAL, fontWeight: 600 }}>Sign in to save this calculation</a> and track all your rent increases in one place.
+                </div>
+              )}
+
+              {userId && savedId && (
+                <div style={{ marginBottom: 16, fontSize: 13, color: '#0F7040' }}>
+                  ✓ Saved · <a href="/compliance/rent-calculations" style={{ color: TEAL, fontWeight: 600 }}>View history →</a>
+                </div>
+              )}
 
               {/* Email capture */}
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 24 }}>
@@ -345,7 +430,7 @@ export default function AB1482Calculator() {
                 </div>
                 {emailSent ? (
                   <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10, padding: '14px 16px', fontSize: 14, color: '#166534' }}>
-                    ✓ Sent to {email}. Check your inbox — the notice is attached as a PDF.
+                    ✓ Sent to {email}. Check your inbox — the notice is attached.
                   </div>
                 ) : (
                   <div>
