@@ -10,23 +10,26 @@ const T = {
 };
 
 type Stats = {
-  users: { total: number; newToday: number; newWeek: number; newMonth: number; pro: number; free: number; cancelled: number; weeklySignups: { week: string; count: number }[] };
-  revenue: { totalPaid: number; totalVolume: number; totalFees: number; monthVolume: number; monthFees: number; mrr: number };
-  ai: { documents: number; aiSummaries: number; leasesExtracted: number; inspections: number; totalLeases: number; invited: number };
-  system: { buildings: number; units: number; activeLeases: number; pendingPayments: number; overduePayments: number };
-  recentSignups: any[];
+  users: { total: number; newToday: number; newWeek: number; newMonth: number; trial: number; active: number; cancelled: number };
+  trialPipeline: { name: string | null; email: string; created_at: string; trial_ends_at: string | null; daysLeft: number | null }[];
+  revenue: { mrr: number; unclassifiedActive: number; rentVolumeTotal: number; rentVolumeMonth: number; platformFeesTotal: number; platformFeesMonth: number; paymentsCompleted: number };
+  traffic: { today: number; week: number; byDay: Record<string, number>; topRefs: [string, number][]; funnelViewsToday: number; funnelViewsWeek: number };
+  product: { documents: number; inspectionsCompleted: number; totalLeases: number; buildings: number; units: number; activeLeases: number; pendingRentPayments: number; overdueRentPayments: number };
   feedback: any[];
-  broadcasts: any[];
-  traffic?: { today: number; week: number; byDay: Record<string, number>; topRefs: [string, number][] };
 };
 
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
+function StatCard({ label, value, color, sub }: { label: string; value: string | number; color?: string; sub?: string }) {
   return (
     <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '14px 16px' }}>
       <div style={{ fontSize: 22, fontWeight: 700, color: color || T.navy }}>{value}</div>
       <div style={{ fontSize: 11, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>{sub}</div>}
     </div>
   );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: 14 }}>{children}</div>;
 }
 
 export default function AdminPage() {
@@ -37,20 +40,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'feature' | 'general'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'reviewed' | 'planned' | 'done'>('all');
-  const [bcSubject, setBcSubject] = useState('');
-  const [bcMessage, setBcMessage] = useState('');
-  const [bcType, setBcType] = useState('announcement');
-  const [bcFilter, setBcFilter] = useState('all');
-  const [bcSpecific, setBcSpecific] = useState('');
-  const [bcSending, setBcSending] = useState(false);
-  const [bcResult, setBcResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
-  const [bcPreview, setBcPreview] = useState(false);
-  const [intelRunning, setIntelRunning] = useState(false);
-  const [intelReports, setIntelReports] = useState<any[]>([]);
-  const [buildPrompt, setBuildPrompt] = useState<string | null>(null);
-  const [promptCopied, setPromptCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [activeSection, setActiveSection] = useState('users');
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -78,19 +68,11 @@ export default function AdminPage() {
     setLoading(false);
     if (data.error) { setError('Access denied'); return; }
     sessionStorage.setItem('kw_admin', password);
-    // Also drop a cookie so middleware can gate /admin/agents/* and /api/agents/*
+    // Also drop a cookie so proxy.ts can gate /admin/agents/* and /api/agents/*
     // server-side (sessionStorage is browser-only and doesn't reach the server).
-    // 7-day expiry; SameSite=Lax so it flows on top-level navigations.
     document.cookie = `kw_admin=${encodeURIComponent(password)}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax${typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; secure' : ''}`;
     setAuthed(true);
     setStats(data);
-
-    // If we got here from /admin/agents/* via the middleware redirect, bounce back.
-    const params = new URLSearchParams(window.location.search);
-    const next = params.get('next');
-    if (next && next.startsWith('/admin/')) {
-      window.location.href = next;
-    }
   };
 
   const fetchStats = async () => {
@@ -102,7 +84,7 @@ export default function AdminPage() {
         body: JSON.stringify({ password, action: 'stats' }),
       });
       const data = await res.json();
-      if (!data.error) { setStats(data); if (data.intelReports) setIntelReports(data.intelReports); }
+      if (!data.error) setStats(data);
     } catch (err) {
       console.error('[admin] Refresh error:', err);
     } finally {
@@ -141,7 +123,6 @@ export default function AdminPage() {
 
   if (!stats) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkMuted }}>Loading dashboard...</div>;
 
-  const maxWeekly = Math.max(...stats.users.weeklySignups.map(w => w.count), 1);
   const filteredFeedback = stats.feedback.filter(f =>
     (feedbackFilter === 'all' || f.type === feedbackFilter) &&
     (statusFilter === 'all' || f.status === statusFilter)
@@ -166,8 +147,12 @@ export default function AdminPage() {
           {!isMobile && <span style={{ fontSize: 12, color: T.teal, marginLeft: 12 }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href="/admin/tools"
+            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, fontWeight: 700, textDecoration: 'none', minHeight: 36, display: 'inline-flex', alignItems: 'center' }}>
+            🛠 Tools
+          </a>
           <a href="/admin/agents"
-            style={{ background: T.teal, color: T.navy, padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, fontWeight: 700, textDecoration: 'none', minHeight: 36, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+            style={{ background: T.teal, color: T.navy, padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, fontWeight: 700, textDecoration: 'none', minHeight: 36, display: 'inline-flex', alignItems: 'center' }}>
             🤖 Agents →
           </a>
           <button onClick={fetchStats} disabled={loading} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: T.radiusSm, fontSize: 11, cursor: loading ? 'default' : 'pointer', minHeight: 36, opacity: loading ? 0.6 : 1, fontFamily: 'inherit' }}>
@@ -180,135 +165,124 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Mobile section nav */}
-      {isMobile && (
-        <div style={{ display: 'flex', overflowX: 'auto', background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 12px', WebkitOverflowScrolling: 'touch' as any }}>
-          {[['users', 'Users'], ['traffic', 'Traffic'], ['revenue', 'Revenue'], ['ai', 'AI'], ['feedback', 'Feedback'], ['signups', 'Signups'], ['broadcast', 'Broadcast'], ['intel', 'Intel']].map(([id, label]) => (
-            <button key={id} onClick={() => { setActiveSection(id); document.getElementById('admin-' + id)?.scrollIntoView({ behavior: 'smooth' }); }}
-              style={{ padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === id ? 700 : 400, color: activeSection === id ? T.navy : T.inkMuted, borderBottom: activeSection === id ? `2px solid ${T.navy}` : '2px solid transparent', whiteSpace: 'nowrap', fontFamily: 'inherit', minHeight: 44 }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px' }}>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
-
-        {/* USER GROWTH */}
-        <div id="admin-users" style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>User Growth</div>
+        {/* USERS & TRIAL PIPELINE */}
+        <div style={{ marginBottom: 32 }}>
+          <SectionHeader>Customers</SectionHeader>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
-            <StatCard label="Total Users" value={stats.users.total} />
-            <StatCard label="New Today" value={stats.users.newToday} color={T.teal} />
-            <StatCard label="This Week" value={stats.users.newWeek} color={T.teal} />
-            <StatCard label="This Month" value={stats.users.newMonth} color={T.teal} />
-            <StatCard label="Pro Users" value={stats.users.pro} color={T.greenDark} />
-            <StatCard label="Free Users" value={stats.users.free} />
+            <StatCard label="Total Signups" value={stats.users.total} />
+            <StatCard label="New This Week" value={stats.users.newWeek} color={T.teal} />
+            <StatCard label="In Trial" value={stats.users.trial} color={T.amberDark} />
+            <StatCard label="Paying" value={stats.users.active} color={T.greenDark} />
             <StatCard label="Churned" value={stats.users.cancelled} color={T.coral} />
           </div>
-          {/* Weekly bar chart */}
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 12 }}>Signups by Week</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
-              {stats.users.weeklySignups.map((w, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: T.navy }}>{w.count}</span>
-                  <div style={{ width: '100%', height: Math.max(4, (w.count / maxWeekly) * 80), background: T.teal, borderRadius: 4 }} />
-                  <span style={{ fontSize: 9, color: T.inkMuted }}>{w.week}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* REVENUE */}
-        {/* TRAFFIC */}
-        {stats.traffic && (
-          <div id="admin-traffic" style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Site Traffic</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
-              <StatCard label="Today" value={stats.traffic.today} color={T.teal} />
-              <StatCard label="This Week" value={stats.traffic.week} />
-            </div>
-            {/* Daily chart */}
-            {stats.traffic.byDay && (
-              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 12 }}>Visits by Day</div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
-                  {(() => {
-                    const days: [string, number][] = [];
-                    for (let i = 6; i >= 0; i--) {
-                      const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
-                      days.push([d, stats.traffic.byDay[d] || 0]);
-                    }
-                    const max = Math.max(...days.map(d => d[1]), 1);
-                    return days.map(([d, c]) => (
-                      <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: T.navy }}>{c}</span>
-                        <div style={{ width: '100%', height: Math.max(4, (c / max) * 60), background: T.teal, borderRadius: 4 }} />
-                        <span style={{ fontSize: 9, color: T.inkMuted }}>{d.slice(5)}</span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-            {/* Top referrers */}
-            {stats.traffic.topRefs && stats.traffic.topRefs.length > 0 && (
-              <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 10 }}>Top Referrers (7 days)</div>
-                {stats.traffic.topRefs.map(([ref, count]: [string, number]) => (
-                  <div key={ref} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
-                    <span style={{ color: T.ink, fontWeight: 500 }}>{ref}</span>
-                    <span style={{ color: T.navy, fontWeight: 700 }}>{count}</span>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 12 }}>Trial Pipeline — who's about to decide</div>
+            {stats.trialPipeline.length === 0 ? (
+              <div style={{ fontSize: 13, color: T.inkMuted, textAlign: 'center', padding: 12 }}>No one currently in trial.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {stats.trialPipeline.map((t) => (
+                  <div key={t.email} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: T.ink }}>{t.name || t.email}</div>
+                      {t.name && <div style={{ fontSize: 11, color: T.inkMuted }}>{t.email}</div>}
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                      background: t.daysLeft === null ? T.bg : t.daysLeft <= 2 ? T.coralLight : t.daysLeft <= 7 ? T.amberLight : T.tealLight,
+                      color: t.daysLeft === null ? T.inkMuted : t.daysLeft <= 2 ? T.coral : t.daysLeft <= 7 ? T.amberDark : T.tealDark,
+                    }}>
+                      {t.daysLeft === null ? 'no trial end set' : t.daysLeft < 0 ? 'trial ended' : `${t.daysLeft}d left`}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        )}
+        </div>
 
-        <div id="admin-revenue" style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Revenue</div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-            <StatCard label="MRR" value={'$' + stats.revenue.mrr.toLocaleString()} color={T.greenDark} />
-            <StatCard label="Total Volume" value={'$' + stats.revenue.totalVolume.toLocaleString()} />
-            <StatCard label="This Month" value={'$' + stats.revenue.monthVolume.toLocaleString()} color={T.teal} />
-            <StatCard label="Total Fees" value={'$' + stats.revenue.totalFees.toLocaleString()} color={T.greenDark} />
-            <StatCard label="Month Fees" value={'$' + stats.revenue.monthFees.toLocaleString()} />
-            <StatCard label="Payments Processed" value={stats.revenue.totalPaid} />
+        {/* REVENUE */}
+        <div style={{ marginBottom: 32 }}>
+          <SectionHeader>Revenue</SectionHeader>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            <StatCard label="MRR (Keywise Pro)" value={'$' + stats.revenue.mrr.toLocaleString()} color={T.greenDark}
+              sub={stats.revenue.unclassifiedActive > 0 ? `${stats.revenue.unclassifiedActive} active w/ unknown tier` : undefined} />
+            <StatCard label="Platform Fees (total)" value={'$' + stats.revenue.platformFeesTotal.toLocaleString()} color={T.greenDark} />
+            <StatCard label="Platform Fees (mo.)" value={'$' + stats.revenue.platformFeesMonth.toLocaleString()} />
+          </div>
+          <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 10, marginBottom: 10 }}>
+            Rent payment volume flowing through landlord accounts (not Keywise revenue):
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            <StatCard label="Rent Volume (total)" value={'$' + stats.revenue.rentVolumeTotal.toLocaleString()} />
+            <StatCard label="Rent Volume (mo.)" value={'$' + stats.revenue.rentVolumeMonth.toLocaleString()} />
+            <StatCard label="Rent Payments Completed" value={stats.revenue.paymentsCompleted} />
           </div>
         </div>
 
-        {/* AI USAGE + SYSTEM */}
-        <div id="admin-ai" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 32 }}>
-          <div>
-            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>AI & Documents</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <StatCard label="Documents" value={stats.ai.documents} />
-              <StatCard label="AI Summaries" value={stats.ai.aiSummaries} color={T.teal} />
-              <StatCard label="Leases Extracted" value={stats.ai.leasesExtracted} />
-              <StatCard label="Inspections" value={stats.ai.inspections} />
-              <StatCard label="Total Leases" value={stats.ai.totalLeases} />
-              <StatCard label="Tenants Invited" value={stats.ai.invited} color={T.tealDark} />
+        {/* TRAFFIC */}
+        <div style={{ marginBottom: 32 }}>
+          <SectionHeader>Site Traffic <span style={{ fontWeight: 400, fontSize: 11, color: T.inkMuted, textTransform: 'none' }}>(bot/crawler traffic filtered out)</span></SectionHeader>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+            <StatCard label="Today" value={stats.traffic.today} color={T.teal} />
+            <StatCard label="This Week" value={stats.traffic.week} />
+            <StatCard label="Funnel Views Today" value={stats.traffic.funnelViewsToday} color={T.tealDark} sub="calculator + eviction tool + compliance" />
+            <StatCard label="Funnel Views (wk)" value={stats.traffic.funnelViewsWeek} sub="calculator + eviction tool + compliance" />
+          </div>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 12 }}>Visits by Day</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
+              {(() => {
+                const days: [string, number][] = [];
+                for (let i = 6; i >= 0; i--) {
+                  const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
+                  days.push([d, stats.traffic.byDay[d] || 0]);
+                }
+                const max = Math.max(...days.map(d => d[1]), 1);
+                return days.map(([d, c]) => (
+                  <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: T.navy }}>{c}</span>
+                    <div style={{ width: '100%', height: Math.max(4, (c / max) * 60), background: T.teal, borderRadius: 4 }} />
+                    <span style={{ fontSize: 9, color: T.inkMuted }}>{d.slice(5)}</span>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>System Health</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <StatCard label="Buildings" value={stats.system.buildings} />
-              <StatCard label="Units" value={stats.system.units} />
-              <StatCard label="Active Leases" value={stats.system.activeLeases} color={T.greenDark} />
-              <StatCard label="Pending Payments" value={stats.system.pendingPayments} color={T.amberDark} />
-              <StatCard label="Overdue" value={stats.system.overduePayments} color={T.coral} />
+          {stats.traffic.topRefs.length > 0 && (
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, marginBottom: 10 }}>Top Referrers (7 days)</div>
+              {stats.traffic.topRefs.map(([ref, count]) => (
+                <div key={ref} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
+                  <span style={{ color: T.ink, fontWeight: 500 }}>{ref}</span>
+                  <span style={{ color: T.navy, fontWeight: 700 }}>{count}</span>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
+
+        {/* PRODUCT USAGE */}
+        <div style={{ marginBottom: 32 }}>
+          <SectionHeader>Product Usage</SectionHeader>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
+            <StatCard label="Buildings" value={stats.product.buildings} />
+            <StatCard label="Units" value={stats.product.units} />
+            <StatCard label="Active Leases" value={stats.product.activeLeases} color={T.greenDark} />
+            <StatCard label="Documents" value={stats.product.documents} />
+            <StatCard label="Inspections Done" value={stats.product.inspectionsCompleted} />
+            <StatCard label="Pending Rent" value={stats.product.pendingRentPayments} color={T.amberDark} />
+            <StatCard label="Overdue Rent" value={stats.product.overdueRentPayments} color={T.coral} />
           </div>
         </div>
 
         {/* FEEDBACK */}
-        <div id="admin-feedback" style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 32 }}>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: isMobile ? 10 : 0 }}>User Feedback ({stats.feedback.length})</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.navy, marginBottom: isMobile ? 10 : 0 }}>User Feedback ({stats.feedback.length})</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               {(['all', 'bug', 'feature', 'general'] as const).map(f => (
                 <button key={f} onClick={() => setFeedbackFilter(f)}
@@ -362,276 +336,7 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-
-        {/* RECENT SIGNUPS */}
-        <div id="admin-signups" style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>Recent Signups</div>
-          {isMobile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {stats.recentSignups.map((u: any) => (
-                <div key={u.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '12px 14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: T.ink }}>{u.full_name || '—'}</div>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                      background: u.subscription_status === 'active' ? T.greenLight : u.subscription_status === 'cancelled' ? T.coralLight : T.bg,
-                      color: u.subscription_status === 'active' ? T.greenDark : u.subscription_status === 'cancelled' ? T.coral : T.inkMuted, textTransform: 'capitalize' }}>
-                      {u.subscription_status || 'free'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>{u.email || '—'}</div>
-                  <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    {['Name', 'Email', 'Signed Up', 'Plan'].map(h => (
-                      <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: `1px solid ${T.border}` }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentSignups.map((u: any) => (
-                    <tr key={u.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                      <td style={{ padding: '10px 14px', fontWeight: 600, color: T.ink }}>{u.full_name || '—'}</td>
-                      <td style={{ padding: '10px 14px', color: T.inkMid }}>{u.email || '—'}</td>
-                      <td style={{ padding: '10px 14px', color: T.inkMuted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: '10px 14px' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                          background: u.subscription_status === 'active' ? T.greenLight : u.subscription_status === 'cancelled' ? T.coralLight : T.bg,
-                          color: u.subscription_status === 'active' ? T.greenDark : u.subscription_status === 'cancelled' ? T.coral : T.inkMuted, textTransform: 'capitalize' }}>
-                          {u.subscription_status || 'free'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* BROADCAST EMAIL */}
-        <div id="admin-broadcast" style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy, marginBottom: 14 }}>📢 Broadcast Email</div>
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 20 }}>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Subject</label>
-              <input value={bcSubject} onChange={e => setBcSubject(e.target.value)} placeholder="Email subject line"
-                style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 150 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Recipients</label>
-                <select value={bcFilter} onChange={e => setBcFilter(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, outline: 'none' }}>
-                  <option value="all">All users</option>
-                  <option value="pro">Pro subscribers only</option>
-                  <option value="trial">Trial/Free users</option>
-                  <option value="specific">Specific email</option>
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: 150 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Type</label>
-                <select value={bcType} onChange={e => setBcType(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, outline: 'none' }}>
-                  <option value="announcement">📣 Announcement</option>
-                  <option value="feature">🚀 New Feature</option>
-                  <option value="bug">🐛 Bug Fix</option>
-                  <option value="newsletter">📰 Newsletter</option>
-                  <option value="notice">⚠️ Important Notice</option>
-                </select>
-              </div>
-            </div>
-
-            {bcFilter === 'specific' && (
-              <div style={{ marginBottom: 12 }}>
-                <input value={bcSpecific} onChange={e => setBcSpecific(e.target.value)} placeholder="recipient@example.com"
-                  style={{ width: '100%', padding: '10px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
-              </div>
-            )}
-
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.inkMuted, display: 'block', marginBottom: 4 }}>Message</label>
-              <textarea value={bcMessage} onChange={e => setBcMessage(e.target.value)}
-                placeholder="Write your email message here... (line breaks will be converted to HTML)"
-                style={{ width: '100%', padding: '12px 14px', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, minHeight: 120, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} />
-            </div>
-
-            {bcResult && (
-              <div style={{ background: bcResult.failed > 0 ? T.amberLight : T.greenLight, border: `1px solid ${bcResult.failed > 0 ? T.amberDark : T.greenDark}33`, borderRadius: T.radiusSm, padding: '10px 14px', marginBottom: 12, fontSize: 13, fontWeight: 600, color: bcResult.failed > 0 ? T.amberDark : T.greenDark }}>
-                Sent {bcResult.sent} of {bcResult.total} emails{bcResult.failed > 0 ? ` (${bcResult.failed} failed)` : ''}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setBcPreview(!bcPreview)}
-                style={{ padding: '10px 16px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, color: T.navy, cursor: 'pointer' }}>
-                {bcPreview ? 'Hide Preview' : '👁 Preview'}
-              </button>
-              <button onClick={async () => {
-                if (!bcSubject || !bcMessage) { alert('Subject and message are required'); return; }
-                if (bcFilter === 'specific' && !bcSpecific) { alert('Enter recipient email'); return; }
-                if (!confirm(`Send broadcast "${bcSubject}" to ${bcFilter === 'specific' ? bcSpecific : bcFilter + ' users'}?`)) return;
-                setBcSending(true);
-                setBcResult(null);
-                const res = await fetch('/api/admin/broadcast', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ password, subject: bcSubject, message: bcMessage, type: bcType, recipient_filter: bcFilter, specific_email: bcSpecific }),
-                });
-                const data = await res.json();
-                setBcSending(false);
-                if (data.error) { alert('Error: ' + data.error); }
-                else { setBcResult(data); fetchStats(); }
-              }} disabled={bcSending || !bcSubject || !bcMessage}
-                style={{ padding: '10px 20px', background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: !bcSubject || !bcMessage ? 0.5 : 1 }}>
-                {bcSending ? 'Sending...' : 'Send Broadcast'}
-              </button>
-            </div>
-
-            {bcPreview && bcSubject && (
-              <div style={{ marginTop: 16, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, overflow: 'hidden' }}>
-                <div style={{ background: T.navy, padding: '16px 24px' }}>
-                  <div style={{ color: T.teal, fontSize: 16, fontWeight: 700 }}>Keywise</div>
-                </div>
-                <div style={{ padding: 24 }}>
-                  <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, marginBottom: 12,
-                    background: bcType === 'feature' ? T.tealLight : bcType === 'bug' ? T.coralLight : bcType === 'notice' ? T.amberLight : T.bg,
-                    color: bcType === 'feature' ? T.tealDark : bcType === 'bug' ? T.coral : bcType === 'notice' ? T.amberDark : T.navy }}>
-                    {bcType === 'announcement' ? '📣 Announcement' : bcType === 'feature' ? '🚀 New Feature' : bcType === 'bug' ? '🐛 Bug Fix' : bcType === 'newsletter' ? '📰 Newsletter' : '⚠️ Important Notice'}
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: T.navy, marginBottom: 12 }}>{bcSubject}</div>
-                  <div style={{ fontSize: 14, color: T.inkMid, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{bcMessage}</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Broadcast history */}
-          {stats.broadcasts && stats.broadcasts.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.inkMuted, marginBottom: 8 }}>Sent History</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {stats.broadcasts.map((b: any) => (
-                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '10px 14px' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{b.subject}</div>
-                      <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 2 }}>{new Date(b.created_at).toLocaleDateString()} — {b.recipient_filter} — {b.type}</div>
-                    </div>
-                    <div style={{ fontSize: 12, color: T.greenDark, fontWeight: 600 }}>
-                      {b.sent_count}/{b.recipient_count} sent
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* INTELLIGENCE */}
-        <div id="admin-intel" style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: isMobile ? 15 : 16, fontWeight: 700, color: T.navy }}>Competitive Intelligence</div>
-            <button onClick={async () => {
-              setIntelRunning(true);
-              try {
-                const res = await fetch('/api/admin/run-intelligence', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ password }),
-                });
-                const data = await res.json();
-                if (data.success) { fetchStats(); }
-                else alert(data.error || 'Failed');
-              } catch { alert('Error running intelligence'); }
-              setIntelRunning(false);
-            }} disabled={intelRunning}
-              style={{ padding: '8px 16px', background: T.navy, color: '#fff', border: 'none', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: intelRunning ? 0.7 : 1 }}>
-              {intelRunning ? 'Running...' : 'Run Now'}
-            </button>
-          </div>
-
-          {intelReports.length === 0 ? (
-            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 24, textAlign: 'center', color: T.inkMuted, fontSize: 13 }}>
-              No intelligence reports yet. Click "Run Now" to generate.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {intelReports.map((r: any) => (
-                <div key={r.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: T.navy }}>{r.date}</span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {(r.urgent?.length || 0) > 0 && <span style={{ background: '#FFF0F0', color: '#CC0000', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{r.urgent.length} urgent</span>}
-                      {(r.opportunities?.length || 0) > 0 && <span style={{ background: '#FFF8E0', color: '#9A6500', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{r.opportunities.length} opportunities</span>}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 13, color: T.inkMid, lineHeight: 1.6 }}>{r.summary}</div>
-                  {(r.urgent || []).map((u: any, i: number) => (
-                    <div key={i} style={{ background: '#FFF0F0', borderLeft: '3px solid #FF4444', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                      <div><strong>{u.title}</strong>: {u.description}</div>
-                      <button onClick={() => setBuildPrompt(`Build this feature for Keywise (keywise.app):\n\nFeature: ${u.title}\nDescription: ${u.description}\nPriority: ${u.priority || 'high'}\nEffort: ${u.effort || 'medium'}\nType: ${u.type || 'defensive'}\n\nContext:\n- Tech stack: Next.js app router, TypeScript, Supabase, Anthropic Claude API, Stripe Connect, Resend, Twilio\n- Brand colors: T.navy #0F3460, T.teal #00D4AA from app/lib/theme.ts\n- GitHub: github.com/keywise-app/keywise\n- Live at: keywise.app\n\nRequirements:\n1. Build the complete feature end to end\n2. Add any required Supabase tables (show me the SQL to run)\n3. Make it mobile responsive\n4. Use existing theme styles from app/lib/theme.ts\n5. Handle errors gracefully\n6. After building, run: git add . && git commit -m "Add: ${u.title}" && git push\n\nBuild it now.`)}
-                        style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        Build This
-                      </button>
-                    </div>
-                  ))}
-                  {(r.opportunities || []).map((o: any, i: number) => (
-                    <div key={i} style={{ background: '#FFF8E0', borderLeft: '3px solid #FFB347', borderRadius: 6, padding: '10px 12px', marginTop: 8, fontSize: 12, color: T.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                      <div><strong>{o.title}</strong>: {o.description}</div>
-                      <button onClick={() => setBuildPrompt(`Build this feature for Keywise (keywise.app):\n\nFeature: ${o.title}\nDescription: ${o.description}\nPriority: ${o.priority || 'medium'}\nEffort: ${o.effort || 'medium'}\nSource: ${o.source || ''}\n\nContext:\n- Tech stack: Next.js app router, TypeScript, Supabase, Anthropic Claude API, Stripe Connect, Resend, Twilio\n- Brand colors: T.navy #0F3460, T.teal #00D4AA from app/lib/theme.ts\n- GitHub: github.com/keywise-app/keywise\n- Live at: keywise.app\n\nRequirements:\n1. Build the complete feature end to end\n2. Add any required Supabase tables (show me the SQL to run)\n3. Make it mobile responsive\n4. Use existing theme styles from app/lib/theme.ts\n5. Handle errors gracefully\n6. After building, run: git add . && git commit -m "Add: ${o.title}" && git push\n\nBuild it now.`)}
-                        style={{ background: T.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        Build This
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Build Prompt Modal */}
-      {buildPrompt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}
-          onClick={() => { setBuildPrompt(null); setPromptCopied(false); }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 640, width: '100%', maxHeight: '85vh', overflow: 'auto' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Claude Code Prompt</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 16 }}>Copy this prompt and paste it into Claude Code in your terminal.</div>
-            <textarea readOnly value={buildPrompt}
-              style={{ width: '100%', height: 280, padding: 14, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, fontFamily: 'monospace', color: T.ink, resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6, background: T.bg }}
-              onFocus={e => e.target.select()} />
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={() => { navigator.clipboard.writeText(buildPrompt); setPromptCopied(true); setTimeout(() => setPromptCopied(false), 2000); }}
-                style={{ flex: 1, background: T.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                {promptCopied ? '✓ Copied!' : 'Copy Prompt'}
-              </button>
-              <button onClick={() => window.open('https://claude.ai', '_blank')}
-                style={{ flex: 1, background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: T.navy }}>
-                Open Claude.ai →
-              </button>
-            </div>
-            <div style={{ marginTop: 16, background: T.bg, borderRadius: 8, padding: 14, fontSize: 12, color: T.inkMid, lineHeight: 1.6 }}>
-              <strong>Steps:</strong><br/>
-              1. Copy the prompt above<br/>
-              2. Open Claude Code in your terminal: <code style={{ background: '#E0E6F0', padding: '1px 4px', borderRadius: 3 }}>claude</code><br/>
-              3. Paste the prompt and let it build<br/>
-              4. Review the changes, then it will commit and push automatically
-            </div>
-            <button onClick={() => { setBuildPrompt(null); setPromptCopied(false); }}
-              style={{ width: '100%', marginTop: 12, background: 'none', border: 'none', color: T.inkMuted, fontSize: 13, cursor: 'pointer', padding: '8px' }}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
