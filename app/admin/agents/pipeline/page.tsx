@@ -91,7 +91,6 @@ const SOURCES = ["cpo", "cmo", "competitive_intel", "manual"];
 const CATEGORIES: Category[] = ["feature", "bug", "content", "marketing", "infra"];
 
 function PipelineCard({ item }: { item: Item }) {
-  const autoShips = item.category === "content";
   return (
     <div className="border rounded-lg p-4 bg-white">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
@@ -105,7 +104,6 @@ function PipelineCard({ item }: { item: Item }) {
             </span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${categoryColors[item.category]}`}>
               {item.category}
-              {autoShips ? " · auto-ships" : ""}
             </span>
             <span className="text-xs text-gray-500">from {item.source_agent}</span>
           </div>

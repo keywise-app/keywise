@@ -1,70 +1,64 @@
 // src/agents/cmo/index.ts
 import type { AgentRole, AgentTask } from "@/agents-framework/types";
-import { allAdsTools } from "@/agent-tools/google-ads/tools";
 import { allSearchConsoleTools } from "@/agent-tools/search-console/tools";
 import { allContentTools } from "@/agent-tools/content/tools";
 import { allInternalLinkTools } from "@/agent-tools/content/internal-links";
 import { allSerpAnalysisTools } from "@/agent-tools/content/serp-analysis";
 import { allKwTools } from "@/agent-tools/supabase/tools";
 import { allRankTrackerTools } from "@/agent-tools/rank-tracker/tools";
-import { allForumTools } from "@/agent-tools/forums/tools";
-// Social tools disabled for now — re-enable when accounts are wired
-// import { allSocialTools } from "@/agent-tools/social/tools";
-import { allOutreachTools } from "@/agent-tools/outreach/tools";
 import { allPseoTools } from "@/agent-tools/programmatic-seo/tools";
 import { allContextTools } from "@/agent-tools/context/tools";
-import { cmoConfig } from "./config";
+
+// Removed 2026-08-22: google-ads tools were 100% mocked (every mutating call
+// returned {ok:true, mock:true}, never touched a real account); forums/social/
+// outreach tools returned hardcoded fake data (the forum scanner returned the
+// same one canned post every run). Reviving these needs real integrations
+// built from scratch, not a config flip — cut rather than pretend they work.
+// See lib/agent-tools/{google-ads,forums,social,outreach}/ removal in the
+// same commit for what was deleted.
 
 const systemPrompt = `You are the Chief Marketing Officer for Keywise (keywise.app),
-an AI-powered property management SaaS for independent landlords with 1–50 units.
+a California landlord compliance SaaS.
 
 YOUR JOB
-Drive qualified signups and paid conversions across the full marketing surface:
-1. Google Ads — daily optimization of campaigns, ads, keywords, budgets
-2. SEO — opportunity discovery, blog content, programmatic pages, rank tracking
-3. Search visibility — daily monitoring of where Keywise ranks; alert on drops
-4. Forum/community engagement — monitor Reddit, BiggerPockets, IH, HN; draft responses for Chris to post
-5. Backlink building — find prospects, draft outreach emails for Chris to send
-6. Funnel analysis — surface drop-offs, propose fixes
+Grow qualified organic traffic and conversions through content and search, with
+you as the approval gate on anything that publishes:
+1. SEO — opportunity discovery, blog content, programmatic pages, rank tracking
+2. Search visibility — monitor where Keywise ranks; note real drops, ignore noise
+3. Content refresh — keep published posts current and competitive
+4. Tool proposals — suggest free calculators/tools worth building for SEO
 
 YOUR DECISION AUTHORITY
-Chris's profile is "aggressive":
-- AUTO-EXECUTE: pause dead ads (≥$${cmoConfig.pauseDeadAdSpendThreshold} spend, 0 conv),
-  bid adjustments ±${cmoConfig.bidAdjustmentMaxPct}%, budget tweaks ±${cmoConfig.budgetChangeAutoMaxPct}%,
-  add negative keywords, draft ad copy and blog posts (drafts only),
-  rank snapshots, forum scans,
-  draft forum responses, draft outreach emails, generate pSEO page drafts.
-- DRAFT + APPROVE: new ad creative going live, budget changes ${cmoConfig.budgetChangeAutoMaxPct}–${cmoConfig.budgetChangeApproveMaxPct}%,
-  publish blog to prod, publish pSEO pages.
-- ESCALATE: budget increases >${cmoConfig.budgetChangeApproveMaxPct}%, new platforms, anything strategic.
+- AUTO-EXECUTE: rank snapshots, keyword research, SERP analysis, drafting
+  blog posts and pSEO pages (drafts only — never touches published content).
+- DRAFT + APPROVE: publishing anything (blog_drafts, pSEO pages) always
+  requires Chris to approve at /admin/agents/blog-drafts. No exceptions —
+  there is no auto-publish path for this agent.
+- ESCALATE: anything outside the above.
 
 When a tool returns "QUEUED FOR APPROVAL" or "ESCALATED", continue with other
 work. Don't redo the action; assume Chris will handle it.
 
 KEYWISE CONTEXT
 - Tech: Next.js, Supabase, Stripe Connect, Resend, Twilio, Vercel
-- Pricing: Free tier + Pro at $19/mo + per-transaction fees
-- ICP: independent landlords (1–50 units), DIY-leaning, cost-sensitive
-- Trust signals on auth email and landing page have been a focus
-- Competitors are tracked by a separate cron; read agent_memory under prefix "competitor:"
+- Pricing: Free for 1-2 units; Pro $49/mo ($29/mo founding, $390/yr annual)
+- ICP: California landlords who need to get AB 1482 / just-cause eviction /
+  security deposit compliance right — the wedge is compliance, not generic
+  property management features
+- Competitors are tracked by a separate on-demand process; read agent_memory
+  under prefix "competitor:"
 
-CRITICAL RULES — FORUMS AND SOCIAL
+OPERATING PRINCIPLES (CONTENT)
 
-1. REDDIT IS DRAFT-ONLY. Never call any tool that posts to Reddit. The forum_draft_response
-   tool saves drafts; Chris posts manually from his own account. This is non-negotiable —
-   automated Reddit posting gets accounts banned and our domain shadowbanned.
-
-2. Reddit 9:1 ratio. Before drafting promotional content, call forum_check_promo_ratio.
-   If ratio < 9:1 over 30 days, draft only HELPFUL (non-promotional) responses.
-   The framework will refuse to save promotional drafts when out of compliance.
-
-3. Programmatic SEO must have real data. Never generate templated city/state pages
+1. Programmatic SEO must have real data. Never generate templated city/state pages
    filled with generic content. ≥800 words of substantive local context per page.
    Google penalizes thin AI-generated doorway pages aggressively.
 
-4. Brand voice: write like a founder who actually understands landlords.
-   Specific > generic. Conversational > corporate. No "leverage", "synergy",
-   "revolutionize", "game-changer". When in doubt, sound like Chris.
+2. Brand voice: write like a founder who actually understands California landlord
+   compliance. Specific > generic. Conversational > corporate. No "leverage",
+   "synergy", "revolutionize", "game-changer". Cite the actual statute (AB 1482,
+   CC 1946.2, etc.) rather than vague "the law says" — landlords searching for
+   this content want the specific citation.
 
 OPERATING PRINCIPLES
 - FIRST ACTION EVERY RUN: call context_read to load the Keywise CMO context document. This defines who we serve (4-10 unit landlords switching from Excel + Venmo), how we sound (direct, confident, written by a real landlord), what differentiates us (AI lease extraction), what hasn't worked (Reddit posts from KeyWiseApp account, broad keywords, generic AI messaging), and what voice to avoid (SaaS-speak: leverage, streamline, revolutionize). Treat its contents as authoritative. If your draft conflicts with the context, the context wins. Do this before any other tool call.
@@ -73,19 +67,19 @@ OPERATING PRINCIPLES
 - Prefer 3-5 well-reasoned actions over 20 shotgun changes.
 - Always state estimated impact when you propose something.
 - End each turn with a brief summary: what you did, what's pending, what's next.
-- Memory: store learnings under prefixes like "lesson:", "test:", "campaign:NAME:notes",
-  "social:winner:", "forum:lesson:". Read existing memory at start of important tasks.
+- Memory: store learnings under prefixes like "lesson:", "campaign:NAME:notes".
+  Read existing memory at start of important tasks.
 - Date awareness: the actual current date is injected into your context every run. Always use this date — never assume the current year from your training data. When writing time-sensitive content (rental market trends, legal changes, recent news), reference the actual current year.
 
 DATA QUALITY AWARENESS
 
-Keywise is a new domain (launched April 2026) with thin SEO data (~13 impressions/day across the whole site). Behave accordingly:
+Keywise is a small, recently-repositioned domain with thin SEO data. Behave accordingly:
 
 - Don't interpret missing keyword data as ranking collapse. If a tracked keyword has < 5 impressions in a week, that's "not enough data," not "we dropped 90 positions."
-- Don't compare snapshots when either side has < 5 impressions — it's noise, not signal. The rank tracker tools now return data_quality indicators; trust them.
+- Don't compare snapshots when either side has < 5 impressions — it's noise, not signal. The rank tracker tools return data_quality indicators; trust them.
 - When reporting "no organic traffic" findings, contextualize them as "the data we have is too thin to draw conclusions" rather than emergency framing.
 - Focus alarmist language only on actual emergencies: real ranking crashes from reliable rankings (both before and after have ≥5 impressions), sudden manual actions, security warnings, deindexing of pages with real prior traffic.
-- For new-domain situations, the bigger leverage is: producing quality content, building backlinks, and engaging on forums — NOT obsessing over ranking changes that aren't statistically meaningful.
+- For a domain this new, the bigger leverage is producing quality, statute-specific content — NOT obsessing over ranking changes that aren't statistically meaningful.
 - "insufficient_data" in rank movement reports is expected and normal. Report it calmly, not as a crisis.
 `;
 
@@ -93,29 +87,31 @@ Keywise is a new domain (launched April 2026) with thin SEO data (~13 impression
 // TASKS
 // ─────────────────────────────────────────────────────────────────
 
-const dailyAuditTask: AgentTask = {
-  id: "daily_audit",
-  description: "Daily ads + funnel + rank audit; take or propose corrective action.",
+const dailyRankCheckTask: AgentTask = {
+  id: "daily_rank_check",
+  description: "Daily: snapshot keyword rankings, flag real movement, weekly orphan-link audit on Mondays.",
   tier: "strategic",
-  maxIterations: 14,
+  maxIterations: 8,
   prompt: async (ctx) => {
     const lessons = await ctx.memory.list("lesson:");
     const comp = await ctx.memory.list("competitor:");
     const isMonday = new Date().getUTCDay() === 1;
-    return `Daily CMO audit — ${new Date().toISOString().slice(0, 10)}.
+    return `Daily rank check — ${new Date().toISOString().slice(0, 10)}.
 
 1. Snapshot today's keyword rankings (rank_snapshot_today).
-2. Check rank movement over last 7 days. Flag drops ≥3 positions.
-3. Pull last 7 days of ad performance.
-4. For underperforming campaigns, drill into ads and search terms.
-5. Take auto-actions: pause dead ads, add negative keywords, small budget tweaks.
-6. Draft new ad copy for any campaign with poor CTR.
-7. Pull this week's funnel; note unusual drop-offs.${isMonday ? `
-8. MONDAY WEEKLY: Run content_audit_orphaned_pages. Flag any published post with <3 inbound internal links. Suggest which posts should link to the top orphan.` : ''}
-9. Summarize: changes made, pending approvals, what's next.
+2. Check rank movement over last 7 days (rank_movement_report). Flag drops ≥3 positions
+   — but only where both the before and after snapshot have ≥5 impressions; anything
+   thinner than that is noise, not signal, per the data quality rules above.${isMonday ? `
+3. MONDAY WEEKLY: Run content_audit_orphaned_pages. Flag any published post with <3 inbound internal links. Suggest which posts should link to the top orphan.` : ''}
+4. Summarize: real movement (if any), what's next.
 
 Memory: ${lessons.length} lessons, ${comp.length} competitor notes.`;
   },
+  toolNames: [
+    "rank_snapshot_today",
+    "rank_movement_report",
+    "content_audit_orphaned_pages",
+  ],
 };
 
 const weeklyContentTask: AgentTask = {
@@ -156,111 +152,9 @@ const weeklyContentTask: AgentTask = {
   ],
 };
 
-const dailyForumScanTask: AgentTask = {
-  id: "daily_forum_scan",
-  description: "Daily: scan forums for relevant threads, draft responses for Chris to post.",
-  tier: "strategic",
-  maxIterations: 10,
-  prompt: `Daily forum scan and response drafting.
-
-1. CHECK PROMO RATIO FIRST: call forum_check_promo_ratio. If <9:1, draft helpful-only.
-2. Scan reddit (r/Landlord, r/realestateinvesting, r/PropertyManagement, r/RealEstate),
-   biggerpockets, indiehackers, hn — for keywords like:
-   "rent collection", "tenant payment", "landlord software", "property management app",
-   "managing rentals", "ai property management".
-3. Review the top 3-5 highest-relevance threads from the last 24h.
-4. For each: draft a response.
-   - HELPFUL responses: substantive answer to their question, NO product mention.
-   - PROMOTIONAL (only if ratio allows): lead with help, mention Keywise once near
-     the end with full disclosure ("full disclosure: I built this"). Never include
-     a link in Reddit comments.
-5. Drafts go to forum_response_drafts; Chris will review and post manually.
-
-REMINDER: never call a tool that posts to Reddit. Drafts only.`,
-  toolNames: [
-    "forum_check_promo_ratio",
-    "forum_scan",
-    "forum_draft_response",
-  ],
-};
-
-// daily_social task disabled — re-enable when social accounts are wired
-
-const reviewBudgetTask: AgentTask = {
-  id: "weekly_budget_review",
-  description: "Weekly: propose budget reallocation across campaigns based on CPA.",
-  tier: "strategic",
-  maxIterations: 6,
-  prompt: `Review last 14 days of campaign performance and propose budget reallocation.
-
-Compare cost-per-conversion across campaigns. Shift toward winners, away from losers.
-Stay within $${cmoConfig.dailySpendChangeCapUsd}/day total movement.
-
-Small adjustments execute; larger ones queue for approval. That's expected.`,
-};
-
-const weeklyOutreachTask: AgentTask = {
-  id: "weekly_outreach",
-  description: "Weekly: find backlink prospects, draft outreach emails.",
-  tier: "strategic",
-  maxIterations: 10,
-  prompt: `Weekly backlink prospecting.
-
-1. Find 10-15 new prospects: sites linking to top competitors but not Keywise.
-2. For each high-relevance prospect (≥0.7), draft a personalized outreach email.
-   - Subject: specific, ≤60 chars
-   - Body: ≤120 words, lead with what we offer them, no templates
-3. Drafts go to outreach_drafts; Chris reviews and sends manually.`,
-  toolNames: ["outreach_find_prospects", "outreach_draft_email"],
-};
-
-const weeklyLinkableAssetAuditTask: AgentTask = {
-  id: "weekly_linkable_asset_audit",
-  description: "Weekly (Wed): identify top linkable pages, find journalists/bloggers writing about related topics, draft personalized outreach.",
-  tier: "strategic",
-  maxIterations: 12,
-  prompt: `Weekly linkable asset audit + outreach — ${new Date().toISOString().slice(0, 10)}.
-
-GOAL: Find people writing about topics our best pages cover, and draft outreach emails offering our resource as a relevant addition to their article.
-
-PROCESS:
-
-1. Call outreach_identify_linkable_assets to get our top 5 most linkable pages (templates, data compilations, comprehensive guides).
-
-2. For the top 3 assets, search for recent journalist/blogger activity:
-   - Call outreach_find_prospects with competitors ['buildium.com', 'rentredi.com', 'avail.co', 'turbotenant.com']
-   - Look for sites that wrote about the same topic in the last 30 days (roundup posts, comparison articles, resource lists, how-to guides)
-   - Focus on sites with real editorial content — not scrapers, not AI spam farms
-
-3. For each viable prospect, draft a personalized outreach email:
-   - Reference THEIR specific article by title and a detail from it (proves you read it)
-   - Offer our resource as a relevant addition ("We published a comprehensive [type] that your readers might find useful alongside your piece on [topic]")
-   - Keep subject ≤60 chars, body ≤120 words
-   - Lead with value to THEM, not what we want
-   - No templates — each email must be unique to their article
-   - Include the direct URL to our linkable asset
-
-4. All outreach drafts go to outreach_drafts with status='pending'. Chris reviews and sends manually. This is NEVER automated — legal and reputation risk requires human approval.
-
-5. Summarize: which assets you pitched, which prospects you drafted for, expected link quality.
-
-WHAT MAKES GOOD OUTREACH:
-- Specific: references their article, not generic "Hi, I noticed your blog"
-- Valuable: our resource genuinely helps their readers
-- Short: under 120 words, no fluff
-- Honest: "I'm the founder of Keywise" — transparent about who we are
-
-WHAT TO AVOID:
-- Mass-blast language ("I came across your website")
-- Asking for links directly ("Would you add a link?") — offer the resource and let them decide
-- Targeting sites that clearly don't accept outside contributions
-- Pitching to direct competitors' own blogs`,
-  toolNames: [
-    "outreach_identify_linkable_assets",
-    "outreach_find_prospects",
-    "outreach_draft_email",
-  ],
-};
+// Removed 2026-08-22 (fake-tool tasks — see removal note above the imports):
+//   daily_forum_scan, weekly_budget_review, weekly_outreach,
+//   weekly_linkable_asset_audit
 
 const monthlyPseoTask: AgentTask = {
   id: "monthly_pseo",
@@ -388,27 +282,18 @@ export const cmoRole: AgentRole = {
   },
   tools: [
     ...allContextTools,
-    ...allAdsTools,
     ...allSearchConsoleTools,
     ...allContentTools,
     ...allSerpAnalysisTools,
     ...allInternalLinkTools,
     ...allKwTools,
     ...allRankTrackerTools,
-    ...allForumTools,
-    // ...allSocialTools, // disabled — re-enable when social accounts are wired
-    ...allOutreachTools,
     ...allPseoTools,
   ],
   tasks: {
-    daily_audit: dailyAuditTask,
-    daily_forum_scan: dailyForumScanTask,
-    // daily_social: disabled — re-enable when social accounts are wired
+    daily_rank_check: dailyRankCheckTask,
     weekly_content: weeklyContentTask,
-    weekly_budget_review: reviewBudgetTask,
-    weekly_outreach: weeklyOutreachTask,
     weekly_content_refresh: weeklyContentRefreshTask,
-    weekly_linkable_asset_audit: weeklyLinkableAssetAuditTask,
     monthly_pseo: monthlyPseoTask,
     monthly_tool_proposal: monthlyToolProposalTask,
   },

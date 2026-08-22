@@ -65,12 +65,6 @@ export default async function AgentsPage() {
             Blog drafts →
           </Link>
           <Link
-            href="/admin/agents/forum-drafts"
-            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
-          >
-            Forum drafts →
-          </Link>
-          <Link
             href="/admin/agents/ranks"
             className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >

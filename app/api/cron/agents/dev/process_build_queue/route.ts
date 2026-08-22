@@ -100,10 +100,12 @@ function buildDevPrompt(item: QueueRow): string {
 }
 
 async function publishContent(supabase: any, item: QueueRow): Promise<{ ok: boolean; note?: string }> {
-  // Content category auto-publishes — lower risk than code. We look up the
-  // matching blog_drafts row by title (the CMO's mirror call links them) and
-  // flip it to published. If we can't find a draft, we just mark the queue
-  // item as failed with a note — never invent content here.
+  // Content category used to auto-publish here — flipping blog_drafts straight
+  // to 'published' with no human in the loop. Changed 2026-08-22: every
+  // publish path now goes through the same gate, the manual approve/publish
+  // action at /admin/agents/blog-drafts. This just confirms the matching
+  // draft exists and leaves it for that review, same as content produced by
+  // weekly_content ever did.
   const { data: drafts, error } = await supabase
     .from("blog_drafts")
     .select("id, status")
@@ -114,13 +116,7 @@ async function publishContent(supabase: any, item: QueueRow): Promise<{ ok: bool
   const draft = drafts?.[0];
   if (!draft) return { ok: false, note: "no matching blog_drafts row" };
   if (draft.status === "published") return { ok: true, note: "already published" };
-
-  const { error: upErr } = await supabase
-    .from("blog_drafts")
-    .update({ status: "published", published_at: new Date().toISOString() })
-    .eq("id", draft.id);
-  if (upErr) return { ok: false, note: `blog_drafts publish failed: ${upErr.message}` };
-  return { ok: true };
+  return { ok: true, note: "draft ready for review at /admin/agents/blog-drafts" };
 }
 
 export async function GET(req: NextRequest) {
@@ -173,11 +169,10 @@ export async function GET(req: NextRequest) {
   if (item.category === "content") {
     const res = await publishContent(supabase, item);
     if (res.ok) {
-      await supabase
-        .from("build_queue")
-        .update({ status: "shipped", shipped_at: new Date().toISOString() })
-        .eq("id", item.id);
-      return NextResponse.json({ picked: item.id, category: "content", action: "auto-published" });
+      // Left in_progress, same as marketing below — the matching blog_drafts
+      // row exists and is ready, but nothing publishes without the manual
+      // approve/publish action at /admin/agents/blog-drafts.
+      return NextResponse.json({ picked: item.id, category: "content", action: "ready-for-review", note: res.note });
     }
     await supabase
       .from("build_queue")
