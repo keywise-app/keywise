@@ -97,6 +97,7 @@ export async function POST(req: Request) {
 
       const trialPipeline = trialCustomers
         .map((p: any) => ({
+          id: p.id,
           name: p.full_name || null,
           email: p.email,
           created_at: p.created_at,

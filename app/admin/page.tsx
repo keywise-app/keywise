@@ -11,7 +11,7 @@ const T = {
 
 type Stats = {
   users: { total: number; newToday: number; newWeek: number; newMonth: number; trial: number; active: number; cancelled: number };
-  trialPipeline: { name: string | null; email: string; created_at: string; trial_ends_at: string | null; daysLeft: number | null }[];
+  trialPipeline: { id: string; name: string | null; email: string; created_at: string; trial_ends_at: string | null; daysLeft: number | null }[];
   revenue: { mrr: number; unclassifiedActive: number; rentVolumeTotal: number; rentVolumeMonth: number; platformFeesTotal: number; platformFeesMonth: number; paymentsCompleted: number };
   traffic: { today: number; week: number; byDay: Record<string, number>; topRefs: [string, number][]; funnelViewsToday: number; funnelViewsWeek: number };
   product: { documents: number; inspectionsCompleted: number; totalLeases: number; buildings: number; units: number; activeLeases: number; pendingRentPayments: number; overdueRentPayments: number };
@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'bug' | 'feature' | 'general'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'reviewed' | 'planned' | 'done'>('all');
   const [isMobile, setIsMobile] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -99,6 +100,28 @@ export default function AdminPage() {
       body: JSON.stringify({ password, action: 'update_feedback', payload: { id, status, admin_notes } }),
     });
     fetchStats();
+  };
+
+  const deleteUser = async (id: string, email: string) => {
+    if (!confirm(`Permanently delete ${email}? This cannot be undone.`)) return;
+    setDeletingUserId(id);
+    try {
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, user_id: id }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+      setStats(prev => prev ? { ...prev, trialPipeline: prev.trialPipeline.filter(t => t.id !== id) } : prev);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user.');
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   if (!authed) {
@@ -185,18 +208,30 @@ export default function AdminPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {stats.trialPipeline.map((t) => (
-                  <div key={t.email} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}`, fontSize: 13 }}>
                     <div>
                       <div style={{ fontWeight: 600, color: T.ink }}>{t.name || t.email}</div>
                       {t.name && <div style={{ fontSize: 11, color: T.inkMuted }}>{t.email}</div>}
                     </div>
-                    <span style={{
-                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                      background: t.daysLeft === null ? T.bg : t.daysLeft <= 2 ? T.coralLight : t.daysLeft <= 7 ? T.amberLight : T.tealLight,
-                      color: t.daysLeft === null ? T.inkMuted : t.daysLeft <= 2 ? T.coral : t.daysLeft <= 7 ? T.amberDark : T.tealDark,
-                    }}>
-                      {t.daysLeft === null ? 'no trial end set' : t.daysLeft < 0 ? 'trial ended' : `${t.daysLeft}d left`}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                        background: t.daysLeft === null ? T.bg : t.daysLeft <= 2 ? T.coralLight : t.daysLeft <= 7 ? T.amberLight : T.tealLight,
+                        color: t.daysLeft === null ? T.inkMuted : t.daysLeft <= 2 ? T.coral : t.daysLeft <= 7 ? T.amberDark : T.tealDark,
+                      }}>
+                        {t.daysLeft === null ? 'no trial end set' : t.daysLeft < 0 ? 'trial ended' : `${t.daysLeft}d left`}
+                      </span>
+                      <button
+                        onClick={() => deleteUser(t.id, t.email)}
+                        disabled={deletingUserId === t.id}
+                        style={{
+                          fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: 'none',
+                          background: T.coralLight, color: T.coral, cursor: deletingUserId === t.id ? 'default' : 'pointer',
+                          opacity: deletingUserId === t.id ? 0.6 : 1, fontFamily: 'inherit',
+                        }}>
+                        {deletingUserId === t.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
