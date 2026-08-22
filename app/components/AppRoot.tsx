@@ -43,7 +43,7 @@ function CompliancePlaceholder() {
         <div style={{ fontSize: 14, color: T.inkMuted }}>California-specific tools to keep your landlord practice legally sound.</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-        <a href="/ab1482-calculator" target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
+        <a href="/tools/ca/ab1482-calculator" target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
           <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14, padding: 24, cursor: 'pointer', boxShadow: T.shadow }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
               <div style={{ fontSize: 32 }}>📊</div>

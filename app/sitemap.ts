@@ -9,13 +9,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: base, lastModified, changeFrequency: 'weekly', priority: 1.0 },
     { url: `${base}/blog`, lastModified, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${base}/ab1482-calculator`, lastModified, changeFrequency: 'weekly' as const, priority: 0.9 },
+    { url: `${base}/tools/ca/ab1482-calculator`, lastModified, changeFrequency: 'weekly' as const, priority: 0.9 },
+    { url: `${base}/tools/ca/eviction-notice`, lastModified, changeFrequency: 'weekly' as const, priority: 0.9 },
+    { url: `${base}/tools`, lastModified, changeFrequency: 'weekly' as const, priority: 0.8 },
+    { url: `${base}/compliance`, lastModified, changeFrequency: 'weekly' as const, priority: 0.7 },
+    { url: `${base}/blog/california-ab-1482-explained-2026`, lastModified, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${base}/blog/california-compliance-tools-landlords`, lastModified, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${base}/blog/security-deposit-deductions`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/late-rent-notice`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/move-in-inspection-checklist`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/collect-rent-online`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/free-lease-agreement-template`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/security-deposit-laws`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/blog/property-management-software-comparison`, lastModified, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/blog/landlord-tenant-communication`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/blog/onboard-tenant-from-lease`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/tenant`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/contact`, lastModified, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${base}/privacy`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
@@ -26,6 +34,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const hardcodedSlugs = new Set([
     'late-rent-notice', 'move-in-inspection-checklist', 'collect-rent-online',
     'free-lease-agreement-template', 'security-deposit-laws', 'property-management-software-comparison',
+    'california-ab-1482-explained-2026', 'california-compliance-tools-landlords', 'security-deposit-deductions',
+    'landlord-tenant-communication', 'onboard-tenant-from-lease',
   ]);
 
   let dynamicEntries: MetadataRoute.Sitemap = [];

@@ -32,7 +32,7 @@ export default function CompliancePage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
           {/* Active: AB 1482 */}
-          <a href="/ab1482-calculator" style={{ textDecoration: 'none' }}>
+          <a href="/tools/ca/ab1482-calculator" style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <div style={{ fontSize: 36 }}>📊</div>

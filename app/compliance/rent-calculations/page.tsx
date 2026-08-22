@@ -95,7 +95,7 @@ export default function RentCalculationsPage() {
         </a>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <a href="/compliance" style={{ color: '#fff', fontSize: 13, textDecoration: 'none', opacity: 0.7 }}>← Compliance</a>
-          <a href="/ab1482-calculator"
+          <a href="/tools/ca/ab1482-calculator"
             style={{ background: TEAL, color: N, textDecoration: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 700 }}>
             + New Calculation
           </a>
@@ -128,7 +128,7 @@ export default function RentCalculationsPage() {
             <div style={{ fontSize: 15, color: INK_MID, marginBottom: 24, maxWidth: 420, margin: '0 auto 24px', lineHeight: 1.65 }}>
               Run the AB 1482 rent cap calculator to see your maximum legal rent increase for any property. Calculations are saved automatically when you&apos;re signed in.
             </div>
-            <a href="/ab1482-calculator"
+            <a href="/tools/ca/ab1482-calculator"
               style={{ display: 'inline-block', background: N, color: '#fff', textDecoration: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 14, fontWeight: 700 }}>
               Run First Calculation →
             </a>
@@ -183,7 +183,7 @@ export default function RentCalculationsPage() {
 
                   {/* Actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                    <a href="/ab1482-calculator"
+                    <a href="/tools/ca/ab1482-calculator"
                       style={{ background: BG, color: N, textDecoration: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, border: `1px solid ${BORDER}`, textAlign: 'center' as const }}>
                       Re-run
                     </a>

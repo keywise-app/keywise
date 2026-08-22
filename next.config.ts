@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '20mb',
     },
   },
+  async redirects() {
+    return [
+      {
+        source: '/ab1482-calculator',
+        destination: '/tools/ca/ab1482-calculator',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
