@@ -91,9 +91,13 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
     setStripeConnecting(true);
     setStripeError('');
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/stripe/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ user_id: userId }),
       });
       const data = await res.json();
@@ -113,9 +117,13 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const startTrial = async () => {
     setSubscribing(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/stripe/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ user_id: userId, email: profile.email, name: profile.full_name }),
       });
       const data = await res.json();
@@ -134,9 +142,13 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
   const openBillingPortal = async () => {
     setBillingLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/stripe/billing-portal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ user_id: userId }),
       });
       const data = await res.json();

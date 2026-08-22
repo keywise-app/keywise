@@ -66,9 +66,13 @@ function UpgradeModal({ reason, onClose }: {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setError('Not signed in.'); setLoading(false); return; }
       const { data: prof } = await supabase.from('profiles').select('email, full_name').eq('id', user.id).single();
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/stripe/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ user_id: user.id, email: prof?.email || user.email, name: prof?.full_name || '' }),
       });
       const data = await res.json();

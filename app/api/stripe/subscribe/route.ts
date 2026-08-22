@@ -22,6 +22,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'user_id and email are required' }, { status: 400 });
     }
 
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user || user.id !== user_id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const selectedPlan = plan || 'monthly';
     const priceId = PRICE_IDS[selectedPlan];
 
