@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useState } from 'react';
 import LegalDisclaimer from '../../../components/compliance/LegalDisclaimer';
 
 const N = '#0F3460';
@@ -45,29 +45,30 @@ export default function NoticePreview({
   saving,
   saved,
 }: NoticePreviewProps) {
-  const printRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
 
-  const handlePrint = () => {
-    const content = printRef.current;
-    if (!content) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${noticeTypeLabel} - ${tenantName}</title>
-        <style>
-          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; margin: 1in; color: #000; }
-          pre { white-space: pre-wrap; word-wrap: break-word; font-family: 'Times New Roman', serif; font-size: 12pt; }
-          @media print { body { margin: 0.75in; } }
-        </style>
-      </head>
-      <body><pre>${noticeText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch('/api/eviction-notice/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noticeText, noticeTypeLabel, tenantName, propertyAddress }),
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${noticeTypeLabel} - ${tenantName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Failed to generate PDF. Please try again.');
+    }
+    setDownloading(false);
   };
 
   const handleEmail = () => {
@@ -118,7 +119,6 @@ export default function NoticePreview({
 
       {/* Notice document */}
       <div
-        ref={printRef}
         style={{
           background: '#fff',
           border: `1px solid ${BORDER}`,
@@ -147,7 +147,8 @@ export default function NoticePreview({
       {/* Action buttons */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         <button
-          onClick={handlePrint}
+          onClick={handleDownloadPdf}
+          disabled={downloading}
           style={{
             background: N,
             color: '#fff',
@@ -156,13 +157,14 @@ export default function NoticePreview({
             padding: '11px 22px',
             fontSize: 14,
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: downloading ? 'default' : 'pointer',
+            opacity: downloading ? 0.7 : 1,
             display: 'flex',
             alignItems: 'center',
             gap: 6,
           }}
         >
-          Print / Download PDF
+          {downloading ? 'Generating...' : 'Download PDF'}
         </button>
         <button
           onClick={onSave}

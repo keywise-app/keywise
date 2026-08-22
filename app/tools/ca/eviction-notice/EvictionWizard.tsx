@@ -313,6 +313,7 @@ export default function EvictionWizard() {
         body: JSON.stringify({
           unit_id: selectedUnit.id,
           notice_type: selectedType.id,
+          notice_type_label: selectedType.label,
           at_fault: selectedType.atFault,
           situation_inputs: noticeInputs,
           notice_days: effectiveDays,

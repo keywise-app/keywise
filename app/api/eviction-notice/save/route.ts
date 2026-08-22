@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { buildEvictionNoticePdf } from '../../../../lib/compliance/ca/eviction-notice-pdf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -57,6 +58,28 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Supabase insert error:', error);
       return Response.json({ error: 'Failed to save notice' }, { status: 500 });
+    }
+
+    try {
+      const pdfBuffer = await buildEvictionNoticePdf({
+        noticeText: body.notice_text,
+        noticeTypeLabel: body.notice_type_label || body.notice_type,
+        tenantName: body.situation_inputs?.tenantName || 'Tenant',
+        propertyAddress: body.situation_inputs?.propertyAddress || '',
+      });
+      const pdfPath = `${user.id}/eviction-notices/${data.id}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(pdfPath, pdfBuffer, { contentType: 'application/pdf', upsert: true });
+
+      if (!uploadError) {
+        await supabase.from('eviction_notices').update({ pdf_path: pdfPath }).eq('id', data.id);
+      } else {
+        console.error('PDF upload error:', uploadError);
+      }
+    } catch (pdfErr) {
+      // Notice text is already saved; PDF generation is a convenience artifact, not the source of truth.
+      console.error('PDF generation error:', pdfErr);
     }
 
     return Response.json({ id: data.id });
