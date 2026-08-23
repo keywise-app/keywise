@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/agents/dev/process_build_queue",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/reddit-thread-scan",
+      "schedule": "0 13 * * *"
     }
   ],
   "functions": {

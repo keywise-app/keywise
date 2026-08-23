@@ -59,6 +59,12 @@ export default async function AgentsPage() {
         </p>
         <nav className="mt-4 flex gap-3 text-sm">
           <Link
+            href="/admin/agents/threads"
+            className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
+          >
+            Threads to answer →
+          </Link>
+          <Link
             href="/admin/agents/blog-drafts"
             className="px-3 py-2 border rounded hover:bg-gray-50 min-h-[40px] flex items-center"
           >
