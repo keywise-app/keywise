@@ -128,16 +128,19 @@ const weeklyContentTask: AgentTask = {
    This gives you: our current ranking, related queries, existing posts that might overlap,
    and a gap brief with must-cover topics, target word count (1.5x competitor benchmark),
    differentiators to include, and cannibalization warnings.
-5. Draft 1-2 full blog posts following the gap brief:
+5. Draft exactly 1 full blog post following the gap brief (not 2 — this task runs on a
+   5-minute execution budget, and one well-researched, gap-brief-compliant post beats two rushed ones):
    - Hit the targetWordCount from the brief (typically 2700-3750 words)
    - Cover every item in must_cover
    - Include every differentiator that fits naturally
    - If cannibalization_risk is flagged, consider content_update_blog_post instead
    - Brand voice: founder-style, specific, conversational
-6. For each draft, call content_find_internal_links and weave links into the markdown.
-7. Run content_audit_orphaned_pages. Flag posts with <3 inbound links.
-8. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
-9. Summarize: SERP analysis findings, keywords picked, drafts created, gap brief compliance, orphans.`,
+6. Call content_find_internal_links and weave links into the draft's markdown.
+7. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
+8. Summarize: SERP analysis findings, keyword picked, draft created, gap brief compliance.
+
+NOTE: orphaned-page auditing already runs every Monday inside daily_rank_check — don't
+duplicate it here.`,
   toolNames: [
     "sc_top_queries",
     "sc_top_pages",
@@ -148,7 +151,6 @@ const weeklyContentTask: AgentTask = {
     "content_update_blog_post",
     "content_publish_blog_post",
     "content_find_internal_links",
-    "content_audit_orphaned_pages",
   ],
 };
 
