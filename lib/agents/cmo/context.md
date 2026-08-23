@@ -148,14 +148,25 @@ Stay factual, not sneering. Punch up at enterprise tools (Buildium, AppFolio), b
 
 ## Pricing context for content
 
+**CORRECTED 2026-08-22 — this section was stale (said $19/mo) while live pricing has
+been $49/mo since the founding-member pricing launch. 10 published posts had to be
+corrected as a result — always verify against /pricing before publishing price claims.**
+
 - **Free forever:** Up to 2 units, all features EXCEPT online rent collection
-- **Pro: $19/month + $2 per online transaction** — unlimited units, online rent collection, auto-pay
-- **No setup fees, no per-tenant charges, no per-unit fees beyond the flat $19/mo**
+- **Pro: $49/month** (or $390/year annual) **+ $2 per online rent-collection transaction**
+  — unlimited units, online rent collection, auto-pay
+- **Founding Member: $29/month for life** — first 100 California landlords only, requires
+  continuous subscription (cancel and you lose the rate). Mention this as a real,
+  time-limited offer when it fits naturally — it's a genuine differentiator right now.
+- **No setup fees, no per-tenant charges, no per-unit fees beyond the flat monthly price**
 
 When discussing price in content:
-- Always anchor to a competitor when it makes the value clear ("$19/mo vs Buildium's $79/mo")
+- Always anchor to a competitor when it makes the value clear ("$49/mo vs Buildium's $79/mo")
+- Mention the founding member rate ($29/mo, first 100) where it strengthens urgency
 - Be explicit about the $2 transaction fee (don't bury it)
 - Compare favorably to Stripe direct (2.9% on a $2,000 rent = $58 per transaction vs our $2)
+- The $390/yr annual plan is genuinely cheaper than 12x monthly ($588) — a real selling
+  point, not just a convenience option
 
 ---
 
