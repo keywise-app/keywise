@@ -158,6 +158,14 @@ export default function ComplianceSaveButton({ calculations, onSaved }: Props) {
       const userId = data.user?.id;
       if (!userId) throw new Error('Signup succeeded but no user ID returned');
 
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'conversion', {
+          send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
+          value: 1.0,
+          currency: 'USD',
+        });
+      }
+
       // Update profile with notification preferences
       await supabase.from('profiles').upsert({
         id: userId,
