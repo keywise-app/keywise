@@ -5,10 +5,37 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { agentFetch } from "./lib/agentFetch";
 
+// Plain-language label for a tool name, used only as a last-resort summary
+// when neither proposed_input.title nor reasoning has anything usable.
+const ROLE_LABELS: Record<string, string> = {
+  cmo: "Marketing",
+  dev: "Engineering",
+};
+
+const TOOL_LABELS: Record<string, string> = {
+  content_publish_blog_post: "Publish a blog post",
+  content_draft_blog_post: "Draft a new blog post",
+  content_update_blog_post: "Update a published blog post",
+  pseo_create_template: "Create a new page template",
+  pseo_publish_pages: "Publish generated pages",
+  pseo_generate_page: "Generate a new page",
+};
+
+function summarize(approval: any): string {
+  const title = approval.proposed_input?.title;
+  if (title) return title;
+  if (approval.reasoning?.trim()) {
+    const firstLine = approval.reasoning.trim().split("\n")[0];
+    return firstLine.length > 140 ? firstLine.slice(0, 140) + "…" : firstLine;
+  }
+  return TOOL_LABELS[approval.tool] || `Run ${approval.tool}`;
+}
+
 export default function ApprovalCard({ approval }: { approval: any }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const summary = summarize(approval);
 
   async function decide(decision: "approved" | "rejected") {
     setBusy(true);
@@ -33,10 +60,8 @@ export default function ApprovalCard({ approval }: { approval: any }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs uppercase tracking-wide text-amber-800 font-semibold">
-              {approval.role}
+              {ROLE_LABELS[approval.role] || approval.role}
             </span>
-            <span className="text-xs text-gray-500">·</span>
-            <span className="text-xs text-gray-700">{approval.tool}</span>
             {approval.created_at && (
               <>
                 <span className="text-xs text-gray-500">·</span>
@@ -46,7 +71,7 @@ export default function ApprovalCard({ approval }: { approval: any }) {
               </>
             )}
           </div>
-          <p className="mt-2 text-sm text-gray-900">{approval.reasoning}</p>
+          <p className="mt-2 text-sm font-medium text-gray-900">{summary}</p>
           {approval.estimated_impact && (
             <p className="text-xs text-amber-900 mt-1">
               Estimated impact: {approval.estimated_impact}
@@ -54,11 +79,19 @@ export default function ApprovalCard({ approval }: { approval: any }) {
           )}
           <details className="mt-2">
             <summary className="text-xs text-gray-600 cursor-pointer">
-              View proposed action
+              More detail
             </summary>
-            <pre className="mt-2 text-xs bg-white border rounded p-2 overflow-auto">
-              {JSON.stringify(approval.proposed_input, null, 2)}
-            </pre>
+            <div className="mt-2 space-y-2">
+              {approval.proposed_input?.description && (
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">{approval.proposed_input.description}</p>
+              )}
+              {approval.reasoning?.trim() && approval.reasoning.trim() !== summary && (
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">{approval.reasoning}</p>
+              )}
+              <pre className="text-xs bg-white border rounded p-2 overflow-auto">
+                {JSON.stringify(approval.proposed_input, null, 2)}
+              </pre>
+            </div>
           </details>
         </div>
       </div>
