@@ -172,15 +172,17 @@ duplicate it here.`;
 
 const monthlyPseoTask: AgentTask = {
   id: "monthly_pseo",
-  description: "Monthly: generate programmatic SEO page drafts from real local data.",
+  description: "Monthly: generate a small batch of programmatic SEO page drafts from real local data.",
   tier: "strategic",
-  maxIterations: 14,
+  maxIterations: 10,
   prompt: `Monthly programmatic SEO sweep.
 
 1. Review existing pSEO templates and pages.
 2. If no template exists yet, propose ONE template (requires approval) such as
    "/property-management-software-{city}" or "/landlord-laws-{state}".
-3. Once a template is approved, generate 5-10 high-quality page DRAFTS using real data.
+3. Once a template is approved, generate exactly 3 high-quality page DRAFTS using real
+   data (not 5-10 — this task must fit inside one 300s serverless invocation; run again
+   next month to build out more of the template).
    - Each page: ≥800 words, real local stats (population, median rent, common laws),
      specific local context (e.g. "California's AB 1482 rent cap" for a CA page).
    - NO generic boilerplate. NO duplicate copy across pages with just the city name swapped.
@@ -195,23 +197,34 @@ const monthlyPseoTask: AgentTask = {
 
 const weeklyContentRefreshTask: AgentTask = {
   id: "weekly_content_refresh",
-  description: "Weekly (Thu): audit published posts older than 90 days, refresh underperformers with updated content.",
+  description: "Weekly (Thu): audit published posts older than 90 days, refresh the single best underperformer.",
   tier: "strategic",
-  maxIterations: 14,
-  prompt: `Weekly content refresh — ${new Date().toISOString().slice(0, 10)}.
+  maxIterations: 8,
+  // Same fix as weekly_content: pre-fetch SC data server-side instead of 2 more
+  // agent-driven round trips, and cut scope to 1 refresh (this must fit inside
+  // one 300s serverless invocation — Vercel Hobby plan hard cap).
+  prompt: async () => {
+    const [topQueries, topPages] = await Promise.all([
+      fetchTopQueries(28),
+      fetchTopPages(28),
+    ]);
+    return `Weekly content refresh — ${new Date().toISOString().slice(0, 10)}.
 
-GOAL: Find published blog posts that are stale or underperforming and refresh them.
-Refreshed posts often jump 5-20 positions — often more than new posts ever achieve.
+GOAL: Find published blog posts that are stale or underperforming and refresh the single
+best one. Refreshed posts often jump 5-20 positions — often more than new posts ever achieve.
+
+TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
+TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}
 
 1. Call content_list_published to get all published posts with their dates.
 2. Identify posts older than 90 days (published_at before ${new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)}).
-3. For each candidate, check Search Console performance via sc_top_queries and sc_top_pages:
+3. Cross-reference against the Search Console data above:
    - Is the target keyword ranking on page 2-3 (positions 11-30)? → high-value refresh
-   - Has position stagnated or dropped vs. earlier snapshots? → needs refresh
    - Is it getting impressions but low CTR? → title/meta refresh
-4. Pick the 1-2 highest-leverage refresh candidates.
-5. For each, call content_find_internal_links to find new linking opportunities
-   from recently published posts that didn't exist when the original was written.
+4. Pick the SINGLE highest-leverage refresh candidate (not 1-2 — one done well beats
+   two rushed, and this task runs on a tight execution budget).
+5. Call content_find_internal_links to find new linking opportunities from recently
+   published posts that didn't exist when the original was written.
 6. Call content_update_blog_post with refreshed content:
    - Update all year references to current year (${new Date().getFullYear()})
    - Add fresh statistics, data points, or examples
@@ -220,15 +233,14 @@ Refreshed posts often jump 5-20 positions — often more than new posts ever ach
    - Update meta_description if CTR is below 3%
    - Keep the same slug and URL — we're refreshing, not replacing
 7. The update will queue for approval since the post is published (live content).
-8. Summarize: which posts were refreshed, what changed, expected impact.
+8. Summarize: which post was refreshed, what changed, expected impact.
 
 NOTE: Static blog posts (hardcoded in app/blog/) cannot be refreshed by this tool —
-only posts in the blog_drafts table. Focus on those.`,
+only posts in the blog_drafts table. Focus on those.`;
+  },
   toolNames: [
     "content_list_published",
     "content_analyze_serp",
-    "sc_top_queries",
-    "sc_top_pages",
     "content_find_internal_links",
     "content_update_blog_post",
   ],
