@@ -1,6 +1,7 @@
 // src/agents/cmo/index.ts
 import type { AgentRole, AgentTask } from "@/agents-framework/types";
 import { allSearchConsoleTools } from "@/agent-tools/search-console/tools";
+import { fetchTopQueries, fetchTopPages, fetchOpportunityKeywords } from "@/agent-tools/search-console/client";
 import { allContentTools } from "@/agent-tools/content/tools";
 import { allInternalLinkTools } from "@/agent-tools/content/internal-links";
 import { allSerpAnalysisTools } from "@/agent-tools/content/serp-analysis";
@@ -118,33 +119,44 @@ const weeklyContentTask: AgentTask = {
   id: "weekly_content",
   description: "Weekly: SEO opportunity research, blog drafts, content updates.",
   tier: "strategic",
-  maxIterations: 12,
-  prompt: `Weekly content sweep.
+  maxIterations: 8,
+  // Pre-fetch Search Console data server-side (same pattern as daily_rank_check's
+  // context_read) instead of having the agent call 3 SC tools itself — each tool
+  // call is a full LLM round trip, and this whole task must fit inside one 300s
+  // serverless invocation (Vercel Hobby plan hard cap).
+  prompt: async () => {
+    const [topQueries, topPages, opportunities] = await Promise.all([
+      fetchTopQueries(28),
+      fetchTopPages(28),
+      fetchOpportunityKeywords(),
+    ]);
+    return `Weekly content sweep.
 
-1. Pull top queries/pages from Search Console (28d).
-2. Find opportunity keywords (page-2 ranks, decent impressions).
-3. Cross-reference with current keyword_targets — add new ones if found.
-4. For each keyword you plan to write about, call content_analyze_serp FIRST.
+TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
+TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}
+OPPORTUNITY KEYWORDS (page-2 ranks, decent impressions): ${JSON.stringify(opportunities.slice(0, 15))}
+
+1. Pick the single best opportunity keyword from the data above (page-2 rank, decent
+   impressions, clear landlord-compliance relevance). Cross-reference with current
+   keyword_targets via rank_add_keyword_target if it's not tracked yet.
+2. For that keyword, call content_analyze_serp FIRST.
    This gives you: our current ranking, related queries, existing posts that might overlap,
-   and a gap brief with must-cover topics, target word count (1.5x competitor benchmark),
-   differentiators to include, and cannibalization warnings.
-5. Draft exactly 1 full blog post following the gap brief (not 2 — this task runs on a
-   5-minute execution budget, and one well-researched, gap-brief-compliant post beats two rushed ones):
-   - Hit the targetWordCount from the brief (typically 2700-3750 words)
+   and a gap brief with must-cover topics, target word count (capped ~1800 words to fit
+   this task's execution budget), differentiators to include, and cannibalization warnings.
+3. Draft exactly 1 full blog post following the gap brief:
+   - Hit the targetWordCount from the brief
    - Cover every item in must_cover
    - Include every differentiator that fits naturally
    - If cannibalization_risk is flagged, consider content_update_blog_post instead
    - Brand voice: founder-style, specific, conversational
-6. Call content_find_internal_links and weave links into the draft's markdown.
-7. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
-8. Summarize: SERP analysis findings, keyword picked, draft created, gap brief compliance.
+4. Call content_find_internal_links and weave links into the draft's markdown.
+5. Store keyword analysis in memory under "lesson:seo:YYYY-MM-DD".
+6. Summarize: keyword picked, draft created, gap brief compliance.
 
 NOTE: orphaned-page auditing already runs every Monday inside daily_rank_check — don't
-duplicate it here.`,
+duplicate it here.`;
+  },
   toolNames: [
-    "sc_top_queries",
-    "sc_top_pages",
-    "sc_opportunity_keywords",
     "rank_add_keyword_target",
     "content_analyze_serp",
     "content_draft_blog_post",

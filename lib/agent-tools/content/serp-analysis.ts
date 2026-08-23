@@ -157,7 +157,10 @@ function buildGapBrief(
     : "Lead with genuinely helpful content. Earn trust first, mention Keywise only where naturally relevant (last 20% of the post).";
 
   return {
-    targetWordCount: Math.round(baseWordCount * 1.5), // 1.5x competitor benchmark
+    // Capped at 1800: this whole task runs inside one 300s serverless invocation
+    // (Vercel Hobby plan hard cap), and the drafting call's max_tokens (4096) can't
+    // reliably produce much more than that anyway without truncating.
+    targetWordCount: Math.min(1800, Math.round(baseWordCount * 1.5)),
     must_cover: mustCover,
     differentiators,
     cannibalization_risk: cannibalizationRisk,
