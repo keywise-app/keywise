@@ -41,10 +41,6 @@
       "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/reddit-thread-scan",
-      "schedule": "0 13 * * *"
-    },
-    {
       "path": "/api/cron/trial-nurture",
       "schedule": "0 15 * * *"
     }

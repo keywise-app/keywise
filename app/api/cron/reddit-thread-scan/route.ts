@@ -18,6 +18,15 @@
 // Deliberately NOT the old lib/agent-tools/forums/tools.ts (deleted in the
 // agents rebuild) — that one returned the same hardcoded fake post on every
 // run. This hits Reddit for real, or fails loudly if it can't.
+//
+// DORMANT as of 2026-08-24 -- removed from vercel.json's cron schedule.
+// Reddit's Responsible Builder Policy requires separate written commercial-use
+// approval for this kind of automated read access (self-serve OAuth app
+// creation isn't enough for a for-profit company), and the account it'd run
+// under can't be a personal account per their "no mixed-use accounts" rule.
+// Route and admin UI (/admin/agents/threads) left in place in case Chris
+// wants to pursue formal approval later; dropped as a goal for now in favor
+// of manually checking the same subreddits by hand.
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
