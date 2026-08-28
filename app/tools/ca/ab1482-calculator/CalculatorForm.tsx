@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
+import { ORDINANCE_FRESHNESS_WARNING } from '../../../../lib/compliance/ca/ab1482-config';
 import { RentCapResult } from '../../../../lib/compliance/types';
 import ComplianceSaveButton from './ComplianceSaveButton';
 import LegalDisclaimer from '../../../components/compliance/LegalDisclaimer';
@@ -281,9 +282,10 @@ export default function CalculatorForm() {
               {result.localOrdinance && (
                 <div style={{ background: '#FFF9E6', border: '1px solid #F5D67A', borderRadius: 10, padding: 14, marginTop: 16 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#7A5C00', marginBottom: 4 }}>Local rent control may still apply</div>
-                  <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
-                    Your property is in <strong>{result.localOrdinance.city}</strong>, which has its own rent control ordinance ({result.localOrdinance.note}). Contact your city&apos;s rent board for details.
+                  <p style={{ fontSize: 13, color: INK_MID, margin: '0 0 8px' }}>
+                    Your property is in <strong>{result.localOrdinance.city}</strong>, which has its own rent control ordinance ({result.localOrdinance.note}).
                   </p>
+                  <p style={{ fontSize: 12, color: '#7A5C00', margin: 0, fontStyle: 'italic' }}>{ORDINANCE_FRESHNESS_WARNING}</p>
                 </div>
               )}
 
@@ -327,7 +329,7 @@ export default function CalculatorForm() {
                 <div style={{ background: '#FFF9E6', border: '1px solid #F5D67A', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#7A5C00', marginBottom: 4 }}>CPI data pending</div>
                   <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
-                    The April 2026 CPI for your region hasn&apos;t been published by BLS yet. This calculation uses the pre-August 2026 rate as a conservative estimate. Check back after mid-July 2026.
+                    The April 2026 CPI for your region hadn&apos;t been published by BLS as of this tool&apos;s last data update. This calculation uses the pre-August 2026 rate as a conservative estimate — check <a href="https://www.bls.gov/regions/west/ca_california.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#7A5C00', fontWeight: 600 }}>BLS.gov</a> directly for the current figure.
                   </p>
                 </div>
               )}
@@ -336,9 +338,10 @@ export default function CalculatorForm() {
               {result.localOverrides && result.localOrdinance && (
                 <div style={{ background: '#FFF9E6', border: '1px solid #F5D67A', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#7A5C00', marginBottom: 4 }}>Local ordinance applies</div>
-                  <p style={{ fontSize: 13, color: INK_MID, margin: 0 }}>
+                  <p style={{ fontSize: 13, color: INK_MID, margin: '0 0 8px' }}>
                     {result.localOrdinance.city} limits rent increases to {result.localOrdinance.rate}% ({result.localOrdinance.note}), which is stricter than AB 1482&apos;s {result.cpiValue! + 5}% cap. The local rate applies.
                   </p>
+                  <p style={{ fontSize: 12, color: '#7A5C00', margin: 0, fontStyle: 'italic' }}>{ORDINANCE_FRESHNESS_WARNING}</p>
                 </div>
               )}
 

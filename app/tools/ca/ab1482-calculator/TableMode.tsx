@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { calculateAB1482, AB1482Input } from '../../../../lib/compliance/ca/ab1482-calculator';
+import { ORDINANCE_FRESHNESS_WARNING } from '../../../../lib/compliance/ca/ab1482-config';
 import { RentCapResult } from '../../../../lib/compliance/types';
 import ComplianceSaveButton from './ComplianceSaveButton';
 
@@ -318,9 +319,10 @@ export default function TableMode() {
                 {expandedResult.result.localOrdinance && (
                   <div style={{ background: '#FFF9E6', border: '1px solid #F5D67A', borderRadius: 10, padding: 12, marginTop: 12 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#7A5C00', marginBottom: 4 }}>Local rent control may still apply</div>
-                    <p style={{ fontSize: 12, color: INK_MID, margin: 0 }}>
+                    <p style={{ fontSize: 12, color: INK_MID, margin: '0 0 6px' }}>
                       Your property is in <strong>{expandedResult.result.localOrdinance.city}</strong> ({expandedResult.result.localOrdinance.note}).
                     </p>
+                    <p style={{ fontSize: 11, color: '#7A5C00', margin: 0, fontStyle: 'italic' }}>{ORDINANCE_FRESHNESS_WARNING}</p>
                   </div>
                 )}
               </div>

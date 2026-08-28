@@ -76,6 +76,14 @@ export interface LocalOrdinanceConfig {
   effectivePeriod?: string;
 }
 
+// These rates are point-in-time snapshots of ordinances that reset annually
+// (usually each summer). Never show one as current fact without this caveat —
+// several were already past their own effectivePeriod window as of the last
+// time this file was reviewed (Aug 2026), and there's no live feed keeping
+// them current.
+export const ORDINANCE_FRESHNESS_WARNING =
+  "Local rent-control rates reset annually (usually each summer) and this figure may be from a prior cycle. Confirm the current rate directly with the city's rent board before relying on it.";
+
 export const LOCAL_ORDINANCES: Record<string, LocalOrdinanceConfig> = {
   'Los Angeles':    { rate: 3.0, note: 'LA RSO: 3% (+ 1% if landlord pays gas/electric)', effectivePeriod: 'Jul 2025 – Jun 2026' },
   'San Francisco':  { rate: 1.4, note: '60% of SF-Oakland CPI (Oct-Oct)', effectivePeriod: 'Mar 2025 – Feb 2026' },
