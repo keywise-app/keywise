@@ -142,6 +142,14 @@ export default async function RanksPage() {
             /admin/agents
           </Link>{" "}
           or wait for the next cron run.
+          <br />
+          <strong>If this stays empty for more than a day or two</strong>, the
+          Search Console connection is probably broken (this table used to
+          silently fill up with fake null/zero rows on every OAuth failure
+          instead of staying empty — that bug is fixed, but the underlying
+          credential still needs to work). Check runtime logs for{" "}
+          <code>invalid_grant</code> on <code>[search-console]</code> calls,
+          and re-authorize <code>GOOGLE_SC_REFRESH_TOKEN</code> if so.
         </div>
       )}
 

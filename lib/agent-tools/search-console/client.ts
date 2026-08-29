@@ -128,59 +128,54 @@ export async function fetchOpportunityKeywords(): Promise<SCQueryRow[]> {
   }
 }
 
+// Unlike the other fetch* helpers in this file, this one does NOT swallow
+// errors into a fake empty/zero result. A caller storing this as a daily
+// rank snapshot can't tell "Google says zero impressions" apart from
+// "the API call itself failed" if both look like the same all-null row --
+// that's exactly what happened here for months (invalid_grant on every
+// call, silently recorded as "not ranked" for every keyword, every day).
+// Let it throw; callers must decide how to record a failed fetch.
 export async function fetchRanksForKeywords(
   keywords: string[]
 ): Promise<{ keyword: string; position: number | null; impressions: number; clicks: number; ctr: number; url: string | null }[]> {
-  try {
-    const sc = getClient();
-    const res = await sc.searchanalytics.query({
-      siteUrl: getSiteUrl(),
-      requestBody: {
-        startDate: dateStr(3),
-        endDate: dateStr(0),
-        dimensions: ["query", "page"],
-        rowLimit: 500,
-      },
-    });
+  const sc = getClient();
+  const res = await sc.searchanalytics.query({
+    siteUrl: getSiteUrl(),
+    requestBody: {
+      startDate: dateStr(3),
+      endDate: dateStr(0),
+      dimensions: ["query", "page"],
+      rowLimit: 500,
+    },
+  });
 
-    const rows = res.data.rows || [];
-    // Build a map: query → best (lowest position) row
-    const best = new Map<string, { position: number; impressions: number; clicks: number; ctr: number; url: string }>();
-    for (const r of rows) {
-      const q = r.keys![0].toLowerCase();
-      const pos = r.position ?? 100;
-      const existing = best.get(q);
-      if (!existing || pos < existing.position) {
-        best.set(q, {
-          position: Math.round(pos * 10) / 10,
-          impressions: r.impressions ?? 0,
-          clicks: r.clicks ?? 0,
-          ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
-          url: r.keys![1],
-        });
-      }
+  const rows = res.data.rows || [];
+  // Build a map: query → best (lowest position) row
+  const best = new Map<string, { position: number; impressions: number; clicks: number; ctr: number; url: string }>();
+  for (const r of rows) {
+    const q = r.keys![0].toLowerCase();
+    const pos = r.position ?? 100;
+    const existing = best.get(q);
+    if (!existing || pos < existing.position) {
+      best.set(q, {
+        position: Math.round(pos * 10) / 10,
+        impressions: r.impressions ?? 0,
+        clicks: r.clicks ?? 0,
+        ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
+        url: r.keys![1],
+      });
     }
-
-    return keywords.map((kw) => {
-      const match = best.get(kw.toLowerCase());
-      return {
-        keyword: kw,
-        position: match?.position ?? null,
-        impressions: match?.impressions ?? 0,
-        clicks: match?.clicks ?? 0,
-        ctr: match?.ctr ?? 0,
-        url: match?.url ?? null,
-      };
-    });
-  } catch (err) {
-    console.error("[search-console] fetchRanksForKeywords failed:", err);
-    return keywords.map((kw) => ({
-      keyword: kw,
-      position: null,
-      impressions: 0,
-      clicks: 0,
-      ctr: 0,
-      url: null,
-    }));
   }
+
+  return keywords.map((kw) => {
+    const match = best.get(kw.toLowerCase());
+    return {
+      keyword: kw,
+      position: match?.position ?? null,
+      impressions: match?.impressions ?? 0,
+      clicks: match?.clicks ?? 0,
+      ctr: match?.ctr ?? 0,
+      url: match?.url ?? null,
+    };
+  });
 }

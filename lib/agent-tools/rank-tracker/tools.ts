@@ -25,7 +25,20 @@ export const snapshotRanksTool: AgentTool<{}> = {
     if (!targets || targets.length === 0) {
       return { snapshots: 0, note: "No keyword_targets configured." };
     }
-    const ranks = await fetchRanksForKeywords(targets.map((t: any) => t.keyword));
+
+    let ranks: Awaited<ReturnType<typeof fetchRanksForKeywords>>;
+    try {
+      ranks = await fetchRanksForKeywords(targets.map((t: any) => t.keyword));
+    } catch (err: any) {
+      // Don't write a snapshot at all -- a row full of nulls is
+      // indistinguishable from "Google genuinely shows no data" and
+      // is worse than no row. See client.ts for why this used to
+      // silently write fake data instead.
+      return {
+        snapshots: 0,
+        error: `Search Console call failed: ${err?.message ?? String(err)}. No snapshot recorded today -- check GOOGLE_SC_REFRESH_TOKEN.`,
+      };
+    }
     const today = new Date().toISOString().slice(0, 10);
 
     let reliableCount = 0;
