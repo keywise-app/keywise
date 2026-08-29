@@ -102,15 +102,20 @@ export default function CompliancePage() {
             </div>
           </a>
 
-          {/* Coming soon: Security Deposit 21-Day Rule */}
-          <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, opacity: 0.6, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div style={{ fontSize: 36 }}>💰</div>
-              <span style={{ background: '#F0F4FF', color: '#8892A4', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Coming Soon</span>
+          {/* Guide (tool coming soon): Security Deposit 21-Day Rule */}
+          <a href="/tools/ca/security-deposit-21-day" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div style={{ fontSize: 36 }}>💰</div>
+                <span style={{ background: '#FFF8E0', color: '#9A6500', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Guide · tool soon</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>Security Deposit 21-Day Rule</div>
+              <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65, marginBottom: 16 }}>
+                Plain-English guide to Civil Code § 1950.5, AB 2801 photo requirements, allowable deductions, and the 2x-deposit penalty for missing the 21-day deadline.
+              </div>
+              <div style={{ fontSize: 13, color: '#9A6500', fontWeight: 600 }}>Read the guide →</div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>Security Deposit 21-Day Rule</div>
-            <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65 }}>Track your 21-day deadline to return deposits. Auto-calculates allowable deductions. Generates the itemization letter.</div>
-          </div>
+          </a>
         </div>
       </div>
     </div>
