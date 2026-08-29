@@ -390,6 +390,9 @@ export default function CalculatorForm() {
                   Start free →
                 </a>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>Free for 1-2 units. No credit card.</div>
+                <div style={{ fontSize: 11, color: TEAL, marginTop: 10 }}>
+                  Managing more units? First 100 California landlords get Pro at $29/mo for life — <a href="/pricing" style={{ color: TEAL, fontWeight: 700 }}>see founding member pricing →</a>
+                </div>
               </div>
 
               <button onClick={handleReset} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, color: N, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'flex-start' }}>

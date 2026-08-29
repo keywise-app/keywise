@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import AnimatedDemo from './AnimatedDemo';
 import DemoLeaseExtractor from './DemoLeaseExtractor';
@@ -599,15 +600,9 @@ export default function Landing() {
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ display: 'flex' }}>
-                {['#FF8A65', '#42A5F5', '#66BB6A', '#AB47BC'].map((c, i) => (
-                  <div key={i} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: '2px solid white', marginLeft: i > 0 ? -8 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white' }}>
-                    {['AJ', 'MG', 'DK', 'SC'][i]}
-                  </div>
-                ))}
-              </div>
-              <span style={{ fontSize: 13, color: INK_MUTED }}>Managing 1–50 units · No credit card required</span>
+            <div style={{ fontSize: 13, color: INK_MUTED, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: TEAL, fontWeight: 700 }}>&#9733;</span>
+              Built by a California landlord — first 100 founding members lock in $29/mo for life
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -957,6 +952,11 @@ export default function Landing() {
                 </button>
               </div>
             </div>
+          </div>
+          <div style={{ maxWidth: 560, margin: '20px auto 0', background: '#fff', border: `1.5px solid ${TEAL}`, borderRadius: 14, padding: '16px 22px', textAlign: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: N }}>Founding Member rate: $29/mo for life</span>
+            <span style={{ fontSize: 13, color: INK_MID }}> — first 100 California landlords only. </span>
+            <Link href="/pricing" style={{ fontSize: 13, fontWeight: 700, color: TEAL_DARK, textDecoration: 'none' }}>See details →</Link>
           </div>
           <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
             Free forever for 1-2 units · $49/month for unlimited units + compliance tools · $2 per online payment transaction.
