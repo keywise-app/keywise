@@ -76,6 +76,7 @@ export async function POST(req: Request) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: { trial_period_days: 14 },
       success_url: `https://keywise.app/?page=settings&upgraded=true`,
       cancel_url: 'https://keywise.app/?page=settings',
       allow_promotion_codes: true,
