@@ -199,7 +199,7 @@ export default async function RanksPage() {
                         }`}
                       >
                         {pos == null
-                          ? "not ranked"
+                          ? "insufficient data"
                           : `#${Number(pos).toFixed(1)}`}
                       </span>
                     </td>
