@@ -106,7 +106,7 @@ function buildGapBrief(
   if (intent === "commercial") {
     mustCover.push(
       `Direct answer to "${keyword}" in the first 100 words`,
-      "Specific pricing comparison (cite real numbers: Keywise $19/mo vs competitors)",
+      "Specific pricing comparison (cite real numbers: Keywise $49/mo, or $29/mo founding-member rate, vs competitors)",
       "Feature-by-feature breakdown with pros/cons",
       "Who this is best for (4-10 unit independent landlords)",
       "Setup time and learning curve",

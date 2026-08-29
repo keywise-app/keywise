@@ -24,7 +24,7 @@ We're not primarily competing with other software at the moment we win a custome
 
 **The free tier (1-2 units) is a feeder, not the target.**
 
-When a 1-unit landlord lands on keywise.app, we genuinely serve them with the free tier. They're future customers — when they grow to 3+ units, they upgrade to Pro. Copy should never make them feel unwelcome. Phrase the gap as: "Free forever for 1-2 units, $19/mo when you grow."
+When a 1-unit landlord lands on keywise.app, we genuinely serve them with the free tier. They're future customers — when they grow to 3+ units, they upgrade to Pro. Copy should never make them feel unwelcome. Phrase the gap as: "Free forever for 1-2 units, $49/mo when you grow (or $29/mo for life as a founding member)."
 
 **Who we don't target right now:**
 - Property management companies (different ICP entirely)
@@ -42,7 +42,7 @@ The founder (Chris) owns a duplex and built Keywise to solve his own problems. T
 **Voice examples that work:**
 - "Stop chasing rent. Keywise auto-collects."
 - "Your lease is a PDF. Keywise turns it into a system in 30 seconds."
-- "$19/month. No per-tenant fees. No surprise charges."
+- "$49/month. No per-tenant fees. No surprise charges."
 - "I built this because Venmo wasn't cutting it for my duplex."
 
 **Voice examples that don't work (avoid):**
