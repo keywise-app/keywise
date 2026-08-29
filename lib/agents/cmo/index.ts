@@ -125,16 +125,25 @@ const weeklyContentTask: AgentTask = {
   // call is a full LLM round trip, and this whole task must fit inside one 300s
   // serverless invocation (Vercel Hobby plan hard cap).
   prompt: async () => {
-    const [topQueries, topPages, opportunities] = await Promise.all([
-      fetchTopQueries(28),
-      fetchTopPages(28),
-      fetchOpportunityKeywords(),
-    ]);
+    let scSection: string;
+    try {
+      const [topQueries, topPages, opportunities] = await Promise.all([
+        fetchTopQueries(28),
+        fetchTopPages(28),
+        fetchOpportunityKeywords(),
+      ]);
+      scSection = `TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
+TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}
+OPPORTUNITY KEYWORDS (page-2 ranks, decent impressions): ${JSON.stringify(opportunities.slice(0, 15))}`;
+    } catch (err: any) {
+      // Do NOT fall back to empty arrays here -- that reads as "zero search
+      // visibility," which is a much stronger (and false) claim than "the
+      // API call failed." Say so plainly instead.
+      scSection = `SEARCH CONSOLE DATA UNAVAILABLE (${err?.message ?? String(err)}). Do not treat this as zero search visibility -- the Search Console connection itself failed. Pick this week's keyword from general landlord-compliance judgment and existing keyword_targets instead of live query/page data.`;
+    }
     return `Weekly content sweep.
 
-TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
-TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}
-OPPORTUNITY KEYWORDS (page-2 ranks, decent impressions): ${JSON.stringify(opportunities.slice(0, 15))}
+${scSection}
 
 1. Pick the single best opportunity keyword from the data above (page-2 rank, decent
    impressions, clear landlord-compliance relevance). Cross-reference with current
@@ -204,23 +213,31 @@ const weeklyContentRefreshTask: AgentTask = {
   // agent-driven round trips, and cut scope to 1 refresh (this must fit inside
   // one 300s serverless invocation — Vercel Hobby plan hard cap).
   prompt: async () => {
-    const [topQueries, topPages] = await Promise.all([
-      fetchTopQueries(28),
-      fetchTopPages(28),
-    ]);
+    let scSection: string;
+    let hasScData = true;
+    try {
+      const [topQueries, topPages] = await Promise.all([
+        fetchTopQueries(28),
+        fetchTopPages(28),
+      ]);
+      scSection = `TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
+TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}`;
+    } catch (err: any) {
+      hasScData = false;
+      scSection = `SEARCH CONSOLE DATA UNAVAILABLE (${err?.message ?? String(err)}). Do not treat this as zero search visibility -- the Search Console connection itself failed.`;
+    }
     return `Weekly content refresh — ${new Date().toISOString().slice(0, 10)}.
 
 GOAL: Find published blog posts that are stale or underperforming and refresh the single
 best one. Refreshed posts often jump 5-20 positions — often more than new posts ever achieve.
 
-TOP QUERIES (28d): ${JSON.stringify(topQueries.slice(0, 15))}
-TOP PAGES (28d): ${JSON.stringify(topPages.slice(0, 15))}
+${scSection}
 
 1. Call content_list_published to get all published posts with their dates.
 2. Identify posts older than 90 days (published_at before ${new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)}).
-3. Cross-reference against the Search Console data above:
+3. ${hasScData ? `Cross-reference against the Search Console data above:
    - Is the target keyword ranking on page 2-3 (positions 11-30)? → high-value refresh
-   - Is it getting impressions but low CTR? → title/meta refresh
+   - Is it getting impressions but low CTR? → title/meta refresh` : "Search Console data is unavailable this run -- pick the refresh candidate by age and topic relevance instead of ranking/CTR data."}
 4. Pick the SINGLE highest-leverage refresh candidate (not 1-2 — one done well beats
    two rushed, and this task runs on a tight execution budget).
 5. Call content_find_internal_links to find new linking opportunities from recently

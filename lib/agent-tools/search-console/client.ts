@@ -51,81 +51,76 @@ export interface SCPageRow {
   position: number;
 }
 
+// None of the fetch* functions in this file swallow errors into a fake
+// empty result anymore -- an empty array from a failed API call is
+// indistinguishable from "Search Console genuinely has nothing to report,"
+// and that ambiguity is exactly what let a dead OAuth token pass as
+// legitimate "zero data" for months (see fetchRanksForKeywords and the
+// rank_snapshots cleanup). Callers must handle the rejection themselves:
+// AgentTool.execute() callers get this for free (the runner already
+// catches tool errors and reports them to the agent); direct callers
+// building a prompt() string need their own try/catch so a Search
+// Console outage degrades that one prompt instead of crashing the task.
 export async function fetchTopQueries(days: number): Promise<SCQueryRow[]> {
-  try {
-    const sc = getClient();
-    const res = await sc.searchanalytics.query({
-      siteUrl: getSiteUrl(),
-      requestBody: {
-        startDate: dateStr(days),
-        endDate: dateStr(0),
-        dimensions: ["query"],
-        rowLimit: 25,
-      },
-    });
-    return (res.data.rows || []).map((r) => ({
+  const sc = getClient();
+  const res = await sc.searchanalytics.query({
+    siteUrl: getSiteUrl(),
+    requestBody: {
+      startDate: dateStr(days),
+      endDate: dateStr(0),
+      dimensions: ["query"],
+      rowLimit: 25,
+    },
+  });
+  return (res.data.rows || []).map((r) => ({
+    query: r.keys![0],
+    clicks: r.clicks ?? 0,
+    impressions: r.impressions ?? 0,
+    ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
+    position: Math.round((r.position ?? 0) * 10) / 10,
+  }));
+}
+
+export async function fetchTopPages(days: number): Promise<SCPageRow[]> {
+  const sc = getClient();
+  const res = await sc.searchanalytics.query({
+    siteUrl: getSiteUrl(),
+    requestBody: {
+      startDate: dateStr(days),
+      endDate: dateStr(0),
+      dimensions: ["page"],
+      rowLimit: 25,
+    },
+  });
+  return (res.data.rows || []).map((r) => ({
+    url: r.keys![0],
+    clicks: r.clicks ?? 0,
+    impressions: r.impressions ?? 0,
+    ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
+    position: Math.round((r.position ?? 0) * 10) / 10,
+  }));
+}
+
+export async function fetchOpportunityKeywords(): Promise<SCQueryRow[]> {
+  const sc = getClient();
+  const res = await sc.searchanalytics.query({
+    siteUrl: getSiteUrl(),
+    requestBody: {
+      startDate: dateStr(28),
+      endDate: dateStr(0),
+      dimensions: ["query"],
+      rowLimit: 100,
+    },
+  });
+  return (res.data.rows || [])
+    .map((r) => ({
       query: r.keys![0],
       clicks: r.clicks ?? 0,
       impressions: r.impressions ?? 0,
       ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
       position: Math.round((r.position ?? 0) * 10) / 10,
-    }));
-  } catch (err) {
-    console.error("[search-console] fetchTopQueries failed:", err);
-    return [];
-  }
-}
-
-export async function fetchTopPages(days: number): Promise<SCPageRow[]> {
-  try {
-    const sc = getClient();
-    const res = await sc.searchanalytics.query({
-      siteUrl: getSiteUrl(),
-      requestBody: {
-        startDate: dateStr(days),
-        endDate: dateStr(0),
-        dimensions: ["page"],
-        rowLimit: 25,
-      },
-    });
-    return (res.data.rows || []).map((r) => ({
-      url: r.keys![0],
-      clicks: r.clicks ?? 0,
-      impressions: r.impressions ?? 0,
-      ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
-      position: Math.round((r.position ?? 0) * 10) / 10,
-    }));
-  } catch (err) {
-    console.error("[search-console] fetchTopPages failed:", err);
-    return [];
-  }
-}
-
-export async function fetchOpportunityKeywords(): Promise<SCQueryRow[]> {
-  try {
-    const sc = getClient();
-    const res = await sc.searchanalytics.query({
-      siteUrl: getSiteUrl(),
-      requestBody: {
-        startDate: dateStr(28),
-        endDate: dateStr(0),
-        dimensions: ["query"],
-        rowLimit: 100,
-      },
-    });
-    return (res.data.rows || [])
-      .map((r) => ({
-        query: r.keys![0],
-        clicks: r.clicks ?? 0,
-        impressions: r.impressions ?? 0,
-        ctr: Math.round((r.ctr ?? 0) * 1000) / 1000,
-        position: Math.round((r.position ?? 0) * 10) / 10,
-      }))
-      .filter((q) => q.position >= 8 && q.position <= 20 && q.impressions >= 100);
-  } catch (err) {
-    console.error("[search-console] fetchOpportunityKeywords failed:", err);
-    return [];
-  }
+    }))
+    .filter((q) => q.position >= 8 && q.position <= 20 && q.impressions >= 100);
 }
 
 // Unlike the other fetch* helpers in this file, this one does NOT swallow
