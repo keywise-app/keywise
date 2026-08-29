@@ -62,7 +62,7 @@ export default function Page() {
           Online rent payments solve three big problems: chasing late payments, deciphering memo lines on checks, and the awkward "did you put it in the mail yet?" conversation. Tenants pay faster, you have a clean transaction record, and there's no paper to file.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          The catch is that not every payment app is built for rent collection. Some have transaction limits, some don't give you the records you need at tax time, and some make refunds disturbingly easy for tenants who change their mind.
+          The catch is that not every payment app is built for rent collection. Some have transaction limits, some don't give you the records you need at tax time, and some make refunds disturbingly easy for tenants who change their mind. California landlords should also double-check whether rent cap rules even apply to them — the <Link href="/blog/ab-1482-owner-move-in-eviction-california" style={{ color: '#00A886', fontWeight: 600 }}>owner-occupancy</Link> and three-unit exemptions under AB 1482 catch a lot of small landlords by surprise.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Option 1: Venmo</h2>
@@ -94,10 +94,10 @@ export default function Page() {
           <strong>Best for:</strong> Anyone with more than one unit who wants real automation.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Tools built specifically for landlords (Avail, RentRedi, Apartments.com, Keywise) handle the things consumer apps can't: automated late fees, payment reminders, partial payment policies, full transaction history for taxes, and integration with your lease records. Most charge a small per-transaction fee or a monthly subscription.
+          Tools built specifically for landlords (Avail, RentRedi, Apartments.com, Keywise) handle the things consumer apps can't: automated late fees, the ability to <Link href="/blog/landlord-tenant-communication-app" style={{ color: '#00A886', fontWeight: 600 }}>track payment reminders in-app</Link>, partial payment policies, full transaction history for taxes, and integration with the records you built when you first <Link href="/blog/landlord-move-in-checklist" style={{ color: '#00A886', fontWeight: 600 }}>document the rental condition at move-in</Link>. Most charge a small per-transaction fee or a monthly subscription, though a few <Link href="/blog/free-property-management-software-landlords" style={{ color: '#00A886', fontWeight: 600 }}>free rent collection tools</Link> exist if you're just starting out.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          The biggest difference is reliability. With a dedicated tool, you set it up once and rent collects itself every month. With Venmo or Zelle, you're still chasing tenants who forgot.
+          The biggest difference is reliability. With a dedicated tool, you set it up once and rent collects itself every month. With Venmo or Zelle, you're still chasing tenants who forgot. If you're comparing your options, our roundup of <Link href="/blog/small-landlord-property-management-software-2026" style={{ color: '#00A886', fontWeight: 600 }}>software built for small landlords</Link> is a good place to start.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise handles rent collection</h2>

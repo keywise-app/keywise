@@ -62,7 +62,7 @@ export default function Page() {
           A late rent notice is a formal written communication informing a tenant that their rent is overdue. It's typically the first step before any legal action like serving a Pay or Quit notice. Sending one promptly creates a paper trail and gives the tenant a clear deadline to make things right.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Most leases include a grace period (typically 3-5 days) before rent is officially considered late. Once that grace period passes, you can issue a notice. Many states require this notice before you can proceed with eviction, so even informal landlords should treat it as a critical document.
+          Most leases include a grace period (typically 3-5 days) before rent is officially considered late. Once that grace period passes, you can issue a notice. Many states require this notice before you can proceed with eviction, so even informal landlords should treat it as a critical document. In California, not every eviction follows the standard nonpayment process — the <Link href="/blog/ab-1482-owner-move-in-eviction-california" style={{ color: '#00A886', fontWeight: 600 }}>owner move-in exception to just-cause</Link> rules are a good example of how differently things can play out.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>What to include in a late rent notice</h2>
@@ -93,7 +93,7 @@ export default function Page() {
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Tone matters</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Even though you're collecting on a debt, the tone of your notice should be firm but respectful. Most late payments are caused by a job change, an unexpected expense, or simple forgetfulness — not malice. A professional notice that opens the door to communication often gets faster resolution than an aggressive one.
+          Even though you're collecting on a debt, the tone of your notice should be firm but respectful. Most late payments are caused by a job change, an unexpected expense, or simple forgetfulness — not malice. A professional notice that opens the door to communication often gets faster resolution than an aggressive one. Modern <Link href="/blog/landlord-tenant-communication-app" style={{ color: '#00A886', fontWeight: 600 }}>communication tools</Link> make it easy for a tenant to respond right away instead of avoiding the conversation.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           Save the harsher legal language for the formal "Pay or Quit" notice if it comes to that. The first late notice should make it easy for a tenant to do the right thing.
@@ -101,10 +101,10 @@ export default function Page() {
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise automates this</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Writing late rent notices manually for every overdue payment gets old fast. Keywise watches your payment schedule and drafts a professional late notice the moment rent goes overdue — pre-filled with the tenant's name, property, exact amount owed, and your late fee terms pulled directly from the lease.
+          Writing late rent notices manually for every overdue payment gets old fast. Most <Link href="/blog/small-landlord-property-management-software-2026" style={{ color: '#00A886', fontWeight: 600 }}>landlord software for notices</Link> handles this automatically, and Keywise watches your payment schedule and drafts a professional late notice the moment rent goes overdue — pre-filled with the tenant's name, property, exact amount owed, and your late fee terms pulled directly from the lease.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          You can edit the draft, then send it via email or SMS in one click. Every notice is timestamped and saved in the tenant's file, building the paper trail you'd need if it ever came to court.
+          You can edit the draft, then send it via email or SMS in one click. Every notice is timestamped and saved in the tenant's file, building the same kind of paper trail you should have started with a signed <Link href="/blog/landlord-move-in-checklist" style={{ color: '#00A886', fontWeight: 600 }}>move-in checklist</Link> — and if budget is tight, there's plenty of <Link href="/blog/free-property-management-software-landlords" style={{ color: '#00A886', fontWeight: 600 }}>free property management software</Link> that can get you started.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>

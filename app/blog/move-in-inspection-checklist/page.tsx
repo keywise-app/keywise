@@ -73,7 +73,7 @@ export default function Page() {
           Without a documented move-in inspection, you have no defensible record of what the property looked like before the tenant lived in it. If a wall has a hole when they leave, did the tenant make it? Or was it there when they moved in? A simple checklist with photos answers that question definitively.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Most security deposit disputes can be avoided entirely by doing a proper inspection on day one. Both you and your tenant should walk through the property together, document everything, and sign off on the final checklist. That signed document is gold if a disagreement ever arises.
+          Most security deposit disputes can be avoided entirely by doing a proper inspection on day one. Both you and your tenant should walk through the property together, document everything, and sign off on the final checklist <Link href="/blog/landlord-move-in-checklist" style={{ color: '#00A886', fontWeight: 600 }}>before exchanging keys</Link>. That signed document is gold if a disagreement ever arises, and it's just as useful later if you ever need to review the <Link href="/blog/ab-1482-owner-move-in-eviction-california" style={{ color: '#00A886', fontWeight: 600 }}>AB 1482 owner-occupancy rules</Link> for reclaiming the unit yourself.
         </p>
 
         <h2 id="checklist" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>The complete room-by-room checklist</h2>
@@ -135,7 +135,7 @@ export default function Page() {
 
         <h2 id="tips" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Tips for a great inspection</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          <strong>Take photos of everything.</strong> Even items in perfect condition. Photos are worth more than written notes when it's time to compare against move-out condition. Time-stamp them.
+          <strong>Take photos of everything.</strong> Even items in perfect condition. Photos are worth more than written notes when it's time to compare against move-out condition. Time-stamp them, or <Link href="/blog/landlord-tenant-communication-app" style={{ color: '#00A886', fontWeight: 600 }}>send inspection photos and notes via app</Link> so everything is organized automatically.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           <strong>Walk through with the tenant.</strong> Don't do the inspection alone, then hand them a sheet. Walk through together so they can see what you're noting and add anything you missed.
@@ -146,7 +146,7 @@ export default function Page() {
 
         <h2 id="keywise" style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise makes inspections easier</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. Keywise is building an inspection tool (coming soon) that will walk you through the property room by room — tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place.
+          Paper checklists work, but they get lost, photos get separated from the document, and signatures are a hassle. <Link href="/blog/free-property-management-software-landlords" style={{ color: '#00A886', fontWeight: 600 }}>Software that automates checklists</Link> solves most of that, and Keywise is building an inspection tool (coming soon) that will walk you through the property room by room — tap to mark condition (Excellent/Good/Fair/Poor), add notes, and snap photos with your phone, all stored in one place. If you're comparing options, our guide to <Link href="/blog/small-landlord-property-management-software-2026" style={{ color: '#00A886', fontWeight: 600 }}>management software with inspection tools</Link> breaks down what's actually worth paying for.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
           When you're done, Keywise generates a professional inspection report and sends it to your tenant for digital signature. Both parties get a signed PDF, and the entire record lives in the tenant's file — ready to compare against the move-out inspection a year or two later.
