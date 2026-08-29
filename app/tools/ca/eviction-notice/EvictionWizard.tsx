@@ -103,6 +103,12 @@ export default function EvictionWizard() {
   const [selectedUnit, setSelectedUnit] = useState<UnitOption | null>(null);
   const [selectedType, setSelectedType] = useState<NoticeType | null>(null);
 
+  // Manual entry (no account / no saved units)
+  const [manualTenantName, setManualTenantName] = useState('');
+  const [manualPropertyAddress, setManualPropertyAddress] = useState('');
+  const [manualUnitNumber, setManualUnitNumber] = useState('');
+  const [manualTenancyMonths, setManualTenancyMonths] = useState('');
+
   // Detail form state
   const [rentAmount, setRentAmount] = useState('');
   const [rentPeriod, setRentPeriod] = useState('');
@@ -341,11 +347,17 @@ export default function EvictionWizard() {
     setSaving(false);
   };
 
+  /* ── Manual entry (anonymous / no saved units) ── */
+  const isManualEntry = !loggedIn || (!loadingUnits && units.length === 0);
+
   /* ── Step navigation ── */
   const currentIdx = STEPS.indexOf(step);
   const canGoNext = () => {
     switch (step) {
-      case 'unit': return !!selectedUnit;
+      case 'unit':
+        return isManualEntry
+          ? !!manualTenantName.trim() && !!manualPropertyAddress.trim()
+          : !!selectedUnit;
       case 'type': return !!selectedType;
       case 'details': return !!serviceMethod && !!ownerName;
       case 'defects': return !hasCriticalDefects(defectResults);
@@ -354,6 +366,16 @@ export default function EvictionWizard() {
   };
 
   const goNext = () => {
+    if (step === 'unit' && isManualEntry) {
+      setSelectedUnit({
+        id: '',
+        address: manualPropertyAddress.trim(),
+        unit_number: manualUnitNumber.trim(),
+        tenant_name: manualTenantName.trim() || null,
+        lease_start: null,
+        tenancy_months: parseInt(manualTenancyMonths, 10) || 0,
+      });
+    }
     if (step === 'details') {
       runDefectChecks();
     }
@@ -406,15 +428,44 @@ export default function EvictionWizard() {
   /* ── Render each step ── */
   const renderUnit = () => (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: N, margin: '0 0 4px' }}>Step 1: Select Unit</h2>
-      <p style={{ fontSize: 14, color: INK_MID, margin: '0 0 20px' }}>Choose the rental unit for this eviction notice.</p>
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: N, margin: '0 0 4px' }}>Step 1: Unit Details</h2>
+      <p style={{ fontSize: 14, color: INK_MID, margin: '0 0 20px' }}>
+        {isManualEntry ? 'Enter the rental unit and tenant details for this notice.' : 'Choose the rental unit for this eviction notice.'}
+      </p>
 
-      {loadingUnits ? (
-        <p style={{ fontSize: 14, color: INK_MUTED }}>Loading units...</p>
-      ) : units.length === 0 ? (
-        <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 20, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: INK_MID, margin: '0 0 8px' }}>No units found. Add a property first.</p>
-          <a href="/properties" style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 600, textDecoration: 'none' }}>Go to Properties</a>
+      {isManualEntry ? (
+        <div>
+          {!loggedIn && (
+            <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 14, marginBottom: 20, fontSize: 13, color: INK_MID }}>
+              No account needed to generate and download a notice. <a href="/?signup=true" style={{ color: TEAL_DARK, fontWeight: 600, textDecoration: 'none' }}>Create a free account</a> if you want to save it and pull tenant details automatically next time.
+            </div>
+          )}
+          {loggedIn && units.length === 0 && (
+            <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 14, marginBottom: 20, fontSize: 13, color: INK_MID }}>
+              No saved units yet — enter details below, or <a href="/properties" style={{ color: TEAL_DARK, fontWeight: 600, textDecoration: 'none' }}>add a property</a> first to save this notice to a unit.
+            </div>
+          )}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Property Address *</label>
+            <input style={inputStyle} value={manualPropertyAddress} onChange={(e) => setManualPropertyAddress(e.target.value)} placeholder="123 Main St, Los Angeles, CA" />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Unit Number</label>
+            <input style={inputStyle} value={manualUnitNumber} onChange={(e) => setManualUnitNumber(e.target.value)} placeholder="Optional" />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Tenant Name *</label>
+            <input style={inputStyle} value={manualTenantName} onChange={(e) => setManualTenantName(e.target.value)} placeholder="Tenant's full name" />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Length of Tenancy (months)</label>
+            <input style={inputStyle} type="number" min="0" value={manualTenancyMonths} onChange={(e) => setManualTenancyMonths(e.target.value)} placeholder="e.g., 18" />
+            {parseInt(manualTenancyMonths, 10) > 0 && parseInt(manualTenancyMonths, 10) < 12 && (
+              <div style={{ fontSize: 12, color: '#FFB347', fontWeight: 600, marginTop: 6 }}>
+                Note: Tenancy is under 12 months. Verify whether CC 1946.2 just-cause requirements apply.
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -952,6 +1003,7 @@ export default function EvictionWizard() {
           onSave={handleSave}
           saving={saving}
           saved={saved}
+          canSave={loggedIn && !!selectedUnit?.id}
         />
       </div>
     );
@@ -959,28 +1011,10 @@ export default function EvictionWizard() {
 
   /* ── Main render ── */
 
-  if (!loggedIn && !loadingUnits) {
+  if (loadingUnits) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚖</div>
-          <div style={{ fontWeight: 700, fontSize: 20, color: N, marginBottom: 8 }}>
-            California Just-Cause Eviction Notice Wizard
-          </div>
-          <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6, maxWidth: 440, margin: '0 auto 8px' }}>
-            Generate legally-cited eviction notices for California rental properties. The wizard checks for 13 common procedural defects before you serve, and calculates notice periods including weekends and judicial holidays.
-          </div>
-          <div style={{ fontSize: 13, color: INK_MUTED, marginTop: 12 }}>
-            ✓ 12 notice types &nbsp;·&nbsp; ✓ Defect checker &nbsp;·&nbsp; ✓ Deadline calculator &nbsp;·&nbsp; ✓ PDF generation
-          </div>
-          <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <a href="/?login=true" style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Log in to start →</a>
-            <a href="/?signup=true" style={{ background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>Create free account</a>
-          </div>
-          <div style={{ fontSize: 11, color: INK_MUTED, marginTop: 12 }}>
-            Free for 1-2 units. No credit card required.
-          </div>
-        </div>
+      <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', padding: '48px 0' }}>
+        <p style={{ fontSize: 14, color: INK_MUTED }}>Loading...</p>
       </div>
     );
   }

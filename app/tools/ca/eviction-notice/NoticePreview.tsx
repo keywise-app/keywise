@@ -27,6 +27,7 @@ interface NoticePreviewProps {
   onSave: () => void;
   saving: boolean;
   saved: boolean;
+  canSave: boolean;
 }
 
 export default function NoticePreview({
@@ -44,6 +45,7 @@ export default function NoticePreview({
   onSave,
   saving,
   saved,
+  canSave,
 }: NoticePreviewProps) {
   const [downloading, setDownloading] = useState(false);
 
@@ -166,23 +168,42 @@ export default function NoticePreview({
         >
           {downloading ? 'Generating...' : 'Download PDF'}
         </button>
-        <button
-          onClick={onSave}
-          disabled={saving || saved}
-          style={{
-            background: saved ? '#E8F8F0' : '#E0FAF5',
-            color: saved ? '#0F7040' : TEAL_DARK,
-            border: `1px solid ${saved ? '#2ECC7133' : '#00D4AA33'}`,
-            borderRadius: 10,
-            padding: '11px 22px',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: saving || saved ? 'default' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saved ? 'Saved' : saving ? 'Saving...' : 'Save to Unit'}
-        </button>
+        {canSave ? (
+          <button
+            onClick={onSave}
+            disabled={saving || saved}
+            style={{
+              background: saved ? '#E8F8F0' : '#E0FAF5',
+              color: saved ? '#0F7040' : TEAL_DARK,
+              border: `1px solid ${saved ? '#2ECC7133' : '#00D4AA33'}`,
+              borderRadius: 10,
+              padding: '11px 22px',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: saving || saved ? 'default' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saved ? 'Saved' : saving ? 'Saving...' : 'Save to Unit'}
+          </button>
+        ) : (
+          <a
+            href="/?signup=true"
+            style={{
+              background: '#E0FAF5',
+              color: TEAL_DARK,
+              border: '1px solid #00D4AA33',
+              borderRadius: 10,
+              padding: '11px 22px',
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: 'none',
+              display: 'inline-block',
+            }}
+          >
+            Sign up to save & track this notice
+          </a>
+        )}
         <button
           onClick={handleEmail}
           style={{
