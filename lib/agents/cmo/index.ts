@@ -115,6 +115,20 @@ Memory: ${lessons.length} lessons, ${comp.length} competitor notes.`;
   ],
 };
 
+const contentAuditOrphansTask: AgentTask = {
+  id: "content_audit_orphans",
+  description: "On demand: find published posts with fewer than 3 inbound internal links and suggest fixes.",
+  tier: "routine",
+  maxIterations: 4,
+  prompt: `Orphaned-page audit.
+
+1. Run content_audit_orphaned_pages.
+2. For each orphan it returns, state which existing published post(s) should link to it and
+   a natural anchor text for that link.
+3. Summarize: how many orphans found, and the single highest-priority fix.`,
+  toolNames: ["content_audit_orphaned_pages"],
+};
+
 const weeklyContentTask: AgentTask = {
   id: "weekly_content",
   description: "Weekly: SEO opportunity research, blog drafts, content updates.",
@@ -335,6 +349,7 @@ export const cmoRole: AgentRole = {
   ],
   tasks: {
     daily_rank_check: dailyRankCheckTask,
+    content_audit_orphans: contentAuditOrphansTask,
     weekly_content: weeklyContentTask,
     weekly_content_refresh: weeklyContentRefreshTask,
     monthly_pseo: monthlyPseoTask,
