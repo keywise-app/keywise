@@ -1,8 +1,20 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Compliance Tools | Keywise',
-  robots: { index: false },
+  title: 'California Landlord Compliance Tools | Keywise',
+  description:
+    'Free tools to keep your California landlord practice legally sound. AB 1482 rent cap calculator, just-cause eviction notice builder, AB 2801 move-out inspections, and more — with statutory citations built in.',
+  alternates: { canonical: 'https://keywise.app/compliance' },
+  openGraph: {
+    title: 'California Landlord Compliance Tools | Keywise',
+    description:
+      'Free tools to keep your California landlord practice legally sound. AB 1482, just-cause evictions, AB 2801 inspections — with statutory citations built in.',
+    url: 'https://keywise.app/compliance',
+    siteName: 'Keywise',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function CompliancePage() {
@@ -60,21 +72,45 @@ export default function CompliancePage() {
             </div>
           </a>
 
-          {/* Coming soon tools */}
-          {[
-            { icon: '⚖️', title: 'Just-Cause Eviction Notice Builder', desc: 'Generate the correct eviction notice for any AB 1482 just-cause reason. Checks eligibility, fills in required language.' },
-            { icon: '🔍', title: 'AB 2801 Move-Out Inspections', desc: 'Document move-out condition with photo evidence. Generate the required inspection report and 21-day deposit accounting.' },
-            { icon: '💰', title: 'Security Deposit 21-Day Rule', desc: 'Track your 21-day deadline to return deposits. Auto-calculates allowable deductions. Generates the itemization letter.' },
-          ].map(tool => (
-            <div key={tool.title} style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, opacity: 0.6, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+          {/* Active: Just-Cause Eviction Notice Builder */}
+          <a href="/tools/ca/eviction-notice" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div style={{ fontSize: 36 }}>{tool.icon}</div>
-                <span style={{ background: '#F0F4FF', color: '#8892A4', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Coming Soon</span>
+                <div style={{ fontSize: 36 }}>⚖️</div>
+                <span style={{ background: '#E0FAF5', color: '#00A886', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Active</span>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>{tool.title}</div>
-              <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65 }}>{tool.desc}</div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>Just-Cause Eviction Notice Builder</div>
+              <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65, marginBottom: 16 }}>
+                Generate any California 3-day, 30-day, or 60-day eviction notice with built-in defect checking, statutory citations, and just-cause eligibility rules.
+              </div>
+              <div style={{ fontSize: 13, color: '#00A886', fontWeight: 600 }}>Open notice builder →</div>
             </div>
-          ))}
+          </a>
+
+          {/* Active: AB 2801 Move-Out Inspections */}
+          <a href="/inspections" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div style={{ fontSize: 36 }}>🔍</div>
+                <span style={{ background: '#E0FAF5', color: '#00A886', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Active</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>AB 2801 Move-Out Inspections</div>
+              <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65, marginBottom: 16 }}>
+                Document move-out condition with photo evidence. Generates the required inspection report and 21-day itemized deposit accounting.
+              </div>
+              <div style={{ fontSize: 13, color: '#00A886', fontWeight: 600 }}>Start inspection →</div>
+            </div>
+          </a>
+
+          {/* Coming soon: Security Deposit 21-Day Rule */}
+          <div style={{ background: '#fff', border: '1px solid #E0E6F0', borderRadius: 16, padding: 28, opacity: 0.6, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div style={{ fontSize: 36 }}>💰</div>
+              <span style={{ background: '#F0F4FF', color: '#8892A4', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Coming Soon</span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 17, color: '#0F3460', marginBottom: 8 }}>Security Deposit 21-Day Rule</div>
+            <div style={{ fontSize: 14, color: '#4A5068', lineHeight: 1.65 }}>Track your 21-day deadline to return deposits. Auto-calculates allowable deductions. Generates the itemization letter.</div>
+          </div>
         </div>
       </div>
     </div>
