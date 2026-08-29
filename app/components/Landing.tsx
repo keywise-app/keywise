@@ -847,7 +847,7 @@ export default function Landing() {
                   <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 200 }}>Feature</th>
                   <th style={{ padding: '16px', textAlign: 'center', background: N, color: '#fff', fontWeight: 700, borderRadius: '12px 12px 0 0', minWidth: 120 }}>
                     Keywise
-                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$29/mo</div>
+                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$49/mo</div>
                   </th>
                   <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 140 }}>
                     Generic Landlord Apps
@@ -940,7 +940,7 @@ export default function Landing() {
                   <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$29</span>
+                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$49</span>
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>
@@ -959,7 +959,7 @@ export default function Landing() {
             </div>
           </div>
           <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
-            Free forever for 1-2 units · $29/month for unlimited units + compliance tools · $2 per online payment transaction.
+            Free forever for 1-2 units · $49/month for unlimited units + compliance tools · $2 per online payment transaction.
           </p>
         </div>
       </section>
@@ -976,7 +976,7 @@ export default function Landing() {
           <FAQItem q="How does the AB 1482 calculator work?" a="Enter your property address and current rent. Keywise checks whether the property is exempt, pulls the current CPI for your region, calculates the maximum legal increase, and generates the required notice. Takes about 30 seconds." />
           <FAQItem q="What if I'm not a California landlord?" a="Keywise is built specifically for California landlords right now. If you're outside California, our general property management features work, but the compliance tools are California-specific." />
           <FAQItem q="Do I need a credit card to start?" a="No. Free for 1-2 units, no credit card required." />
-          <FAQItem q="How much does it cost after the free tier?" a="$29/month for unlimited units. Includes all compliance tools, online rent collection ($2 per transaction), document signing, and inspections." />
+          <FAQItem q="How much does it cost after the free tier?" a="$49/month for unlimited units (or $29/month for life if you're one of the first 100 founding members). Includes all compliance tools, online rent collection ($2 per transaction), document signing, and inspections." />
           <FAQItem q="Can I cancel anytime?" a="Yes, no contracts. Downgrade to the free tier or cancel entirely whenever you want." />
           <FAQItem q="Is my tenant data secure?" a="Yes. Enterprise-grade encryption via Supabase and Stripe. Your data is stored in US-based data centers and never sold or shared." />
           <FAQItem q="Will this help me win an eviction case?" a="Keywise creates a defensible paper trail — proper notices with delivery logs, inspection reports with photos and signatures, and lease documentation with signed timestamps. This is exactly what small claims and eviction courts look for. It doesn't guarantee outcomes, but it dramatically improves your position." />

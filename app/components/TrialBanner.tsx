@@ -61,7 +61,7 @@ export default function TrialBanner({
             : "You're on the free plan. "
           }
           <span style={{ fontWeight: 400, opacity: 0.9 }}>
-            Upgrade to Pro for $29/mo — unlimited units + all compliance tools.
+            Upgrade to Pro for $49/mo — unlimited units + all compliance tools.
           </span>
         </span>
       </div>

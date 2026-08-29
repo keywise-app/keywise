@@ -70,7 +70,7 @@ export default function PricingPage() {
           {[
             { q: "What's the founding member deal?", a: "The first 100 California landlords who subscribe get $29/mo locked in for life. The only condition: maintain a continuous subscription. If you cancel, you lose the founding rate and would resubscribe at the current price ($49/mo)." },
             { q: 'What happens to existing customers?', a: "If you're already subscribed, your rate is grandfathered. Nothing changes unless you cancel." },
-            { q: 'Is there a free trial?', a: 'Yes. 14 days, full Pro features, no credit card required to start.' },
+            { q: 'Is there a free trial?', a: "Yes. 14 days, full Pro features. A card is required to start the trial, but you won't be charged until it ends — cancel anytime before then." },
             { q: 'What does the $2 transaction fee cover?', a: 'Each online rent payment processed through Keywise costs $2 flat — not a percentage of rent. A $3,000 payment costs the same as a $1,000 one.' },
             { q: 'Can I switch from monthly to annual?', a: 'Yes, anytime from your billing settings. Annual saves $198/year vs monthly.' },
             { q: 'What if founding member spots fill up?', a: "The founding member offer disappears. You can still subscribe at the standard $49/mo or $390/yr price." },
@@ -87,7 +87,7 @@ export default function PricingPage() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Ready to manage smarter?</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Free for 1 unit. 14-day Pro trial. No credit card required.
+            Free for 1 unit, no credit card. Or start a 14-day Pro trial — cancel before it ends and you won't be charged.
           </p>
           <Link href="/?signup=true" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →
