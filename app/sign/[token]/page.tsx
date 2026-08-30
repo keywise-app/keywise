@@ -177,6 +177,32 @@ export default function SignPage() {
               </div>
             </div>
 
+            {docData?.file_url && (
+              <div style={{ marginBottom: 20 }}>
+                <a
+                  href={docData.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    background: T.teal,
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 15,
+                    padding: '14px 24px',
+                    borderRadius: T.radius,
+                    textDecoration: 'none',
+                  }}
+                >
+                  ⬇ Download your signed copy (PDF)
+                </a>
+              </div>
+            )}
+
             <div style={{ background: T.bg, borderRadius: 10, padding: 16, marginBottom: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.navy, marginBottom: 8 }}>What happens next</div>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#4A5068', lineHeight: 1.8 }}>
