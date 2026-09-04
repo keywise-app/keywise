@@ -5,6 +5,11 @@ Faceless account in the landlord / rent-roll niche. Topical & educational only �
 carousels (text-on-image slides) or single graphics that a scheduler (Later/Buffer/
 Metricool) or the app's posting pipeline can publish.
 
+> **Direction update (2026-09):** views dropped when the account moved from Reels to
+> static graphics. **Reels are now the discovery format** — see
+> `instagram-reels-scripts.md`. Carousels below are the *save-and-convert* layer, not
+> the reach driver. Lead with a Reel; recycle winners into carousels.
+
 Status legend: `queued` → `scheduled` → `posted`
 
 ---
