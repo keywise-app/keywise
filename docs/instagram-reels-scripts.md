@@ -70,6 +70,95 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 ---
 
+## Reel 4 — "5 lease clauses that pay for themselves" · tactical · List-Tease hook
+**Length:** ~18s · **Audio:** upbeat lo-fi or a countdown/list sound
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **5 lease clauses that quietly pay for themselves.** | lease document, pen tapping |
+| 0:02–0:05 | 1. A real late-fee clause. | clock ticking past a due date |
+| 0:05–0:08 | 2. Auto-renewal terms. | calendar pages flipping |
+| 0:08–0:11 | 3. Maintenance-responsibility split. | wrench + receipt |
+| 0:11–0:14 | 4. Early-termination fee. | suitcase by an open door |
+| 0:14–0:17 | 5. Inspection rights. | clipboard checklist |
+| 0:17–0:18 | Save this for your next lease ↓ | brand card |
+
+**Caption:** A lease is only as strong as its worst clause. (1) A late fee that's actually enforceable. (2) Auto-renewal so a lease never lapses into month-to-month by accident. (3) Who pays for what, in writing, before the dispute. (4) A fee that makes breaking the lease your tenant's cost, not yours. (5) The right to inspect before small problems become $5k ones. Not legal advice — check your state's rules. → Which of these is missing from your lease? 👇
+**Hashtags:** #leaseagreement #landlordtips #rentalproperty #propertymanagement #realestateinvesting #landlordlife
+**Cover text (grid):** "5 lease clauses"
+
+---
+
+## Reel 5 — "10% real estate, 90% remembering" · mindset · Relatability/Statement hook
+**Length:** ~9s · **Audio:** relatable/funny trending sound or soft lo-fi
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **Being a landlord is 10% real estate…** | phone glow in a dark room |
+| 0:02–0:05 | …and 90% remembering who actually paid. | scrolling a payments app |
+| 0:05–0:08 | It's 11pm. You're reconciling rent. Again. | tired hand, phone at night |
+| 0:08–0:09 | Spreadsheet or app? 👇 | brand card |
+
+**Caption:** If you've ever scrolled Venmo at 11pm trying to match payments to units, this one's for you. The properties are the easy part — it's the *remembering* that wears you down. There's a better way, but first: how are you tracking it right now — spreadsheet or app? 👇
+**Hashtags:** #landlordlife #landlordproblems #rentalproperty #sidehustle #passiveincome
+**Cover text (grid):** "10% real estate…"
+
+---
+
+## Reel 6 — "Your spreadsheet breaks at 3 units" · product-adjacent · Contrarian hook
+**Length:** ~14s · **Audio:** tense build / "plot-twist" sound
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **Your rent spreadsheet breaks at exactly 3 units.** | spreadsheet on a laptop |
+| 0:02–0:05 | Roommates + partial payments. | cells splitting, getting messy |
+| 0:05–0:08 | Late fees you forget to apply. | red "OVERDUE" flag |
+| 0:08–0:11 | No reminders. No paper trail. | empty calendar |
+| 0:11–0:13 | Tax time = chaos. | pile of receipts |
+| 0:13–0:14 | A system does the remembering. Follow ↓ | brand card |
+
+**Caption:** Spreadsheets are great — until they're not. The break point is usually around unit #3: that's when partial payments, roommates, and late fees outgrow what a grid can quietly track, and things start slipping through. It's not that you're disorganized — it's that the tool stopped fitting the job. → How many units before your spreadsheet started failing you? 👇
+**Hashtags:** #landlordtips #rentalproperty #propertymanagement #realestateinvesting #smalllandlord
+**Cover text (grid):** "Breaks at 3 units"
+
+---
+
+## Reel 7 — "Raise rent without losing a good tenant" · tactical · How-to hook
+**Length:** ~16s · **Audio:** upbeat lo-fi
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **How to raise rent without losing a good tenant.** | keys handed over / handshake |
+| 0:02–0:05 | 1. Give more notice than required. | calendar, weeks ahead circled |
+| 0:05–0:08 | 2. Anchor to market data, not feelings. | rent comps / chart |
+| 0:08–0:11 | 3. Trade a longer lease for a smaller bump. | lease being signed |
+| 0:11–0:14 | 4. Lead with what you've improved. | fresh paint / new appliance |
+| 0:14–0:16 | A good tenant is cheaper than a vacancy. Save ↓ | brand card |
+
+**Caption:** A good tenant is cheaper than a vacancy — every time. So raise rent like you want them to stay: (1) give more notice than the law requires, (2) show the market data so the number feels fair, not arbitrary, (3) offer a longer lease in exchange for a gentler increase, (4) remind them what you've improved. Turnover, make-ready, and a vacant month usually cost more than the raise ever earns. → Biggest increase you've done *without* a turnover? 👇
+**Hashtags:** #landlord #rentincrease #rentalproperty #buyandhold #landlordtips
+**Cover text (grid):** "Raise rent, keep the tenant"
+
+---
+
+## Reel 8 — "What one vacant month really costs" · market-data · Mistake/Data hook
+**Length:** ~13s · **Audio:** news/urgent build
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **One vacant month costs way more than one month's rent.** | empty, echoey apartment |
+| 0:03–0:06 | Lost rent: $1,800. | counter ticking |
+| 0:06–0:08 | + turnover & make-ready. | painting / cleaning |
+| 0:08–0:10 | + advertising & screening. | listing on a phone |
+| 0:10–0:12 | Real cost: closer to **$3,000+**. | total ticking past $3k |
+| 0:12–0:13 | Vacancy is the silent killer. Save ↓ | brand card |
+
+**Caption:** "One month vacant" sounds like one month's rent. It isn't. On an $1,800 unit you're looking at the lost rent *plus* make-ready, cleaning, advertising, screening, and the days it sits before someone moves in — often $3,000+ all in. That's why keeping a good tenant almost always beats chasing a slightly higher rent. → What's your average days-to-fill? 👇 *(Swap in your real make-ready numbers before posting.)*
+**Hashtags:** #rentalproperty #realestateinvesting #landlord #cashflow #buyandhold
+**Cover text (grid):** "1 vacant month = ?"
+
+---
+
 ## Reusable template (for the next scripts)
 1. **Hook (0–1s):** contrarian claim, mistake warning, or list tease — the single most self-relevant line.
 2. **Tension (mid):** 2–3 beats that widen the curiosity gap, one idea per beat.
