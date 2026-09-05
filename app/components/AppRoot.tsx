@@ -268,13 +268,6 @@ export default function AppRoot() {
     }
     if (params.get('signup') === 'complete') {
       window.history.replaceState({}, '', '/');
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
-          value: 1.0,
-          currency: 'USD',
-        });
-      }
     }
     if (params.get('upgraded') === 'true') {
       setShowUpgradedBanner(true);
@@ -289,8 +282,8 @@ export default function AppRoot() {
       // Google Ads conversion event
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
-          value: 19.0,
+          send_to: 'AW-18070985639/XyZ9QrStUvWxYz12',
+          value: 49.0,
           currency: 'USD',
         });
       }

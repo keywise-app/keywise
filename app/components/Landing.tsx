@@ -151,7 +151,7 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
       else {
         if (typeof window !== 'undefined' && (window as any).gtag) {
           (window as any).gtag('event', 'conversion', {
-            send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
+            send_to: 'AW-18070985639/AbC1dEfGhIjKlMnO',
             value: 1.0,
             currency: 'USD',
           });
@@ -423,7 +423,7 @@ export default function Landing() {
     setSent(true);
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'conversion', {
-        send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
+        send_to: 'AW-18070985639/AbC1dEfGhIjKlMnO',
         value: 1.0,
         currency: 'USD',
       });

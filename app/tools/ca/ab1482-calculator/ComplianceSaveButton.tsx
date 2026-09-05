@@ -160,7 +160,7 @@ export default function ComplianceSaveButton({ calculations, onSaved }: Props) {
 
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'conversion', {
-          send_to: 'AW-18070985639/_8rLCMetnZccEKrJ5_ID',
+          send_to: 'AW-18070985639/AbC1dEfGhIjKlMnO',
           value: 1.0,
           currency: 'USD',
         });
