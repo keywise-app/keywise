@@ -10,6 +10,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 ## Faceless Reel formula (every script follows it)
 - **7–15s** is the sweet spot for reach on faceless text-reels. Loop-friendly.
 - **Hook on screen in the first 1 second** — before the viewer decides to scroll.
+- **Beat 1 opens on an aspirational Hero shot** (money, homes, keys) — desire first, detail after. `→` means "cut to" the substance b-roll. See the hero-shot bank in `instagram-reels-shot-list.md`.
 - **No talking head:** on-screen text synced to audio beats, over b-roll
   (stock house/key/money footage, screen-recordings, or simple motion cards).
 - **Trending audio, low competition** — pick a rising sound the day you post;
@@ -25,7 +26,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **You're losing $2,400 a year per unit — and can't even see it.** | slow push-in on a rental house exterior |
+| 0:00–0:02 | **You're losing $2,400 a year per unit — and can't even see it.** | **Hero:** luxury home exterior, dusk (slow push-in) |
 | 0:02–0:05 | One renewal date you forgot. | calendar, a date quietly un-circles |
 | 0:05–0:08 | Rent stayed flat. The market didn't. | rent line climbing away from a flat line |
 | 0:08–0:10 | × 12 months = **$2,400 gone. Per unit.** | money counter ticking up |
@@ -42,7 +43,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **3 tenant red flags landlords ignore — until it's too late.** | application form on a desk |
+| 0:00–0:02 | **3 tenant red flags landlords ignore — until it's too late.** | **Hero:** keys turning in a door lock |
 | 0:02–0:06 | 1. Income that *just barely* qualifies. | paystub / calculator |
 | 0:06–0:10 | 2. A rush to move in *this weekend*. | clock, boxes by a door |
 | 0:10–0:14 | 3. Gaps they explain before you ask. | rental history page, finger scrolling |
@@ -59,7 +60,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **Rent went up in 47 of 50 metros this year.** | fast-rising bar chart |
+| 0:00–0:03 | **Rent went up in 47 of 50 metros this year.** | **Hero:** city skyline aerial → fast-rising bar chart |
 | 0:03–0:06 | Only **3** dropped. | 3 bars turn red and dip |
 | 0:06–0:09 | Guess them before you swipe 👇 | map of the U.S., 3 blurred pins |
 | 0:09–0:11 | Comment your city — I'll tell you where it's headed. | brand card |
@@ -75,7 +76,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **5 lease clauses that quietly pay for themselves.** | lease document, pen tapping |
+| 0:00–0:02 | **5 lease clauses that quietly pay for themselves.** | **Hero:** marble kitchen / warm interior |
 | 0:02–0:05 | 1. A real late-fee clause. | clock ticking past a due date |
 | 0:05–0:08 | 2. Auto-renewal terms. | calendar pages flipping |
 | 0:08–0:11 | 3. Maintenance-responsibility split. | wrench + receipt |
@@ -94,7 +95,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **Being a landlord is 10% real estate…** | phone glow in a dark room |
+| 0:00–0:02 | **Being a landlord is 10% real estate…** | **Hero:** cozy upscale living room, evening lamp |
 | 0:02–0:05 | …and 90% remembering who actually paid. | scrolling a payments app |
 | 0:05–0:08 | It's 11pm. You're reconciling rent. Again. | tired hand, phone at night |
 | 0:08–0:09 | Spreadsheet or app? 👇 | brand card |
@@ -110,7 +111,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **Your rent spreadsheet breaks at exactly 3 units.** | spreadsheet on a laptop |
+| 0:00–0:02 | **Your rent spreadsheet breaks at exactly 3 units.** | **Hero:** small apartment building, golden hour → spreadsheet on a laptop |
 | 0:02–0:05 | Roommates + partial payments. | cells splitting, getting messy |
 | 0:05–0:08 | Late fees you forget to apply. | red "OVERDUE" flag |
 | 0:08–0:11 | No reminders. No paper trail. | empty calendar |
@@ -128,7 +129,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **How to raise rent without losing a good tenant.** | keys handed over / handshake |
+| 0:00–0:02 | **How to raise rent without losing a good tenant.** | **Hero:** renovated modern kitchen |
 | 0:02–0:05 | 1. Give more notice than required. | calendar, weeks ahead circled |
 | 0:05–0:08 | 2. Anchor to market data, not feelings. | rent comps / chart |
 | 0:08–0:11 | 3. Trade a longer lease for a smaller bump. | lease being signed |
@@ -146,7 +147,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **One vacant month costs way more than one month's rent.** | empty, echoey apartment |
+| 0:00–0:03 | **One vacant month costs way more than one month's rent.** | **Hero:** empty luxury apartment, sunlight |
 | 0:03–0:06 | Lost rent: $1,800. | counter ticking |
 | 0:06–0:08 | + turnover & make-ready. | painting / cleaning |
 | 0:08–0:10 | + advertising & screening. | listing on a phone |
@@ -164,7 +165,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **3 security-deposit mistakes that get landlords sued.** | lease + gavel / courthouse steps |
+| 0:00–0:03 | **3 security-deposit mistakes that get landlords sued.** | **Hero:** keys + lease on a marble counter → gavel |
 | 0:03–0:07 | 1. No move-in condition report. | photographing an empty room |
 | 0:07–0:11 | 2. Missing the return deadline. | calendar, clock ticking |
 | 0:11–0:14 | 3. Vague deductions, no receipts. | itemized receipts |
@@ -181,7 +182,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **The 1% rule is lying to you.** | house + calculator |
+| 0:00–0:02 | **The 1% rule is lying to you.** | **Hero:** suburban homes, drone aerial → house + calculator |
 | 0:02–0:05 | It says nothing about taxes, insurance, capex, vacancy. | line items stacking up |
 | 0:05–0:09 | "Deals" that pass still lose money. | red negative number |
 | 0:09–0:12 | Use it to reject fast — never to buy. | crossed-out listing |
@@ -198,7 +199,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **Your rental "cash flows" $200/mo. It's actually losing money.** | cash fan + house |
+| 0:00–0:03 | **Your rental "cash flows" $200/mo. It's actually losing money.** | **Hero:** cash fan + modern house |
 | 0:03–0:06 | Rent minus mortgage isn't profit. | subtraction on screen |
 | 0:06–0:10 | Where's your capex reserve? | roof / HVAC / water heater |
 | 0:10–0:13 | One water heater = a year of that $200. | appliance close-up |
@@ -215,7 +216,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **Handle late rent without losing a good tenant.** | phone + calendar |
+| 0:00–0:02 | **Handle late rent without losing a good tenant.** | **Hero:** apartment building exterior, dusk |
 | 0:02–0:05 | 1. Grace period + auto late fee, in writing. | lease clause |
 | 0:05–0:08 | 2. One firm, friendly reminder. | message bubble |
 | 0:08–0:11 | 3. Offer a payment plan before you threaten. | handshake |
@@ -233,7 +234,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **A flat pet fee is leaving money — and protection — on the table.** | dog in a living room |
+| 0:00–0:03 | **A flat pet fee is leaving money — and protection — on the table.** | **Hero:** bright apartment with a dog |
 | 0:03–0:07 | Pet fee = one-time. Pet rent = monthly wear. | two labeled cards |
 | 0:07–0:10 | Pet deposit = refundable, for damage. | third card |
 | 0:10–0:12 | Stack them where it's legal. | checklist |
@@ -250,7 +251,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **The move-out checklist that kills deposit disputes.** | clipboard, empty apartment |
+| 0:00–0:02 | **The move-out checklist that kills deposit disputes.** | **Hero:** clean modern empty apartment |
 | 0:02–0:06 | Walls, paint, nail holes. | wall close-up |
 | 0:06–0:09 | Floors & carpet. | floor pan |
 | 0:09–0:12 | Appliances + HVAC filters. | kitchen / filter |
@@ -268,7 +269,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **The cheapest repair you're ignoring becomes the most expensive one.** | water stain / drip |
+| 0:00–0:03 | **The cheapest repair you're ignoring becomes the most expensive one.** | **Hero:** beautiful bathroom → water stain / drip |
 | 0:03–0:06 | A $15 caulk line… | bathroom caulk |
 | 0:06–0:09 | …becomes a $9,000 subfloor. | water-damaged floor |
 | 0:09–0:11 | Water compounds silently. | ceiling stain |
@@ -285,7 +286,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **How to fill a vacancy in 7 days.** | "for rent" sign / listing on phone |
+| 0:00–0:02 | **How to fill a vacancy in 7 days.** | **Hero:** bright staged living room, sunlit |
 | 0:02–0:05 | 1. Price to market, not to hope. | rent comps |
 | 0:05–0:08 | 2. Bright, wide photos that sell. | staged sunlit room |
 | 0:08–0:11 | 3. List Thursday, show all weekend. | calendar |
@@ -303,7 +304,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **5 tax write-offs landlords forget every year.** | receipts + laptop |
+| 0:00–0:02 | **5 tax write-offs landlords forget every year.** | **Hero:** luxury home office desk → receipts + laptop |
 | 0:02–0:05 | 1. Mileage to your properties. | odometer / driving |
 | 0:05–0:08 | 2. Depreciation — the big one. | house + calendar |
 | 0:08–0:11 | 3. Home office for managing. | desk setup |
@@ -322,7 +323,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **Fixed lease or month-to-month? Most landlords pick wrong.** | calendar / lease |
+| 0:00–0:03 | **Fixed lease or month-to-month? Most landlords pick wrong.** | **Hero:** modern house exterior |
 | 0:03–0:07 | Fixed = stable income, harder to remove a bad tenant. | padlock |
 | 0:07–0:11 | M2M = flexible + easier rent bumps, more turnover risk. | revolving door |
 | 0:11–0:13 | Choose by tenant quality + your market. | balance scale |
@@ -339,7 +340,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:03 | **The one screening question that reveals everything.** | phone call, notepad |
+| 0:00–0:03 | **The one screening question that reveals everything.** | **Hero:** nice rental exterior, dusk |
 | 0:03–0:06 | Skip "were they a good tenant?" — everyone says yes. | crossed-out text |
 | 0:06–0:09 | Ask: "Would you rent to them again?" | highlighted line |
 | 0:09–0:11 | The pause before the answer is the truth. Save ↓ | brand card |
@@ -355,7 +356,7 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 | Time | On-screen text | Visual / b-roll |
 |------|----------------|-----------------|
-| 0:00–0:02 | **POV: it's the 1st and you're refreshing your bank app.** | phone refresh, coffee |
+| 0:00–0:02 | **POV: it's the 1st and you're refreshing your bank app.** | **Hero:** coffee + city-view window, morning |
 | 0:02–0:05 | 3 paid early. 2 on time. 1 mysteriously silent. | transactions list |
 | 0:05–0:07 | You already know which unit it is. | apartment building |
 | 0:07–0:09 | Tag a landlord who feels this. Follow ↓ | brand card |
