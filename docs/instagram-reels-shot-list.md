@@ -18,6 +18,60 @@ into a stock site, so cutting each Reel is a find-and-drop job.
 
 ---
 
+## Aspirational imagery layer (the hook layer — read first)
+
+Text over a receipt doesn't stop a scroll. **Open every Reel on an aspirational hero
+shot** — money, a beautiful home, the keys-in-hand moment — *then* cut to the functional
+b-roll for the substance. The hero shot creates the desire; the detail earns the save.
+
+**Stills work as well as video.** A high-res photo with a slow **Ken Burns** zoom/pan
+(2–3s) is often more striking than shaky stock video — and faster to assemble.
+- **Photo sources:** [Unsplash](https://unsplash.com), Pexels (Photos tab), Pixabay.
+- **Technique:** import still → add slow zoom-in or pan → 2–3s → text on top.
+
+**Calibration (important for this brand):** aim for **attainable aspiration** — nice
+real rentals, tasteful money shots, keys, warm upscale interiors — **not** exotic-car /
+cash-throwing "guru" flexing. Flex imagery pulls the get-rich-quick crowd (low-value,
+non-buyers) and cheapens a brand tied to a real product. Aspirational, not delusional.
+
+### Reusable hero-shot bank (build a favorites folder)
+| Theme | Search terms |
+|-------|-------------|
+| Money | `cash fan close up`, `counting hundred dollar bills`, `stacks of cash on table`, `coins stacking slow motion` |
+| Homes / property | `luxury home exterior dusk`, `suburban home golden hour`, `modern house architecture`, `apartment building sunset`, `sold sign front yard`, `neighborhood drone aerial` |
+| Luxury interiors | `modern living room interior`, `marble kitchen`, `luxury home office`, `high-rise apartment city view` |
+| The ownership moment | `handing over house keys`, `keys in door lock`, `new homeowner keys close up` |
+| Aspirational calm | `coffee morning window city view`, `laptop on balcony city`, `sunlight empty apartment` |
+
+### Per-Reel hero opener (open on this, under the hook text)
+| Reel | Hero opener |
+|------|-------------|
+| 1 — $2,400 | `luxury home exterior dusk` (what's at stake) |
+| 2 — tenant red flags | `keys in door lock` / nice rental exterior |
+| 3 — 47/50 metros | `city skyline aerial` |
+| 4 — lease clauses | `marble kitchen` / warm interior |
+| 5 — 10% / 90% | `cozy upscale living room, evening lamp` |
+| 6 — breaks at 3 units | `small apartment building, golden hour` |
+| 7 — raise rent | `renovated modern kitchen` |
+| 8 — vacant month | `empty luxury apartment, sunlight` |
+| 9 — deposits | `keys + lease on marble counter` |
+| 10 — 1% rule | `suburban homes drone aerial` |
+| 11 — cash flow | `cash fan` + modern house |
+| 12 — late rent | `apartment building exterior dusk` |
+| 13 — pet fees | `bright apartment with a dog` |
+| 14 — move-out | `clean modern empty apartment` |
+| 15 — $15 → $9,000 | `beautiful bathroom` (before the damage) |
+| 16 — fill vacancy | `bright staged living room, sunlit` |
+| 17 — tax write-offs | `luxury home office desk` |
+| 18 — lease vs M2M | `modern house exterior` |
+| 19 — screening question | `nice rental exterior, dusk` |
+| 20 — POV: it's the 1st | `coffee + city view window, morning` |
+
+> The per-beat tables below stay as the *substance* b-roll. Sequence = **hero opener →
+> substance beats → brand card.**
+
+---
+
 ## Reel 1 — "$2,400 you can't see"
 | Beat | Search terms |
 |------|-------------|
