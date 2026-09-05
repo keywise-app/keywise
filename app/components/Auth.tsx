@@ -96,7 +96,7 @@ export default function Auth() {
       else {
         if (typeof window !== 'undefined' && window.gtag) {
           window.gtag('event', 'conversion', {
-            send_to: 'AW-18070985639/AbC1dEfGhIjKlMnO',
+            send_to: 'AW-18416062236/NqrGCJuOru8cEJyeu81E',
             value: 1.0,
             currency: 'USD',
           });

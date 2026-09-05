@@ -282,7 +282,7 @@ export default function AppRoot() {
       // Google Ads conversion event
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18070985639/XyZ9QrStUvWxYz12',
+          send_to: 'AW-18416062236/iSgECJ6Oru8cEJyeu81E',
           value: 49.0,
           currency: 'USD',
         });
