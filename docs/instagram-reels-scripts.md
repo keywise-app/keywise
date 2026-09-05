@@ -159,6 +159,213 @@ Topical & educational only — **never** real tenant or rent-roll data from the 
 
 ---
 
+## Reel 9 — "Deposit mistakes that get you sued" · tactical/pain · Mistake-Warning hook
+**Length:** ~15s · **Audio:** tense build
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **3 security-deposit mistakes that get landlords sued.** | lease + gavel / courthouse steps |
+| 0:03–0:07 | 1. No move-in condition report. | photographing an empty room |
+| 0:07–0:11 | 2. Missing the return deadline. | calendar, clock ticking |
+| 0:11–0:14 | 3. Vague deductions, no receipts. | itemized receipts |
+| 0:14–0:15 | Document everything. Save this ↓ | brand card |
+
+**Caption:** Deposit disputes are rarely about the money — they're about proof. (1) Photo/video every room before move-in, timestamped. (2) Know your state's return window (often 14–30 days) and hit it — miss it and you can owe 2–3× back. (3) Itemize every deduction with receipts. Not legal advice — check your state. → What's the deposit-return window where you are? 👇
+**Hashtags:** #securitydeposit #landlordtips #rentalproperty #propertymanagement #landlordlife
+**Cover text (grid):** "Deposit = lawsuit?"
+
+---
+
+## Reel 10 — "The 1% rule is lying to you" · market-data · Contrarian hook
+**Length:** ~13s · **Audio:** plot-twist sound
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **The 1% rule is lying to you.** | house + calculator |
+| 0:02–0:05 | It says nothing about taxes, insurance, capex, vacancy. | line items stacking up |
+| 0:05–0:09 | "Deals" that pass still lose money. | red negative number |
+| 0:09–0:12 | Use it to reject fast — never to buy. | crossed-out listing |
+| 0:12–0:13 | Do the real math. Follow ↓ | brand card |
+
+**Caption:** The 1% rule ($1,800 rent on a $180k house) is a napkin filter, not a green light. It ignores property taxes, insurance, capex reserves, management, and vacancy — the things that actually decide whether you cash flow. Use it to throw out obvious no's, then run the full numbers before you ever buy. → What's your must-hit number before you pull the trigger? 👇
+**Hashtags:** #realestateinvesting #rentalproperty #cashflow #buyandhold #landlord
+**Cover text (grid):** "1% rule is lying"
+
+---
+
+## Reel 11 — "Your rental isn't cash flowing" · market-data/mindset · Mistake-Warning hook
+**Length:** ~14s · **Audio:** tense build
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **Your rental "cash flows" $200/mo. It's actually losing money.** | cash fan + house |
+| 0:03–0:06 | Rent minus mortgage isn't profit. | subtraction on screen |
+| 0:06–0:10 | Where's your capex reserve? | roof / HVAC / water heater |
+| 0:10–0:13 | One water heater = a year of that $200. | appliance close-up |
+| 0:13–0:14 | Reserve ~1%/yr. Save ↓ | brand card |
+
+**Caption:** "Cash flow" that ignores reserves is just deferred pain. That $200/mo vanishes the first time the HVAC ($6–10k), roof, or water heater goes. Set aside ~1% of the property's value per year (roughly $200–300/unit/mo) for capex *before* you call anything profit. → Do you keep a reserve, or handle repairs as they hit? 👇
+**Hashtags:** #rentalproperty #cashflow #realestateinvesting #landlordtips #buyandhold
+**Cover text (grid):** "Fake cash flow"
+
+---
+
+## Reel 12 — "Late rent without losing the tenant" · tactical · How-to hook
+**Length:** ~15s · **Audio:** upbeat lo-fi
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **Handle late rent without losing a good tenant.** | phone + calendar |
+| 0:02–0:05 | 1. Grace period + auto late fee, in writing. | lease clause |
+| 0:05–0:08 | 2. One firm, friendly reminder. | message bubble |
+| 0:08–0:11 | 3. Offer a payment plan before you threaten. | handshake |
+| 0:11–0:14 | 4. Document every step. | typing notes |
+| 0:14–0:15 | Firm system, human tone. Save ↓ | brand card |
+
+**Caption:** Good tenants hit rough months too — a system beats emotion. (1) Grace period + an automatic, enforceable late fee so it's never personal. (2) One clear reminder. (3) A short written payment plan before you escalate. (4) A paper trail in case it goes further. Consistency keeps you fair *and* protected. → What's your grace period? 👇
+**Hashtags:** #landlordtips #rentalproperty #propertymanagement #landlordlife #rentcollection
+**Cover text (grid):** "Late rent, kept tenant"
+
+---
+
+## Reel 13 — "You're charging pet fees wrong" · tactical · Contrarian hook
+**Length:** ~13s · **Audio:** upbeat
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **A flat pet fee is leaving money — and protection — on the table.** | dog in a living room |
+| 0:03–0:07 | Pet fee = one-time. Pet rent = monthly wear. | two labeled cards |
+| 0:07–0:10 | Pet deposit = refundable, for damage. | third card |
+| 0:10–0:12 | Stack them where it's legal. | checklist |
+| 0:12–0:13 | Know your state's limits. Save ↓ | brand card |
+
+**Caption:** One flat "pet fee" usually under-covers you. Three different tools: a one-time pet fee (admin, non-refundable), monthly pet rent (ongoing wear), and a pet deposit (damage, refundable). Some states cap or ban certain ones, and service/support animals are exempt — check local law. → Pet rent, deposit, or both? 👇
+**Hashtags:** #landlordtips #rentalproperty #petpolicy #propertymanagement #landlordlife
+**Cover text (grid):** "Pet fees, done right"
+
+---
+
+## Reel 14 — "Move-out inspection checklist" · tactical · List-Tease hook
+**Length:** ~16s · **Audio:** lo-fi / list sound
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **The move-out checklist that kills deposit disputes.** | clipboard, empty apartment |
+| 0:02–0:06 | Walls, paint, nail holes. | wall close-up |
+| 0:06–0:09 | Floors & carpet. | floor pan |
+| 0:09–0:12 | Appliances + HVAC filters. | kitchen / filter |
+| 0:12–0:15 | Photos, timestamped. | phone camera |
+| 0:15–0:16 | Same checklist, every time. Save ↓ | brand card |
+
+**Caption:** Do the walkthrough identically every time and disputes mostly disappear. Check walls/paint, floors/carpet, appliances + HVAC filters, fixtures/keys — and photograph everything with a timestamp. Compare against the move-in report; that side-by-side is what wins if it's ever challenged. → What always gets missed on move-out? 👇
+**Hashtags:** #landlordtips #moveout #securitydeposit #rentalproperty #propertymanagement
+**Cover text (grid):** "Move-out checklist"
+
+---
+
+## Reel 15 — "$15 → $9,000" · pain-point · Curiosity/Mistake hook
+**Length:** ~12s · **Audio:** tense build
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **The cheapest repair you're ignoring becomes the most expensive one.** | water stain / drip |
+| 0:03–0:06 | A $15 caulk line… | bathroom caulk |
+| 0:06–0:09 | …becomes a $9,000 subfloor. | water-damaged floor |
+| 0:09–0:11 | Water compounds silently. | ceiling stain |
+| 0:11–0:12 | Inspect quarterly. Save ↓ | brand card |
+
+**Caption:** Deferred maintenance is a loan with brutal interest. A skipped $15 caulk bead turns into rotted subfloor and a mold bill. Water is the silent killer — check caulk, grout, under-sink, water heater, and roof flashing on a schedule. A 20-minute quarterly walk beats a five-figure surprise. → Worst deferred-repair bill you've eaten? 👇
+**Hashtags:** #landlordtips #rentalproperty #homemaintenance #realestateinvesting #propertymanagement
+**Cover text (grid):** "$15 → $9,000"
+
+---
+
+## Reel 16 — "Fill a vacancy in 7 days" · tactical · How-to hook
+**Length:** ~15s · **Audio:** upbeat
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **How to fill a vacancy in 7 days.** | "for rent" sign / listing on phone |
+| 0:02–0:05 | 1. Price to market, not to hope. | rent comps |
+| 0:05–0:08 | 2. Bright, wide photos that sell. | staged sunlit room |
+| 0:08–0:11 | 3. List Thursday, show all weekend. | calendar |
+| 0:11–0:14 | 4. Screen fast, decide faster. | application on desk |
+| 0:14–0:15 | Speed = money. Save ↓ | brand card |
+
+**Caption:** Every vacant day is rent you never get back. (1) Price to real comps — overpricing costs more than a small cut. (2) Bright, decluttered, wide photos; the listing photo is the whole game. (3) List Thursday so it's fresh for weekend traffic, and batch your showings. (4) Have screening criteria ready so you can say yes the day the right applicant shows. → Your average days-to-fill? 👇
+**Hashtags:** #rentalproperty #landlordtips #vacancy #propertymanagement #realestateinvesting
+**Cover text (grid):** "Filled in 7 days"
+
+---
+
+## Reel 17 — "Tax write-offs landlords miss" · tactical · List-Tease hook
+**Length:** ~16s · **Audio:** lo-fi
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **5 tax write-offs landlords forget every year.** | receipts + laptop |
+| 0:02–0:05 | 1. Mileage to your properties. | odometer / driving |
+| 0:05–0:08 | 2. Depreciation — the big one. | house + calendar |
+| 0:08–0:11 | 3. Home office for managing. | desk setup |
+| 0:11–0:13 | 4. Travel, meals, education. | laptop course |
+| 0:13–0:15 | 5. Loan interest & points. | mortgage statement |
+| 0:15–0:16 | Track it now, not in April. Save ↓ | brand card |
+
+**Caption:** A good year vs a great one is often what you *forgot* to deduct. Commonly missed: mileage to/from properties, depreciation (huge, non-cash), a home office for management, travel/education, and loan interest + points. Keep receipts as you go — reconstructing in April is where money leaks. Not tax advice — talk to your CPA. → Which one did you not know about? 👇
+**Hashtags:** #landlordtips #realestatetax #rentalproperty #realestateinvesting #taxtips
+**Cover text (grid):** "5 write-offs missed"
+
+---
+
+## Reel 18 — "Lease vs month-to-month" · mindset · Decision/Contrarian hook
+**Length:** ~14s · **Audio:** neutral build
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **Fixed lease or month-to-month? Most landlords pick wrong.** | calendar / lease |
+| 0:03–0:07 | Fixed = stable income, harder to remove a bad tenant. | padlock |
+| 0:07–0:11 | M2M = flexible + easier rent bumps, more turnover risk. | revolving door |
+| 0:11–0:13 | Choose by tenant quality + your market. | balance scale |
+| 0:13–0:14 | No default answer. Follow ↓ | brand card |
+
+**Caption:** Neither is "right" — it's a trade. Fixed-term locks in a good tenant and income but ties you down if they turn bad. Month-to-month lets you adjust rent and part ways quickly, at the cost of stability and more turnover. Great tenant, strong market? Lock them in. Uncertain fit or rising rents? Stay flexible. → Which do you default to? 👇
+**Hashtags:** #landlordtips #leaseagreement #rentalproperty #propertymanagement #realestateinvesting
+**Cover text (grid):** "Lease vs M2M"
+
+---
+
+## Reel 19 — "The one screening question" · tactical · Curiosity hook
+**Length:** ~11s · **Audio:** suspense
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:03 | **The one screening question that reveals everything.** | phone call, notepad |
+| 0:03–0:06 | Skip "were they a good tenant?" — everyone says yes. | crossed-out text |
+| 0:06–0:09 | Ask: "Would you rent to them again?" | highlighted line |
+| 0:09–0:11 | The pause before the answer is the truth. Save ↓ | brand card |
+
+**Caption:** A current landlord may talk up a bad tenant just to offload them — soft questions get soft answers. "Would you rent to them again?" forces a real one, and the hesitation before it is often louder than the words. Always call the *previous* landlord too, not only the current one. → Your go-to screening question? 👇
+**Hashtags:** #tenantscreening #landlordtips #rentalproperty #propertymanagement #landlordlife
+**Cover text (grid):** "Ask this 1 question"
+
+---
+
+## Reel 20 — "POV: it's the 1st" · mindset · Relatability hook
+**Length:** ~9s · **Audio:** trending relatable/funny sound
+
+| Time | On-screen text | Visual / b-roll |
+|------|----------------|-----------------|
+| 0:00–0:02 | **POV: it's the 1st and you're refreshing your bank app.** | phone refresh, coffee |
+| 0:02–0:05 | 3 paid early. 2 on time. 1 mysteriously silent. | transactions list |
+| 0:05–0:07 | You already know which unit it is. | apartment building |
+| 0:07–0:09 | Tag a landlord who feels this. Follow ↓ | brand card |
+
+**Caption:** The 1st of the month is a personality test — for your tenants and your patience. You already know which door is about to send the "I get paid Friday" text. There's a better way to track this than refreshing your bank app — but first: how many days late before you send the reminder? 👇
+**Hashtags:** #landlordlife #landlordproblems #rentalproperty #sidehustle #passiveincome
+**Cover text (grid):** "POV: it's the 1st"
+
+---
+
 ## Reusable template (for the next scripts)
 1. **Hook (0–1s):** contrarian claim, mistake warning, or list tease — the single most self-relevant line.
 2. **Tension (mid):** 2–3 beats that widen the curiosity gap, one idea per beat.
