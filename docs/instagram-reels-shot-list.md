@@ -94,6 +94,118 @@ into a stock site, so cutting each Reel is a find-and-drop job.
 | Real cost total | reuse counter clip, push total higher in edit |
 | CTA | brand card |
 
+## Reel 9 — "Deposit mistakes that get you sued"
+| Beat | Search terms |
+|------|-------------|
+| Hook — lease + gavel | `gavel close up`, `courthouse steps`, `signing lease document` |
+| No move-in report | `photographing empty room phone`, `empty apartment interior` |
+| Return deadline | `calendar close up`, `clock ticking close up` |
+| Vague deductions | `itemized receipt close up`, `stack of receipts` |
+| CTA | brand card |
+
+## Reel 10 — "The 1% rule is lying to you"
+| Beat | Search terms |
+|------|-------------|
+| Hook — house + calculator | `calculator and house model`, `real estate calculator desk` |
+| Hidden costs stacking | 📱 line items in a sheet, or `financial spreadsheet close up`, `bills stacking up` |
+| Deals lose money | `red negative number screen`, `stock chart falling red` |
+| Reject fast | `rejected stamp`, `crossing out paper` |
+| CTA | brand card |
+
+## Reel 11 — "Your rental isn't cash flowing"
+| Beat | Search terms |
+|------|-------------|
+| Hook — cash + house | `fanning cash`, `house model with money` |
+| Rent minus mortgage | 📱 subtraction on screen, or `calculator typing close up` |
+| Where's the reserve | `hvac unit outside`, `roof repair`, `water heater` |
+| Water heater cost | `water heater close up`, `plumber hands working` |
+| CTA | brand card |
+
+## Reel 12 — "Late rent without losing the tenant"
+| Beat | Search terms |
+|------|-------------|
+| Hook — phone + calendar | `phone and calendar desk`, `checking calendar phone` |
+| Grace period clause | `lease agreement close up`, `reading contract hands` |
+| One reminder | 📱 typing a text, or `phone message bubble`, `texting close up` |
+| Payment plan | `handshake close up`, `signing agreement` |
+| Document | `typing notes laptop`, `writing in notebook` |
+| CTA | brand card |
+
+## Reel 13 — "You're charging pet fees wrong"
+| Beat | Search terms |
+|------|-------------|
+| Hook — pet in apartment | `dog in living room`, `cat on couch`, `pet in apartment` |
+| Fee vs rent cards | build 3 labeled cards in edit, or `paperwork on desk` |
+| Deposit card | reuse card build |
+| Stack legally | `checklist checkmarks`, `signing checklist` |
+| CTA | brand card |
+
+## Reel 14 — "Move-out inspection checklist"
+| Beat | Search terms |
+|------|-------------|
+| Hook — clipboard, empty apt | `clipboard empty apartment`, `inspection walkthrough` |
+| Walls & paint | `wall close up`, `painted wall texture` |
+| Floors & carpet | `hardwood floor pan`, `carpet close up` |
+| Appliances + filters | `kitchen appliances`, `changing hvac filter` |
+| Timestamped photos | `phone photographing room`, `taking photo interior` |
+| CTA | brand card |
+
+## Reel 15 — "$15 → $9,000"
+| Beat | Search terms |
+|------|-------------|
+| Hook — water stain | `water stain ceiling`, `dripping faucet close up` |
+| $15 caulk | `applying caulk bathroom`, `caulk gun hands` |
+| $9,000 subfloor | `water damaged floor`, `floor rot repair` |
+| Compounds silently | `ceiling water stain spreading`, `mold on wall` |
+| CTA | brand card |
+
+## Reel 16 — "Fill a vacancy in 7 days"
+| Beat | Search terms |
+|------|-------------|
+| Hook — listing/sign | `for rent sign yard`, `rental listing on phone` |
+| Price to market | `rent comparison chart`, `pricing calculator` |
+| Photos that sell | `bright staged living room`, `sunlit apartment interior` |
+| List Thursday | `calendar week view`, `posting listing laptop` |
+| Screen fast | `rental application desk`, `reviewing application` |
+| CTA | brand card |
+
+## Reel 17 — "Tax write-offs landlords miss"
+| Beat | Search terms |
+|------|-------------|
+| Hook — receipts + laptop | `receipts and laptop`, `doing taxes at desk` |
+| Mileage | `car odometer close up`, `driving pov dashboard` |
+| Depreciation | `house model with calendar`, `real estate documents` |
+| Home office | `home office desk setup`, `working from home` |
+| Travel / education | `laptop online course`, `airplane window view` |
+| Loan interest | `mortgage statement close up`, `bank documents` |
+| CTA | brand card |
+
+## Reel 18 — "Lease vs month-to-month"
+| Beat | Search terms |
+|------|-------------|
+| Hook — lease + calendar | `lease agreement calendar`, `signing lease close up` |
+| Fixed = locked in | `padlock close up`, `locked door handle` |
+| M2M = flexible | `revolving door`, `open door sunlight` |
+| Choose by fit/market | `balance scale`, `weighing scale close up` |
+| CTA | brand card |
+
+## Reel 19 — "The one screening question"
+| Beat | Search terms |
+|------|-------------|
+| Hook — call + notepad | `phone call notepad desk`, `talking on phone hands` (no face) |
+| Skip the soft question | `crossing out text`, `red x on paper` |
+| Ask this instead | `highlighting text yellow`, `highlighted notes` |
+| The pause | `clock ticking close up`, `waiting silence phone` |
+| CTA | brand card |
+
+## Reel 20 — "POV: it's the 1st"
+| Beat | Search terms |
+|------|-------------|
+| Hook — refreshing bank app | 📱 pull-to-refresh a banking app, or `checking phone morning coffee` |
+| 3 paid, 2 on time, 1 silent | 📱 transactions list scroll, or `banking app phone` |
+| You know which unit | `apartment building exterior`, `residential building` |
+| CTA | brand card |
+
 ---
 
 ## Fast-cut workflow
