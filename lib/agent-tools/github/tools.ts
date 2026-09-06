@@ -505,7 +505,7 @@ export const reportFailureTool: AgentTool<{
     required: ["implementationId", "reason"],
   },
   defaultAuthority: "auto",
-  describeAction: (i) => `Report failure on ${i.implementationId}: ${i.reason.slice(0, 60)}`,
+  describeAction: (i) => `Report failure on ${i.implementationId}: ${(i.reason ?? "no reason given").slice(0, 60)}`,
   execute: async (i, ctx) => {
     const { error } = await ctx.supabase
       .from("proposal_implementations")

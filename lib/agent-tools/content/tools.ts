@@ -156,7 +156,7 @@ export const updateBlogPostTool: AgentTool<{
     // Draft updates are auto; published updates need approval (live content)
     return data?.status === "published" ? "approve" : "auto";
   },
-  describeAction: (i) => `Update blog post ${i.draftId} (${i.rationale.slice(0, 60)})`,
+  describeAction: (i) => `Update blog post ${i.draftId} (${(i.rationale ?? "no rationale given").slice(0, 60)})`,
   estimateImpact: () => "Refreshed content typically gains 5-20 positions within 2-4 weeks",
   execute: async (i, ctx) => {
     const { data: existing } = await ctx.supabase
