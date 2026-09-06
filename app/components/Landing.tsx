@@ -844,23 +844,32 @@ export default function Landing() {
                     Keywise
                     <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$49/mo</div>
                   </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 140 }}>
-                    Generic Landlord Apps
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    Buildium
+                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>$50+/mo</div>
                   </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 140 }}>
-                    DIY Spreadsheets
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    Avail
+                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>per-unit</div>
+                  </th>
+                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
+                    Nolo forms
+                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>pay per form</div>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: 'California-specific compliance', keywise: true, generic: false, diy: false },
-                  { feature: 'AB 1482 rent cap calculator', keywise: true, generic: false, diy: false },
-                  { feature: 'Just-cause eviction notices', keywise: true, generic: false, diy: false },
-                  { feature: 'AB 2801 inspection compliance', keywise: true, generic: false, diy: false },
-                  { feature: 'Online rent collection', keywise: true, generic: true, diy: false },
-                  { feature: 'Document signing', keywise: true, generic: 'Sometimes', diy: false },
-                  { feature: 'Free for small landlords', keywise: true, generic: false, diy: 'Free but painful' },
+                  { feature: 'California AB 1482 & 2801 compliance', keywise: true, buildium: false, avail: false, nolo: 'Forms only' },
+                  { feature: 'AB 1482 rent cap calculator (auto CPI)', keywise: true, buildium: false, avail: false, nolo: false },
+                  { feature: 'Just-cause eviction notices with defect checking', keywise: true, buildium: false, avail: false, nolo: 'Static forms' },
+                  { feature: 'AB 2801 move-out inspection reports', keywise: true, buildium: false, avail: false, nolo: false },
+                  { feature: '21-day deposit deadline tracking', keywise: true, buildium: false, avail: false, nolo: false },
+                  { feature: 'AI lease extraction', keywise: true, buildium: false, avail: false, nolo: false },
+                  { feature: 'Online rent collection', keywise: true, buildium: true, avail: true, nolo: false },
+                  { feature: 'Tenant portal & messaging', keywise: true, buildium: true, avail: true, nolo: false },
+                  { feature: 'Built for landlords under 25 units', keywise: true, buildium: '50+ units target', avail: true, nolo: 'N/A' },
+                  { feature: 'Free tier for small landlords', keywise: '1-2 units', buildium: false, avail: 'Free basic', nolo: false },
                 ].map((row, i) => {
                   const Check = () => <span style={{ color: '#00A86B', fontSize: 18, fontWeight: 700 }}>✓</span>;
                   const X = () => <span style={{ color: '#FF6B6B', fontSize: 18 }}>✗</span>;
@@ -873,8 +882,9 @@ export default function Landing() {
                     <tr key={i} style={{ background: i % 2 === 0 ? BG : '#fff' }}>
                       <td style={{ padding: '14px 16px', color: INK, fontWeight: 500 }}>{row.feature}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'center', background: i % 2 === 0 ? '#E8F0FF' : '#F0F4FF' }}><Cell val={row.keywise} /></td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.generic} /></td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.diy} /></td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.buildium} /></td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.avail} /></td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.nolo} /></td>
                     </tr>
                   );
                 })}
