@@ -214,6 +214,13 @@ export default function SignPage() {
                   </div>
                 )}
 
+                {/* AI disclosure banner */}
+                {(docData.inspection.rooms || []).length > 0 && (
+                  <div style={{ background: T.tealLight, border: `1px solid ${T.teal}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: T.navy, lineHeight: 1.6 }}>
+                    Condition grades below were assessed by Keywise AI based on inspection notes. Contact your landlord to dispute any grade before signing.
+                  </div>
+                )}
+
                 {(docData.inspection.rooms || []).map((room: any, i: number) => (
                   <div key={i} style={{ background: '#F0F4FF', borderRadius: 10, padding: 14, marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -226,7 +233,9 @@ export default function SignPage() {
                               background: room.condition === 'Excellent' ? '#E8F8F0' : room.condition === 'Good' ? T.tealLight : room.condition === 'Fair' ? '#FFF8E0' : '#FFF0F0',
                               color: room.condition === 'Excellent' ? T.greenDark : room.condition === 'Good' ? T.teal : room.condition === 'Fair' ? '#9A6500' : T.coral,
                             }}>{room.condition}</span>
-                            <span style={{ fontSize: 9, color: T.inkMuted, fontStyle: 'italic' }}>AI-assessed</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.tealLight, color: T.teal }}>
+                              ✦ AI-assessed
+                            </span>
                           </>
                         )}
                         <button
@@ -273,7 +282,12 @@ export default function SignPage() {
 
                 {docData.inspection.report_text && (
                   <div style={{ background: '#F8FAFF', borderRadius: 10, padding: 14, marginTop: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase', marginBottom: 4 }}>Full Report</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.inkMuted, textTransform: 'uppercase' }}>Full Report</div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: T.tealLight, color: T.teal }}>
+                        ✦ AI-assessed
+                      </span>
+                    </div>
                     <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{docData.inspection.report_text}</div>
                   </div>
                 )}
