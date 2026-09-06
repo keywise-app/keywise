@@ -1,0 +1,66 @@
+{
+  "campaign": "Keywise X weekly batch",
+  "weekOf": "2026-06-07",
+  "handle": "@KeywiseApp1",
+  "approvedAt": "2026-06-06",
+  "approvedBy": "user (in-session)",
+  "fireTimeLocal": "09:00",
+  "fireTimeUTC": "16:00",
+  "tz": "America/Los_Angeles",
+  "notes": [
+    "No outbound links in primary post body (link in self-reply or bio)",
+    "No hashtags",
+    "<=280 chars per post unless noted as thread",
+    "Match existing account voice (practical, contrarian, founder)"
+  ],
+  "posts": [
+    {
+      "day": "Sun",
+      "date": "2026-06-07",
+      "angle": "founder_reflection",
+      "text": "Looked at 30 days of Keywise data this weekend.\n\nAvg time between a tenant's first missed payment and the first reminder sent: 6 days.\n\nSix days of silence, then awkwardness, then a stiff text.\n\nAutomate the boring part. Save the relationship for things that actually need it."
+    },
+    {
+      "day": "Mon",
+      "date": "2026-06-08",
+      "angle": "education",
+      "text": "The security deposit rule landlords break the most: returning it \"whenever you get around to it.\"\n\nMost states give you 14–30 days to itemize and send the balance. Miss it and you can owe 2–3x the deposit, plus lawyer's fees.\n\nSet a calendar reminder the day they move out.",
+      "trimmed": true,
+      "original_chars": 310
+    },
+    {
+      "day": "Tue",
+      "date": "2026-06-09",
+      "angle": "pain_rent_collection",
+      "text": "Every landlord I know has the same Sunday-night routine:\n\nOpen Venmo. Scroll the activity feed. Recognize one tenant, miss the other. Realize you forgot which one always pays on the 3rd.\n\nWe didn't build Keywise because rent collection is hard. We built it because remembering is."
+    },
+    {
+      "day": "Wed",
+      "date": "2026-06-10",
+      "angle": "founder_building",
+      "text": "Last week a VC told me independent landlords don't need \"real software\" — unit count too small to matter.\n\nThere are 11M of them in the US. Most pay $0 because existing tools start at $80/mo.\n\nWe built Keywise for that gap. Pro is $19. We'll see if he was right.",
+      "trimmed": true,
+      "original_chars": 300
+    },
+    {
+      "day": "Thu",
+      "date": "2026-06-11",
+      "angle": "pain_lease_paperwork",
+      "text": "The worst part of being a small landlord is not the leaky faucet at 11pm.\n\nIt's three years in, when a tenant asks about a clause and you realize you have:\n– The PDF in Gmail\n– A photo of page 3\n– A scan with the signature page cut off\n– No idea which version they signed."
+    },
+    {
+      "day": "Fri",
+      "date": "2026-06-12",
+      "angle": "comparison_vs_bloated_pm",
+      "text": "AppFolio: $280/mo. Built for property managers with 50+ doors.\nBuildium: $79/mo. Closer, but per-unit add-ons creep up fast.\nKeywise: $19/mo. Built for the landlord who owns 4 doors and a 9-to-5.\n\nYou're not the same customer. Stop paying for someone else's software."
+    },
+    {
+      "day": "Sat",
+      "date": "2026-06-13",
+      "angle": "pain_accidental_landlord",
+      "text": "You weren't supposed to be a landlord.\n\nYou bought a duplex to house-hack, or inherited a place, or moved for work and couldn't sell.\n\nNow it's the 6th and rent isn't in, and nobody handed you a manual for the awkward \"just checking in\" text.\n\nThis account is the manual.",
+      "trimmed": true,
+      "original_chars": 284
+    }
+  ]
+}
