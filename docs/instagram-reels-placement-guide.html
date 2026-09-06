@@ -1,0 +1,270 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>The Rent Roll — Reel Placement Guide</title>
+<style>
+  :root{
+    --bg:#F4F2ED; --fg:#1a1610; --muted:#6b6459; --line:#e2ddd1; --card:#fff;
+    --brand:#2540FF; --amber:#FFC93C; --guide:#ff4d6d;
+    --disp:'Anton',Impact,'Arial Narrow Bold',sans-serif;
+    --ui:'Inter',system-ui,'Segoe UI',Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{--bg:#0e0c0a;--fg:#ece7da;--muted:#9b9284;--line:#2a2620;--card:#171410;}}
+  :root[data-theme="light"]{--bg:#F4F2ED;--fg:#1a1610;--muted:#6b6459;--line:#e2ddd1;--card:#fff;}
+  :root[data-theme="dark"]{--bg:#0e0c0a;--fg:#ece7da;--muted:#9b9284;--line:#2a2620;--card:#171410;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+  .stage{max-width:1000px;margin:0 auto;padding:40px 20px 70px}
+  .head{text-align:center}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--brand);font-weight:700;margin:0 0 12px}
+  h1{font-family:var(--ui);font-weight:800;letter-spacing:-.02em;font-size:clamp(26px,5vw,40px);margin:0;line-height:1.02}
+  .sub{color:var(--muted);max-width:56ch;margin:16px auto 0;font-size:15.5px;line-height:1.55}
+  .tabs{display:flex;gap:8px;margin:24px auto 8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px;width:max-content}
+  .tab{border:0;background:transparent;color:var(--fg);font-family:var(--ui);font-weight:600;font-size:14px;padding:9px 18px;border-radius:999px;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--brand);color:#fff}
+
+  .cols{display:flex;gap:34px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin-top:20px}
+
+  /* ---- phone ---- */
+  .phone{width:300px;max-width:82vw;aspect-ratio:9/19.5;background:#000;border-radius:38px;padding:9px;
+    box-shadow:0 2px 4px rgba(0,0,0,.2),0 40px 80px -30px rgba(0,0,0,.55);position:relative;flex:0 0 auto}
+  .screen{position:relative;width:100%;height:100%;border-radius:30px;overflow:hidden;background:#111;font-family:var(--ui)}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:38%;height:22px;background:#000;border-radius:0 0 14px 14px;z-index:12}
+  .scene{position:absolute;inset:0;transition:background .5s ease}
+  .art{position:absolute;inset:0;width:100%;height:100%}
+  .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 100%);z-index:2}
+  .vignette{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(125% 92% at 50% 40%,rgba(0,0,0,0) 52%,rgba(0,0,0,.46) 100%)}
+  .grain{position:absolute;inset:0;z-index:3;opacity:.09;mix-blend-mode:overlay;pointer-events:none;background-size:150px 150px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ---- guide overlays ---- */
+  #guides{position:absolute;inset:0;z-index:8;display:none;pointer-events:none;font-family:var(--ui)}
+  .screen.guide #guides{display:block}
+  .screen.guide .scene{filter:saturate(.65) brightness(.82)}
+  .gz{position:absolute;left:0;right:0;background:rgba(255,77,109,.14);border-color:var(--guide)}
+  .gz-top{top:0;height:12.8%;border-bottom:1.5px dashed var(--guide)}
+  .gz-bot{bottom:0;height:20.5%;border-top:1.5px dashed var(--guide)}
+  .gz-right{top:12.8%;bottom:20.5%;left:auto;right:0;width:9%;background:rgba(255,77,109,.10);border-left:1.5px dashed var(--guide)}
+  .gz-lbl{position:absolute;font-size:8px;letter-spacing:.14em;font-weight:700;color:#fff;background:var(--guide);padding:2px 5px;border-radius:0 0 5px 0}
+  .gz-lbl.b{border-radius:5px 0 0 0;right:0}
+  .mslot{position:absolute;left:8%;right:12%;top:16%;bottom:26%;border:2px dashed rgba(255,255,255,.7);border-radius:8px;
+    display:flex;flex-direction:column;justify-content:flex-start;padding:9px;gap:5px}
+  .mslot .mnum{width:20px;height:20px;border-radius:50%;background:#fff;color:#111;font-weight:800;font-size:11px;display:grid;place-items:center;font-family:var(--disp)}
+  .mslot .mmedia{color:#fff;font-weight:700;font-size:11.5px;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .mslot .mcrop{color:#ffd;font-size:10px;line-height:1.25;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .mslot .mmotion{margin-top:auto;color:rgba(255,255,255,.85);font-size:9.5px;font-style:italic;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .tzone{position:absolute;left:6%;right:6%;top:20%;height:34%;border:1.5px dashed var(--amber);border-radius:6px;z-index:9;pointer-events:none}
+  .tzone .tlbl{position:absolute;top:-9px;left:8px;font-size:8px;letter-spacing:.14em;font-weight:700;color:#111;background:var(--amber);padding:2px 5px;border-radius:4px}
+
+  /* footage placeholder tag (non-guide) */
+  .ftag{position:absolute;top:52px;left:14px;z-index:6;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.25);padding:4px 8px;border-radius:6px}
+
+  .textLayer{position:absolute;left:0;right:0;top:20%;padding:0 22px;z-index:5;text-align:center}
+  .hook{font-family:var(--disp);color:#f3efe4;font-size:33px;line-height:1.0;letter-spacing:.01em;text-shadow:0 2px 18px rgba(0,0,0,.5);text-wrap:balance}
+  .hook .hl{color:var(--amber)}
+  .bignum{display:inline-block;font-family:var(--disp);color:var(--amber);font-size:64px;line-height:.9;margin:6px 0;text-shadow:0 3px 22px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+  .anim{animation:pop .5s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+
+  .brandcard{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px}
+  .mono{width:74px;height:74px;border:5px solid #f3efe4;border-radius:18px;display:grid;place-items:center;font-family:var(--disp);color:#f3efe4;font-size:34px}
+  .wm{font-family:var(--ui);font-weight:700;letter-spacing:.24em;color:#f3efe4;font-size:15px}
+  .bcta{font-family:var(--disp);color:#f3efe4;font-size:26px;line-height:1.05;text-align:center;margin-top:4px}
+  .bhandle{font-size:12px;color:rgba(243,239,228,.7);font-weight:600}
+
+  .igtop{position:absolute;top:30px;left:0;right:0;z-index:7;padding:0 14px}
+  .segs{display:flex;gap:4px;margin-bottom:12px}
+  .seg{flex:1;height:2.5px;background:rgba(255,255,255,.32);border-radius:2px;overflow:hidden}
+  .seg i{display:block;height:100%;width:0;background:#fff}
+  .igrow{display:flex;align-items:center;gap:8px}
+  .av{width:26px;height:26px;border-radius:50%;background:var(--brand);display:grid;place-items:center;font-family:var(--disp);color:#fff;font-size:12px;border:1.5px solid rgba(255,255,255,.7)}
+  .un{color:#fff;font-weight:600;font-size:12.5px;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+
+  /* ---- build sheet ---- */
+  .sheet{flex:1 1 340px;min-width:300px;max-width:440px}
+  .sheet h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:2px 0 14px;font-weight:700}
+  .row{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .row.active{background:linear-gradient(90deg,rgba(37,64,255,.08),transparent);border-radius:8px;padding-left:8px;margin-left:-8px}
+  .rnum{flex:0 0 24px;height:24px;border-radius:6px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--brand);font-family:var(--disp)}
+  .row.active .rnum{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .rbody{flex:1;min-width:0}
+  .rmedia{font-weight:700;font-size:13.5px;line-height:1.25}
+  .rmeta{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
+  .rmeta b{color:var(--fg);font-weight:600}
+  .rtext{font-size:12.5px;margin-top:5px;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+  .rdur{flex:0 0 auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;align-self:flex-start;margin-top:3px}
+  .meta-foot{margin-top:16px;border-top:2px solid var(--line);padding-top:12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .meta-foot b{color:var(--fg)}
+
+  .controls{margin:26px auto 0;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);font-family:var(--ui);font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .btn[aria-pressed="true"]{background:var(--guide);color:#fff;border-color:var(--guide)}
+  .note{color:var(--muted);font-size:13px;max-width:64ch;margin:24px auto 0;line-height:1.55;text-align:center}
+  .note b{color:var(--fg)}
+  @media (prefers-reduced-motion:reduce){.anim{animation:none}.scene{transition:none}}
+</style>
+
+<div class="stage">
+  <div class="head">
+    <p class="eyebrow">The Rent Roll · Reel Placement Guide</p>
+    <h1>Where every photo &amp; line goes</h1>
+    <p class="sub">A build spec for CapCut. The phone shows each beat with <span style="color:var(--guide);font-weight:600">safe zones</span>, the <b>media slot</b> (which photo/clip, how to crop), and the <b style="color:var(--amber)">text zone</b>. The sheet on the right is your shot-by-shot checklist. Toggle guides off to see the finished look.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-reel="r1">Reel 1 · value</button>
+    <button class="tab" role="tab" aria-selected="false" data-reel="r20">Reel 20 · relatable</button>
+  </div>
+
+  <div class="cols">
+    <div class="phone">
+      <div class="screen guide" id="screen">
+        <div class="notch"></div>
+        <div class="scene" id="scene"><div class="art" id="art"></div></div>
+        <div class="scrim"></div>
+        <div class="vignette"></div>
+        <div class="grain"></div>
+        <div class="ftag" id="ftag"></div>
+
+        <div id="guides">
+          <div class="gz gz-top"><span class="gz-lbl">SAFE ZONE</span></div>
+          <div class="gz gz-bot"><span class="gz-lbl b">SAFE ZONE · caption + buttons</span></div>
+          <div class="gz gz-right"></div>
+          <div class="mslot" id="mslot">
+            <div class="mnum" id="mnum">1</div>
+            <div class="mmedia" id="mmedia"></div>
+            <div class="mcrop" id="mcrop"></div>
+            <div class="mmotion" id="mmotion"></div>
+          </div>
+          <div class="tzone"><span class="tlbl">TEXT ZONE</span></div>
+        </div>
+
+        <div class="igtop">
+          <div class="segs" id="segs"></div>
+          <div class="igrow"><span class="av">RR</span><span class="un">therentroll</span></div>
+        </div>
+
+        <div class="textLayer" id="textLayer"></div>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <h2 id="sheetTitle">Build sheet</h2>
+      <div id="rows"></div>
+      <div class="meta-foot" id="metaFoot"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="replay">↺ Replay</button>
+    <button class="btn" id="toggleGuide" aria-pressed="true">Guides: ON</button>
+  </div>
+  <p class="note"><b>How to use:</b> match each CapCut clip to a numbered beat — drop the media, crop to fill 9:16 keeping the focal point clear of the text zone, set the on-screen line, apply the motion, hold for the listed duration. Photos come from the free sources in <b>instagram-reels-image-sources.md</b>.</p>
+</div>
+
+<script>
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var art={
+    house:'<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="xMidYMax slice"><g fill="rgba(10,8,20,.55)"><rect x="0" y="104" width="100" height="26"/><polygon points="20,104 50,80 80,104"/><rect x="30" y="96" width="40" height="24"/></g><circle cx="74" cy="30" r="10" fill="rgba(255,214,140,.55)"/></svg>',
+    chart:'<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="none"><line x1="8" y1="92" x2="92" y2="92" stroke="rgba(255,255,255,.35)" stroke-width="1.2" stroke-dasharray="3 3"/><polyline points="8,86 28,80 48,58 68,40 92,18" fill="none" stroke="#23C67A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    window:'<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="xMidYMax slice"><g fill="rgba(20,14,10,.4)"><rect x="10" y="70" width="14" height="18"/><rect x="27" y="60" width="12" height="28"/><rect x="42" y="66" width="16" height="22"/><rect x="61" y="54" width="12" height="34"/><rect x="76" y="64" width="14" height="24"/></g><rect x="6" y="24" width="88" height="66" fill="none" stroke="rgba(40,26,16,.5)" stroke-width="4"/><line x1="50" y1="24" x2="50" y2="90" stroke="rgba(40,26,16,.5)" stroke-width="4"/></svg>',
+    list:'<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet"><g><rect x="14" y="40" width="72" height="14" rx="3" fill="rgba(35,198,123,.16)"/><circle cx="22" cy="47" r="3" fill="#23C67A"/><rect x="14" y="58" width="72" height="14" rx="3" fill="rgba(255,255,255,.06)"/><circle cx="22" cy="65" r="3" fill="#23C67A"/><rect x="14" y="76" width="72" height="14" rx="3" fill="rgba(255,90,60,.16)"/><circle cx="22" cy="83" r="3" fill="#FF5A3C"/></g></svg>',
+    building:'<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="xMidYMax slice"><rect x="26" y="34" width="48" height="96" fill="rgba(8,10,22,.5)"/><g fill="rgba(255,214,140,.5)"><rect x="33" y="44" width="7" height="9"/><rect x="46" y="44" width="7" height="9"/><rect x="59" y="44" width="7" height="9"/><rect x="33" y="60" width="7" height="9"/><rect x="59" y="60" width="7" height="9"/><rect x="33" y="76" width="7" height="9"/><rect x="46" y="76" width="7" height="9"/><rect x="46" y="92" width="7" height="9"/><rect x="59" y="92" width="7" height="9"/></g></svg>'
+  };
+  var G={
+    dusk:'radial-gradient(120% 78% at 80% 98%, #f0b268 0%, rgba(240,178,104,0) 44%), radial-gradient(150% 110% at 18% 6%, #283163 0%, rgba(40,49,99,0) 66%), linear-gradient(180deg,#1a2048 0%,#2b2742 55%,#5a4741 100%)',
+    night:'radial-gradient(120% 85% at 28% 22%, #24406e 0%, rgba(36,64,110,0) 58%), linear-gradient(160deg,#132039 0%,#090e1a 100%)',
+    ink:'radial-gradient(130% 95% at 50% 26%, #221d17 0%, #141210 72%)',
+    coffee:'radial-gradient(95% 66% at 72% 18%, #ffe9c6 0%, rgba(255,233,198,0) 52%), linear-gradient(180deg,#efd3a6 0%,#d7995f 58%,#a5643c 100%)',
+    dawn:'radial-gradient(120% 80% at 50% 100%, #3a4874 0%, rgba(58,72,116,0) 62%), linear-gradient(180deg,#232c4c 0%,#111726 100%)',
+    cobalt:'radial-gradient(95% 72% at 50% 26%, #3e57ff 0%, #2540ff 70%)'
+  };
+  var reels={
+    r1:{handle:'therentroll',cap:'The most expensive landlord mistakes aren\'t dramatic — they\'re quiet.',audio:'Trending audio · tense build',cover:'"$2,400 mistake"',
+      beats:[
+        {d:2600,bg:G.dusk,art:art.house,media:'PHOTO — Luxury home, dusk (hero)',crop:'Fill 9:16 · keep the sky in the upper third',motion:'Slow push-in (Ken Burns)',t:'<div class="hook">You\'re losing <span class="hl">$2,400</span> a year per unit — and can\'t even see it.</div>'},
+        {d:2200,bg:G.night,art:'',media:'CLIP — Calendar / a date being missed',crop:'Fill 9:16 · center the date',motion:'Slow zoom-out',t:'<div class="hook">One renewal date you forgot.</div>'},
+        {d:2300,bg:G.ink,art:art.chart,media:'GRAPHIC — Rising rent line (bar/line template)',crop:'Full-bleed motion card',motion:'Line draws upward',t:'<div class="hook">Rent stayed flat.<br>The market didn\'t.</div>'},
+        {d:2700,bg:G.ink,art:'',media:'GRAPHIC — Number counter template',crop:'Centered on ink background',motion:'Count 0 → $2,400 (ease-out)',count:2400,t:'<div class="hook">× 12 months =<br><span class="bignum">$<span id="rrc">0</span></span><br>gone. Per unit.</div>'},
+        {d:2600,bg:G.cobalt,media:'BRAND CARD — RR outro',crop:'Cobalt background, centered lockup',motion:'Monogram pop + fade',brand:'Save this before<br>your next renewal ↓'}
+      ]},
+    r20:{handle:'therentroll',cap:'The 1st of the month is a personality test — for your tenants and your patience.',audio:'Trending audio · relatable',cover:'"POV: it\'s the 1st"',
+      beats:[
+        {d:2500,bg:G.coffee,art:art.window,media:'PHOTO — Coffee + city-view window (hero)',crop:'Fill 9:16 · cup lower third, window fills top',motion:'Very slow push-in',t:'<div class="hook">POV: it\'s the 1st and you\'re refreshing your bank app.</div>'},
+        {d:2500,bg:G.ink,art:art.list,media:'SCREEN-REC — Payments / transactions list',crop:'Phone screen-record, fit to frame',motion:'Slow scroll',t:'<div class="hook">3 paid early. 2 on time.<br><span class="hl">1 mysteriously silent.</span></div>'},
+        {d:2200,bg:G.dawn,art:art.building,media:'CLIP — Apartment building exterior',crop:'Fill 9:16 · building centered',motion:'Slow tilt up',t:'<div class="hook">You already know<br>which unit it is.</div>'},
+        {d:2600,bg:G.cobalt,media:'BRAND CARD — RR outro',crop:'Cobalt background, centered lockup',motion:'Monogram pop + fade',brand:'Tag a landlord<br>who feels this ↓'}
+      ]}
+  };
+
+  var scene=document.getElementById('scene'),artEl=document.getElementById('art'),textLayer=document.getElementById('textLayer'),
+      ftag=document.getElementById('ftag'),segs=document.getElementById('segs'),screenEl=document.getElementById('screen'),
+      rowsEl=document.getElementById('rows'),metaFoot=document.getElementById('metaFoot'),sheetTitle=document.getElementById('sheetTitle'),
+      mnum=document.getElementById('mnum'),mmedia=document.getElementById('mmedia'),mcrop=document.getElementById('mcrop'),mmotion=document.getElementById('mmotion');
+  var token=0,curKey='r1';
+
+  function buildSegs(n){segs.innerHTML='';for(var i=0;i<n;i++)segs.innerHTML+='<span class="seg"><i></i></span>';}
+  function esc(s){return s.replace(/<br>/g,' ').replace(/<[^>]+>/g,'');}
+
+  function buildSheet(r){
+    sheetTitle.textContent=(curKey==='r1'?'Reel 1':'Reel 20')+' · build sheet';
+    rowsEl.innerHTML='';
+    r.beats.forEach(function(b,i){
+      var line=b.brand?esc(b.brand):esc(b.t);
+      rowsEl.innerHTML+='<div class="row" data-i="'+i+'"><div class="rnum">'+(i+1)+'</div><div class="rbody">'+
+        '<div class="rmedia">'+b.media+'</div>'+
+        '<div class="rmeta"><b>Crop:</b> '+b.crop+' · <b>Motion:</b> '+b.motion+'</div>'+
+        '<div class="rtext">“'+line+'”</div></div>'+
+        '<div class="rdur">'+(b.d/1000).toFixed(1)+'s</div></div>';
+    });
+    metaFoot.innerHTML='<b>Caption:</b> '+r.cap+' <b>+ your comment prompt.</b><br><b>Audio:</b> '+r.audio+' · <b>Cover:</b> '+r.cover;
+  }
+
+  function animCount(el,to,dur,t){
+    if(reduce){el.textContent=to.toLocaleString();return;}
+    var s=performance.now();
+    (function tick(now){if(t!==token)return;var p=Math.min(1,(now-s)/dur),e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString();if(p<1)requestAnimationFrame(tick);})(performance.now());
+  }
+
+  function render(beat,i,t){
+    scene.style.background=beat.bg;
+    artEl.innerHTML=beat.art||'';
+    ftag.textContent=beat.tag||''; ftag.style.display=(beat.tag&&!screenEl.classList.contains('guide'))?'block':'none';
+    mnum.textContent=i+1; mmedia.textContent=beat.media; mcrop.textContent=beat.crop; mmotion.textContent='Motion: '+beat.motion;
+    var fills=segs.querySelectorAll('.seg i');
+    for(var k=0;k<fills.length;k++){var f=fills[k];
+      if(k<i){f.style.transition='none';f.style.width='100%';}
+      else if(k===i){f.style.transition='none';f.style.width='0';void f.offsetWidth;f.style.transition='width '+beat.d+'ms linear';f.style.width='100%';}
+      else{f.style.transition='none';f.style.width='0';}}
+    if(beat.brand){
+      textLayer.innerHTML='<div class="brandcard '+(reduce?'':'anim')+'"><div class="mono">RR</div><div class="wm">THE RENT ROLL</div><div class="bcta">'+beat.brand+'</div><div class="bhandle">@'+reels[curKey].handle+'</div></div>';
+    }else{
+      textLayer.innerHTML=beat.t;
+      var box=textLayer.firstChild; if(box&&!reduce)box.classList.add('anim');
+      if(beat.count){var c=document.getElementById('rrc');if(c)animCount(c,beat.count,beat.d-400,t);}
+    }
+    var rws=rowsEl.querySelectorAll('.row');
+    rws.forEach(function(r){r.classList.toggle('active',+r.dataset.i===i);});
+  }
+
+  function play(key){
+    curKey=key;var t=++token;var r=reels[key];
+    buildSegs(r.beats.length); buildSheet(r);
+    var i=0;
+    (function step(){if(t!==token)return;if(i>=r.beats.length)i=0;var b=r.beats[i];render(b,i,t);i++;setTimeout(step,b.d);})();
+  }
+
+  var tabs=document.querySelectorAll('.tab');
+  tabs.forEach(function(tb){tb.addEventListener('click',function(){tabs.forEach(function(x){x.setAttribute('aria-selected','false');});tb.setAttribute('aria-selected','true');play(tb.dataset.reel);});});
+  document.getElementById('replay').addEventListener('click',function(){play(curKey);});
+  var tg=document.getElementById('toggleGuide');
+  tg.addEventListener('click',function(){
+    var on=!screenEl.classList.contains('guide');
+    screenEl.classList.toggle('guide',on);
+    tg.setAttribute('aria-pressed',on?'true':'false'); tg.textContent='Guides: '+(on?'ON':'OFF');
+  });
+
+  play('r1');
+})();
+</script>
