@@ -1,15 +1,7 @@
 const { test } = require('node:test');
 process.env.RESEND_API_KEY = 'fake-test-key';
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ts = require('typescript');
-function load(file, imports = {}) {
-  const exports = {};
-  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(code, { exports, require: name => imports[name] ?? require(name), console, process, fetch, AbortSignal, setTimeout, TypeError, Error });
-  return exports;
-}
+const { load } = require('./load.cjs');
 const helper = load('lib/intelligence/generate.ts');
 const valid = { summary: 'Competitor pricing and landlord feedback reveal a practical opportunity for Keywise.', urgent: [], opportunities: [{ title: 'Simplify onboarding', description: 'Reduce setup effort', source: 'https://example.com' }], trends: [], competitor_updates: [] };
 const ok = (content = JSON.stringify(valid), stop_reason = 'end_turn') => new Response(JSON.stringify({ content: [{ type: 'text', text: content }], stop_reason }));
@@ -32,18 +24,33 @@ test('network error retries', async () => { const g = generator([new TypeError('
 
 function pipeline({ generationError, saveError, emailError } = {}) {
   const effects = [];
-  const route = load('app/api/cron/competitive-intelligence/route.ts', {
-    '@/lib/intelligence/generate': { ...helper, generateIntelligence: async () => { if (generationError) throw new Error('invalid'); return valid; } },
-    'next/server': { NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) } },
-    '@supabase/supabase-js': { createClient: () => db },
-    resend: { Resend: class { emails = { send: async () => { effects.push('email'); return { data: emailError ? null : {id:'email'}, error: emailError }; } }; } },
-    '@/agent-tools/pipeline/propose': { proposeToQueue: async () => { effects.push('queue'); } },
-  });
-  const db = { from: () => ({ insert: () => { effects.push('save'); return {select: () => ({single: async () => ({data: saveError ? null : {id:'report'}, error:saveError})})}; } }) };
-  return { effects, run: () => route.runIntelligence(db) };
+  const daily = load('lib/intelligence/daily.ts', {
+    '@/lib/intelligence/generate': { ...helper, generateIntelligence: async () => {
+      if (generationError) throw new Error('invalid');
+      return valid;
+    } },
+    '@/agent-tools/pipeline/propose': { computeDedupeHash: () => 'hash' },
+    resend: { Resend: class { emails = { send: async () => {
+      effects.push('email');
+      return emailError ? { error: { name: 'invalid_api_key' } } : { data: { id: 'email' } };
+    } }; } },
+  }, { process: { env: { RESEND_API_KEY: 'test', VERCEL_ENV: 'production',
+    VERCEL_PROJECT_ID: 'test', INTELLIGENCE_OWNER_PROJECT_ID: 'test' } } });
+  const db = { rpc: async (_, { p_step, p_args }) => {
+    if (p_step === 'claim') return { data: { state: 'claimed' } };
+    if (p_step === 'prepare') {
+      effects.push('save');
+      if (saveError) return { error: { code: 'test' } };
+      assert.equal(p_args.proposals.length, 1);
+      effects.push('queue');
+      return { data: { report_id: 'report', payload: p_args.payload } };
+    }
+    return { data: { fresh: true } };
+  } };
+  return { effects, run: () => daily.runIntelligence(db, 'cron') };
 }
-test('invalid generation has zero database/queue/email effects', async () => { const p = pipeline({generationError:true}); await assert.rejects(p.run()); assert.equal(p.effects.length,0); });
-test('database failure blocks queue and email', async () => { const p = pipeline({saveError:true}); await assert.rejects(p.run(), /save_failed/); assert.equal(p.effects.join(','),'save'); });
+test('invalid generation writes no report, queue item or email', async () => { const p = pipeline({generationError:true}); await assert.rejects(p.run()); assert.equal(p.effects.length,0); });
+test('database failure blocks queue and email', async () => { const p = pipeline({saveError:true}); await assert.rejects(p.run(), /prepare_failed/); assert.equal(p.effects.join(','),'save'); });
 test('email failure is not success', async () => { const p = pipeline({emailError:true}); await assert.rejects(p.run(), /email_failed/); });
 test('valid report preserves save, queue and email integrations', async () => { const p = pipeline(); const r = await p.run(); assert.equal(r.success,true); assert.equal(p.effects.join(','),'save,queue,email'); });
 test('escape model text in HTML', () => assert.equal(helper.escapeHtml('<script>"&'), '&lt;script&gt;&quot;&amp;'));
