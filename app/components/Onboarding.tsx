@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
+import { brand } from '../lib/brand';
 import { T, input, label, btn } from '../lib/theme';
 
 type FileStatus = {
@@ -466,22 +467,22 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <div style={{ fontSize: 26, fontWeight: 700, color: T.navy, marginBottom: 12, letterSpacing: '-0.4px' }}>
               {profileComplete
                 ? <>Import more documents<br />to your portfolio</>
-                : <>California Landlord Compliance,<br />Done Right.</>
+                : <>{brand.promise}</>
               }
             </div>
             <div style={{ fontSize: 14, color: T.inkMuted, marginBottom: 32, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 32px' }}>
               {profileComplete
                 ? 'Upload lease PDFs, insurance docs, or receipts — Keywise will extract the data and organize everything automatically.'
-                : 'Keywise uses AI to handle the time-consuming parts of being a landlord — so you can focus on what matters.'
+                : 'Start with one property. Add your records, review the details and invite your tenant when you’re ready.'
               }
             </div>
 
             {!profileComplete && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 40, textAlign: 'left' }}>
                 {[
-                  { icon: '📄', title: 'Smart lease tracking', desc: 'Upload a PDF — we extract every term including late fee clauses' },
-                  { icon: '💳', title: 'Rent on autopilot', desc: 'Payment schedules aligned to your actual contract terms' },
-                  { icon: '✦', title: 'AI-powered drafts', desc: 'Notices, reminders, and renewals written in seconds' },
+                  { icon: '📄', title: 'Bring your lease', desc: 'Upload a PDF and review the extracted details' },
+                  { icon: '💳', title: 'Know what’s due', desc: 'Keep recorded rent and payment schedules together' },
+                  { icon: '✦', title: 'Take the next step', desc: 'Draft a message, review it and send when you’re ready' },
                 ].map(item => (
                   <div key={item.title} style={{ background: T.bg, borderRadius: T.radius, padding: 18, border: `1px solid ${T.border}` }}>
                     <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>

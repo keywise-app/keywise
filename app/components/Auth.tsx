@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { brand } from '../lib/brand';
 import { T, input, btn } from '../lib/theme';
 
 function KeywiseLogo({ size = 40 }: { size?: number }) {
@@ -116,7 +117,7 @@ export default function Auth() {
     ? 'Reset your Keywise password.'
     : mode === 'login'
     ? 'Welcome back. Sign in to your portfolio.'
-    : 'Start managing your properties smarter.';
+    : 'Start with one property. Build from there.';
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif", padding: 16 }}>
@@ -205,7 +206,7 @@ export default function Auth() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: T.inkMuted, marginTop: 20 }}>
-          California Landlord Compliance, Done Right.
+          {brand.promise}
         </p>
       </div>
     </div>

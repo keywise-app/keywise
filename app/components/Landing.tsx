@@ -2,8 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import AnimatedDemo from './AnimatedDemo';
-import DemoLeaseExtractor from './DemoLeaseExtractor';
+import { brand, brandWorkflows, brandSteps, brandFaqs } from '../lib/brand';
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
@@ -22,7 +21,7 @@ function Logo({ size = 32, dark = false }: { size?: number; dark?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-        <rect width="32" height="32" rx="8" fill={dark ? SURFACE : N} />
+        <rect width="32" height="32" rx="8" fill={N} />
         <circle cx="13" cy="16" r="5.5" fill="none" stroke={TEAL} strokeWidth="2.5" />
         <circle cx="13" cy="16" r="2" fill={TEAL} />
         <rect x="17.5" y="14.75" width="8" height="2.5" rx="1.25" fill={TEAL} />
@@ -30,7 +29,7 @@ function Logo({ size = 32, dark = false }: { size?: number; dark?: boolean }) {
         <rect x="19" y="17.25" width="2.5" height="2" rx="1" fill={TEAL} />
       </svg>
       <span style={{ fontSize: size * 0.56, fontWeight: 700, color: dark ? SURFACE : N, letterSpacing: '-0.4px' }}>
-        keywise
+        {brand.name}
       </span>
     </div>
   );
@@ -55,7 +54,7 @@ function DashboardMockup() {
         <div style={{ width: 148, background: N, padding: '16px 0', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
           <div style={{ padding: '0 14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 12, position: 'relative' }}>
-            <Logo size={22} />
+            <Logo size={22} dark />
           </div>
           {[
             { icon: '⊞', label: 'Dashboard', active: true },
@@ -79,9 +78,9 @@ function DashboardMockup() {
           <div style={{ fontSize: 13, fontWeight: 700, color: N, marginBottom: 12 }}>Dashboard</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
             {[
-              { label: 'Monthly Revenue', value: '$8,400', color: N },
-              { label: 'Collected', value: '$6,200', color: '#0F7040' },
-              { label: 'Pending', value: '$2,200', color: '#9A6500' },
+              { label: 'Scheduled rent', value: '$8,400', color: N },
+              { label: 'Collected', value: '$4,300', color: '#0F7040' },
+              { label: 'Outstanding', value: '$4,100', color: '#9A6500' },
             ].map(s => (
               <div key={s.label} style={{ background: SURFACE, borderRadius: 10, padding: '10px 12px', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: s.color, letterSpacing: '-0.5px' }}>{s.value}</div>
@@ -170,16 +169,16 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
   const subtitle = mode === 'forgot'
     ? 'Enter your email to receive a reset link.'
     : mode === 'login'
-    ? 'Welcome back. Sign in to your portfolio.'
-    : 'Start managing your properties smarter.';
+    ? 'Welcome back. Your rentals are right here.'
+    : 'Start with one property. Build from there.';
 
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ width: '100%', maxWidth: 420, background: SURFACE, borderRadius: 20, padding: 36, boxShadow: '0 24px 80px rgba(15,52,96,0.25)', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: INK_MUTED, lineHeight: 1, padding: 4 }}>×</button>
+      <div role="dialog" aria-modal="true" aria-label={mode === 'login' ? 'Log in to Keywise' : 'Create a Keywise account'} style={{ width: '100%', maxWidth: 420, background: SURFACE, borderRadius: 20, padding: 36, boxShadow: '0 24px 80px rgba(15,52,96,0.25)', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <button aria-label="Close sign-in dialog" onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: INK_MUTED, lineHeight: 1, padding: 4 }}>×</button>
 
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -291,850 +290,85 @@ function AuthModal({ mode: initialMode, onClose }: { mode: 'login' | 'signup'; o
   );
 }
 
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom: `1px solid ${BORDER}` }}>
-      <button onClick={() => setOpen(!open)}
-        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: N, flex: 1, paddingRight: 16 }}>{q}</span>
-        <span style={{ fontSize: 20, color: INK_MUTED, flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
-      </button>
-      {open && (
-        <div style={{ paddingBottom: 20, fontSize: 14, color: INK_MID, lineHeight: 1.7 }}>{a}</div>
-      )}
-    </div>
-  );
-}
-
-function StickyBottomCTA({ onSignupClick }: { onSignupClick: () => void }) {
-  const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setVisible(window.scrollY > 400 && !dismissed);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [dismissed]);
-
-  if (!visible || dismissed) return null;
-
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, background: N,
-      padding: '12px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-      gap: 16, zIndex: 900, boxShadow: '0 -4px 20px rgba(15,52,96,0.2)',
-      animation: 'kw-slideUp 0.3s',
-    }}>
-      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
-        Free for 1-2 units · No credit card required
-      </div>
-      <button onClick={onSignupClick}
-        style={{ background: TEAL, color: N, border: 'none', padding: '9px 22px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const }}>
-        Start Free →
-      </button>
-      <button onClick={() => setDismissed(true)}
-        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>
-        ×
-      </button>
-      <style>{`@keyframes kw-slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
-    </div>
-  );
-}
-
 export default function Landing() {
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const demoRef = useRef<HTMLDivElement>(null);
-
-  // Inline signup state
-  const [heroEmail, setHeroEmail] = useState('');
-  const [heroLoading, setHeroLoading] = useState(false);
-  const [heroSent, setHeroSent] = useState(false);
-  const [heroError, setHeroError] = useState('');
-  const [showHeroInput, setShowHeroInput] = useState(true);
-
-  // Exit intent
-  const [showExitIntent, setShowExitIntent] = useState(false);
-  const [exitEmail, setExitEmail] = useState('');
-  const [exitLoading, setExitLoading] = useState(false);
-  const [exitSent, setExitSent] = useState(false);
-  const exitShown = useRef(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('signup') === 'true') setAuthMode('signup');
-    else if (params.get('login') === 'true') setAuthMode('login');
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/track-visit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page: '/', referrer: document.referrer || 'direct', user_agent: navigator.userAgent }),
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (authMode === 'signup') window.history.replaceState({}, '', '/?signup=true');
-    else if (authMode === 'login') window.history.replaceState({}, '', '/?login=true');
-    else window.history.replaceState({}, '', '/');
-  }, [authMode]);
-
-  // Exit intent detection
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (e.clientY < 10 && !exitShown.current && !authMode) {
-        exitShown.current = true;
-        setShowExitIntent(true);
-      }
-    };
-    document.addEventListener('mouseleave', handler);
-    return () => document.removeEventListener('mouseleave', handler);
-  }, [authMode]);
-
-  const openSignup = () => { setAuthMode('signup'); setMobileMenuOpen(false); };
-  const openLogin = () => { setAuthMode('login'); setMobileMenuOpen(false); };
-  const closeAuth = () => setAuthMode(null);
-
-  const scrollToFeatures = () => {
-    featuresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  const scrollToDemo = () => {
-    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const sendMagicLink = async (email: string, setLoading: (b: boolean) => void, setSent: (b: boolean) => void, setError: (s: string) => void) => {
-    if (!email) { setError('Please enter your email.'); return; }
-    setLoading(true);
-    setError('');
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: 'https://keywise.app/?welcome=true',
-        shouldCreateUser: true,
-      },
-    });
-    setLoading(false);
-    if (error) { setError(error.message); return; }
-    setSent(true);
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'conversion', {
-        send_to: 'AW-18416062236/NqrGCJuOru8cEJyeu81E',
-        value: 1.0,
-        currency: 'USD',
-      });
-    }
-  };
-
-  return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: SURFACE, color: INK, overflowX: 'hidden' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <style>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; }
-        html { scroll-behavior: smooth; }
-        .landing-btn-primary:hover { opacity: 0.88; }
-        .landing-btn-ghost:hover { background: ${BG} !important; }
-        .landing-btn-teal:hover { opacity: 0.88; }
-        .landing-pain-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(15,52,96,0.12); }
-        .landing-feature-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(15,52,96,0.12); border-color: ${TEAL}66; }
-        .landing-pricing-card:hover { transform: translateY(-4px); }
-        .landing-hamburger { display: none; }
-        .landing-nav-buttons { display: flex; }
-        .landing-mobile-menu { display: none; }
-
-        @media (max-width: 768px) {
-          .landing-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-          .landing-mockup { display: none !important; }
-          .landing-grid-3 { grid-template-columns: 1fr !important; }
-          .landing-grid-2 { grid-template-columns: 1fr !important; max-width: 400px !important; margin-left: auto !important; margin-right: auto !important; }
-          .landing-pain-grid { grid-template-columns: 1fr !important; }
-          .landing-steps-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
-          .landing-steps-connector { display: none !important; }
-          .landing-h1 { font-size: 36px !important; letter-spacing: -0.5px !important; line-height: 1.12 !important; }
-          .landing-h2 { font-size: 28px !important; letter-spacing: -0.3px !important; }
-          .landing-h2-br { display: none; }
-          .landing-hero-p { font-size: 15px !important; }
-          .landing-section { padding: 60px 20px !important; }
-          .landing-nav-inner { padding: 0 20px !important; }
-          .landing-footer-inner { flex-direction: column !important; align-items: flex-start !important; }
-          .landing-hero-ctas { flex-direction: column !important; align-items: stretch !important; }
-          .landing-hero-ctas button { width: 100% !important; justify-content: center !important; }
-          .landing-hamburger { display: flex !important; }
-          .landing-nav-buttons { display: none !important; }
-          .landing-mobile-menu { display: block; }
-          .landing-final-h2 { font-size: 32px !important; }
-          .landing-faq-grid { padding: 0 !important; }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .landing-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
-          .landing-h1 { font-size: 42px !important; }
-          .landing-hero-grid { gap: 32px !important; }
-        }
-      `}</style>
-
-      {/* URGENCY BANNER */}
-      <div style={{ background: TEAL, color: N, padding: '9px 20px', textAlign: 'center', fontSize: 13, fontWeight: 700 }}>
-        Free for the first 1,000 landlords — lock in early pricing
-      </div>
-
-      {/* NAVBAR */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}` }}>
-        <div className="landing-nav-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <Logo size={30} />
-          <div className="landing-nav-buttons" style={{ gap: 10, alignItems: 'center' }}>
-            <a href="/blog" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Blog</a>
-            <a href="/tools" style={{ color: INK_MID, fontSize: 14, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Free Tools</a>
-            <a href="/tenant" style={{ color: INK_MUTED, fontSize: 13, textDecoration: 'none', fontWeight: 500, marginRight: 4 }}>Tenant Login</a>
-            <button onClick={openLogin} className="landing-btn-ghost"
-              style={{ background: 'transparent', color: INK_MID, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              Log In
-            </button>
-            <button onClick={openSignup} className="landing-btn-primary"
-              style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              Start Free
-            </button>
-          </div>
-          <button className="landing-hamburger"
-            onClick={() => setMobileMenuOpen(o => !o)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
-            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', opacity: mobileMenuOpen ? 0 : 1 }} />
-            <span style={{ width: 22, height: 2, background: N, borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
-          </button>
-        </div>
-        {mobileMenuOpen && (
-          <div className="landing-mobile-menu" style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <a href="/tools"
-              style={{ display: 'block', background: 'transparent', color: N, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
-              Free Tools
-            </a>
-            <button onClick={openLogin}
-              style={{ background: 'transparent', color: N, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
-              Log In
-            </button>
-            <button onClick={openSignup}
-              style={{ background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
-              Start Free in 30 Seconds
-            </button>
-          </div>
-        )}
-      </nav>
-
-      {/* HERO */}
-      <section className="landing-section" style={{ background: `linear-gradient(160deg, ${BG} 0%, #e8f0ff 50%, ${TEAL_LIGHT} 100%)`, padding: '80px 40px 60px', overflow: 'hidden' }}>
-        <div className="landing-hero-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '5px 14px', marginBottom: 24 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, display: 'inline-block' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.6px' }}>For California Landlords</span>
-            </div>
-            <h1 className="landing-h1" style={{ fontSize: 52, fontWeight: 800, color: N, lineHeight: 1.08, letterSpacing: '-1.5px', margin: '0 0 20px' }}>
-              Don't lose your next eviction over a paperwork mistake.
-            </h1>
-            <p className="landing-hero-p" style={{ fontSize: 17, color: INK_MID, lineHeight: 1.65, margin: '0 0 24px', maxWidth: 500 }}>
-              California has the strictest landlord laws in the country. One missed notice can cost you $10,000+ in penalties or your entire eviction case. Keywise catches the mistakes before they cost you.
-            </p>
-            <div style={{ marginBottom: 28 }}>
-              {[
-                'Are you charging legal rent under AB 1482?',
-                'Did you serve the right just-cause eviction notice?',
-                'Did your move-out inspection follow AB 2801?',
-                'Are your late fee terms actually enforceable?',
-              ].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID, lineHeight: 1.5 }}>
-                  <span style={{ color: CORAL, fontSize: 15, flexShrink: 0, marginTop: 1 }}>⚠</span>
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Inline magic link signup */}
-            {heroSent ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 12, padding: '14px 18px' }}>
-                <span style={{ fontSize: 20 }}>✓</span>
-                <span style={{ fontSize: 14, color: '#166534', fontWeight: 600 }}>Check your email for a link to get started</span>
-              </div>
-            ) : showHeroInput ? (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ display: 'flex', gap: 8, maxWidth: 420 }}>
-                  <input
-                    type="email"
-                    placeholder="you@email.com"
-                    value={heroEmail}
-                    onChange={e => setHeroEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendMagicLink(heroEmail, setHeroLoading, setHeroSent, setHeroError)}
-                    autoFocus
-                    style={{ flex: 1, background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 16px', fontSize: 14, outline: 'none', fontFamily: 'inherit', color: INK }}
-                  />
-                  <button onClick={() => sendMagicLink(heroEmail, setHeroLoading, setHeroSent, setHeroError)} disabled={heroLoading || !heroEmail}
-                    className="landing-btn-primary"
-                    style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 700, cursor: !heroEmail || heroLoading ? 'default' : 'pointer', opacity: !heroEmail || heroLoading ? 0.6 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' as const, transition: 'all 0.15s' }}>
-                    {heroLoading ? 'Sending…' : 'Start Free →'}
-                  </button>
-                </div>
-                {heroError && <div style={{ color: CORAL, fontSize: 13, marginTop: 8 }}>{heroError}</div>}
-                <div style={{ fontSize: 12, color: INK_MUTED, marginTop: 8 }}>Free for 1-2 units · No credit card · Built for California</div>
-              </div>
-            ) : (
-              <div className="landing-hero-ctas" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-                <button onClick={() => setShowHeroInput(true)} className="landing-btn-primary"
-                  style={{ background: N, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Try Free — No Credit Card →
-                </button>
-                <button onClick={scrollToDemo} className="landing-btn-ghost"
-                  style={{ background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                  Watch 30-sec Demo →
-                </button>
-              </div>
-            )}
-
-            {!showHeroInput && !heroSent && (
-              <div style={{ fontSize: 12, color: INK_MUTED, marginBottom: 20, fontWeight: 500 }}>
-                Free for 1-2 units · No credit card · Cancel anytime
-              </div>
-            )}
-
-            <div style={{ fontSize: 13, color: INK_MUTED, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: TEAL, fontWeight: 700 }}>&#9733;</span>
-              Built by a California landlord — first 100 founding members lock in $29/mo for life
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <DashboardMockup />
-          </div>
-        </div>
-      </section>
-
-      {/* AB 1482 CALCULATOR PROMO */}
-      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
-        <div className="landing-hero-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '5px 14px', marginBottom: 20 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Free Tool</span>
-            </div>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: N, lineHeight: 1.15, letterSpacing: '-0.5px', margin: '0 0 14px' }}>
-              California AB 1482<br />Rent Cap Calculator
-            </h2>
-            <p style={{ fontSize: 16, color: INK_MID, lineHeight: 1.6, margin: '0 0 20px' }}>
-              Check your max allowable rent increase in 60 seconds. No signup needed.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-              {['Current 2026 CPI rates', 'Multi-property support', 'Local ordinance detection'].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: INK_MID }}>
-                  <span style={{ color: TEAL, fontSize: 16, fontWeight: 700 }}>&#10003;</span>
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
-              <a href="/tools/ca/ab1482-calculator" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-                Use the Calculator &rarr;
-              </a>
-              <a href="/blog/california-ab-1482-explained-2026" style={{ fontSize: 13, color: TEAL_DARK, fontWeight: 600, textDecoration: 'none' }}>
-                Learn how AB 1482 works &rarr;
-              </a>
-            </div>
-            <p style={{ fontSize: 12, color: INK_MUTED, marginTop: 20 }}>
-              Built by a California landlord. Verified against current BLS data.
-            </p>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ background: `linear-gradient(160deg, ${TEAL} 0%, ${TEAL_DARK} 100%)`, borderRadius: 16, padding: 32, width: '100%', maxWidth: 340, boxShadow: '0 8px 32px rgba(0,212,170,0.18)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Maximum Allowable Rent</div>
-              <div style={{ fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>$4,674<span style={{ fontSize: 18, fontWeight: 600 }}>/mo</span></div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 8 }}>8.7% increase</div>
-              <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.2)', margin: '16px 0' }} />
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Los Angeles region &middot; Post-Aug 2026</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ANIMATED DEMO */}
-      <section ref={demoRef} id="demo" className="landing-section" style={{ padding: '80px 40px', background: BG }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
-            See it in action
-          </div>
-          <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 16, letterSpacing: '-0.5px' }}>
-            From PDF to Paid in Seconds
-          </h2>
-          <p style={{ color: INK_MUTED, fontSize: 16, marginBottom: 40, maxWidth: 600, margin: '0 auto 40px' }}>
-            Watch how Keywise sets up a tenant and starts collecting rent — automatically.
-          </p>
-          <AnimatedDemo />
-          <div style={{ marginTop: 32 }}>
-            <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="landing-btn-primary"
-              style={{ background: N, color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              Try It Free →
-            </button>
-            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>Free for 1-2 units · No credit card · Built for California</div>
-          </div>
-        </div>
-      </section>
-
-      {/* TRY LEASE EXTRACTOR */}
-      <section className="landing-section" style={{ padding: '80px 40px', background: BG }}>
-        <DemoLeaseExtractor onSignupClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
-      </section>
-
-      {/* BUILT BY A LANDLORD */}
-      <section className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 13, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Why Keywise
-            </div>
-            <h2 className="landing-h2" style={{ fontSize: 32, fontWeight: 800, color: N, marginBottom: 12, letterSpacing: '-0.5px' }}>
-              Built by a landlord, for landlords
-            </h2>
-            <p style={{ color: INK_MUTED, fontSize: 16, maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
-              I own a duplex in Southern California. Spent years juggling spreadsheets, DocuSign, and Venmo. Built Keywise to solve my own problem first.
-            </p>
-          </div>
-
-          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-            {[
-              { icon: '💸', title: '"$15 per DocuSign link"', desc: 'Every new lease, every addendum, every renewal. Adds up fast for a small landlord.' },
-              { icon: '📝', title: '"Typing the same info 5 times"', desc: "Tenant name, rent, late fees — entering the same lease data into every tool I use." },
-              { icon: '💬', title: '"Chasing rent on Venmo"', desc: "Reminding tenants every month. Manually tracking who's late. Feels unprofessional." },
-            ].map(card => (
-              <div key={card.title}
-                style={{ background: SURFACE, borderRadius: 12, padding: 24, borderLeft: `4px solid ${TEAL}`, boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
-                <div style={{ fontSize: 28, marginBottom: 12 }}>{card.icon}</div>
-                <div style={{ fontWeight: 700, color: N, fontSize: 15, marginBottom: 8 }}>{card.title}</div>
-                <div style={{ color: INK_MUTED, fontSize: 13, lineHeight: 1.6 }}>{card.desc}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <div style={{ color: N, fontSize: 18, fontWeight: 600 }}>
-              Keywise solves all of this — for free if you have 1 unit.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PROBLEM */}
-      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Managing rentals shouldn't feel<br className="landing-h2-br" /> like a second job.
-            </h2>
-            <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Sound familiar?</p>
-          </div>
-          <div className="landing-pain-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-            {[
-              { icon: '💸', title: 'Chasing rent payments every month', desc: "Texting tenants, logging into bank accounts, manually tracking who has and hasn't paid." },
-              { icon: '📝', title: 'Drafting the same letters over and over', desc: 'Late notices, lease renewals, entry notices — all written from scratch, every time.' },
-              { icon: '🗂️', title: 'Losing track of leases and documents', desc: 'Lease terms buried in PDFs, maintenance history in text threads, docs scattered across folders.' },
-            ].map(card => (
-              <div key={card.title} className="landing-pain-card"
-                style={{ background: BG, borderRadius: 16, padding: '28px 24px', border: `1px solid ${BORDER}`, transition: 'all 0.2s' }}>
-                <div style={{ fontSize: 36, marginBottom: 16 }}>{card.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: N, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</div>
-                <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6 }}>{card.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section ref={featuresRef} className="landing-section" style={{ background: BG, padding: '80px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <div style={{ display: 'inline-block', background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '4px 14px', marginBottom: 16 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Features</span>
-            </div>
-            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Everything you need.<br className="landing-h2-br" /> Nothing you don't.
-            </h2>
-          </div>
-          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {[
-              { icon: '✦', title: 'AI Lease Extraction', desc: 'Drop a PDF. Keywise extracts every term — including late fees, payment dates, and clauses — automatically.', accent: true },
-              { icon: '💳', title: 'Online Rent Collection', desc: 'Tenants pay online. You get paid faster. Automatic reminders handle the follow-ups.', accent: false },
-              { icon: '✦', title: 'Smart Communications', desc: 'Late notices, renewals, entry notices — drafted in seconds with AI, ready to send in one click.', accent: true },
-              { icon: '🔧', title: 'Maintenance Tracking', desc: 'Log issues, assign contractors, and track every repair from open to resolved.', accent: false },
-              { icon: '📁', title: 'Document Storage', desc: 'Leases, insurance certificates, inspection reports — organized, searchable, always accessible.', accent: false },
-              { icon: '🏘️', title: 'Portfolio Overview', desc: 'Buildings, units, cash flow, occupancy — see your whole portfolio at a glance.', accent: false },
-            ].map(f => (
-              <div key={f.title} className="landing-feature-card"
-                style={{ background: SURFACE, borderRadius: 14, padding: '24px', border: `1px solid ${BORDER}`, transition: 'all 0.2s', boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: f.accent ? `linear-gradient(135deg, ${N}, #1a4a7a)` : BG, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, fontSize: f.accent ? 18 : 22, color: f.accent ? TEAL : N }}>
-                  {f.icon}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: N, marginBottom: 8 }}>{f.title}</div>
-                <div style={{ fontSize: 13, color: INK_MID, lineHeight: 1.6 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COMPLIANCE FEATURES */}
-      <section className="landing-section" style={{ background: SURFACE, padding: '80px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <div style={{ display: 'inline-block', background: TEAL_LIGHT, border: `1px solid ${TEAL}44`, borderRadius: 100, padding: '4px 14px', marginBottom: 16 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Compliance Tools</span>
-            </div>
-            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              California compliance, built in.
-            </h2>
-            <p style={{ fontSize: 16, color: INK_MUTED, margin: '0 auto', maxWidth: 560 }}>Every tool you need to stay on the right side of California landlord law.</p>
-          </div>
-          <div className="landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-            {[
-              {
-                icon: '📊',
-                title: 'AB 1482 Rent Cap Calculator',
-                desc: 'Calculate the maximum legal rent increase for any property. Auto-pulls current CPI. Flags exemptions. Generates the required 30-day or 90-day notice.',
-              },
-              {
-                icon: '⚖️',
-                title: 'Just-Cause Eviction Notice Builder',
-                desc: 'Walk through the correct notice for your situation. Notice periods, required language, cure-or-quit options — done right the first time, with a chain of custody log.',
-              },
-              {
-                icon: '🔍',
-                title: 'AB 2801 Move-Out Inspections',
-                desc: 'Photo-documented inspections that meet California\'s 21-day itemized deduction rules. Small-claims defensible. Signed by both parties digitally.',
-              },
-            ].map(f => (
-              <div key={f.title} className="landing-feature-card"
-                style={{ background: BG, borderRadius: 14, padding: '28px 24px', border: `1px solid ${BORDER}`, transition: 'all 0.2s', boxShadow: '0 1px 4px rgba(15,52,96,0.06)' }}>
-                <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: N, marginBottom: 10, lineHeight: 1.3 }}>{f.title}</div>
-                <div style={{ fontSize: 14, color: INK_MID, lineHeight: 1.6 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COMPARISON */}
-      <section className="landing-section" style={{ padding: '80px 40px', background: '#fff' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 className="landing-h2" style={{ fontSize: 36, fontWeight: 800, color: N, marginBottom: 12, letterSpacing: '-0.8px' }}>
-              Why California landlords choose Keywise
-            </h2>
-            <p style={{ color: INK_MUTED, fontSize: 16, maxWidth: 500, margin: '0 auto' }}>
-              Generic apps don't know California law. Spreadsheets don't catch compliance mistakes.
-            </p>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '16px', textAlign: 'left', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 200 }}>Feature</th>
-                  <th style={{ padding: '16px', textAlign: 'center', background: N, color: '#fff', fontWeight: 700, borderRadius: '12px 12px 0 0', minWidth: 120 }}>
-                    Keywise
-                    <div style={{ fontSize: 11, fontWeight: 400, color: TEAL, marginTop: 2 }}>$49/mo</div>
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    Buildium
-                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>$50+/mo</div>
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    Avail
-                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>per-unit</div>
-                  </th>
-                  <th style={{ padding: '16px', textAlign: 'center', color: INK_MUTED, fontWeight: 600, borderBottom: `2px solid ${BORDER}`, minWidth: 120 }}>
-                    Nolo forms
-                    <div style={{ fontSize: 11, fontWeight: 400, color: INK_MUTED, marginTop: 2 }}>pay per form</div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { feature: 'California AB 1482 & 2801 compliance', keywise: true, buildium: false, avail: false, nolo: 'Forms only' },
-                  { feature: 'AB 1482 rent cap calculator (auto CPI)', keywise: true, buildium: false, avail: false, nolo: false },
-                  { feature: 'Just-cause eviction notices with defect checking', keywise: true, buildium: false, avail: false, nolo: 'Static forms' },
-                  { feature: 'AB 2801 move-out inspection reports', keywise: true, buildium: false, avail: false, nolo: false },
-                  { feature: '21-day deposit deadline tracking', keywise: true, buildium: false, avail: false, nolo: false },
-                  { feature: 'AI lease extraction', keywise: true, buildium: false, avail: false, nolo: false },
-                  { feature: 'Online rent collection', keywise: true, buildium: true, avail: true, nolo: false },
-                  { feature: 'Tenant portal & messaging', keywise: true, buildium: true, avail: true, nolo: false },
-                  { feature: 'Built for landlords under 25 units', keywise: true, buildium: '50+ units target', avail: true, nolo: 'N/A' },
-                  { feature: 'Free tier for small landlords', keywise: '1-2 units', buildium: false, avail: 'Free basic', nolo: false },
-                ].map((row, i) => {
-                  const Check = () => <span style={{ color: '#00A86B', fontSize: 18, fontWeight: 700 }}>✓</span>;
-                  const X = () => <span style={{ color: '#FF6B6B', fontSize: 18 }}>✗</span>;
-                  const Cell = ({ val }: { val: boolean | string }) => {
-                    if (val === true) return <Check />;
-                    if (val === false) return <X />;
-                    return <span style={{ color: INK_MID, fontSize: 13 }}>{val}</span>;
-                  };
-                  return (
-                    <tr key={i} style={{ background: i % 2 === 0 ? BG : '#fff' }}>
-                      <td style={{ padding: '14px 16px', color: INK, fontWeight: 500 }}>{row.feature}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center', background: i % 2 === 0 ? '#E8F0FF' : '#F0F4FF' }}><Cell val={row.keywise} /></td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.buildium} /></td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.avail} /></td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}><Cell val={row.nolo} /></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="landing-btn-primary"
-              style={{ background: N, color: '#fff', border: 'none', padding: '14px 36px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              Start Free →
-            </button>
-            <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 8 }}>
-              Free for 1-2 units · No credit card · Built for California
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section className="landing-section" style={{ background: BG, padding: '80px 40px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 className="landing-h2" style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Simple pricing that grows with you.
-            </h2>
-            <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>No contracts. Cancel anytime.</p>
-          </div>
-          <div className="landing-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 720, margin: '0 auto' }}>
-            <div className="landing-pricing-card"
-              style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)', transition: 'all 0.2s' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
-                <span style={{ fontSize: 14, color: INK_MUTED }}>/forever</span>
-              </div>
-              <div style={{ fontSize: 13, color: INK_MID, marginBottom: 28 }}>1-2 units</div>
-              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginBottom: 28 }}>
-                {['Lease tracking', 'Document storage', 'AI communications', 'Tenant portal'].map(f => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: INK_MID }}>
-                    <span style={{ color: TEAL_DARK, fontWeight: 700, fontSize: 16 }}>✓</span> {f}
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-ghost"
-                style={{ width: '100%', background: 'transparent', color: N, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                Get started free →
-              </button>
-            </div>
-            <div className="landing-pricing-card"
-              style={{ background: N, borderRadius: 20, padding: '32px 28px', border: `2px solid ${TEAL}44`, boxShadow: `0 8px 32px rgba(15,52,96,0.2), 0 0 0 1px ${TEAL}22`, transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `${TEAL}12` }} />
-              <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: `${TEAL}08` }} />
-              <div style={{ position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' as const, letterSpacing: '0.8px' }}>Pro</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, background: TEAL, color: N, padding: '3px 10px', borderRadius: 100 }}>POPULAR</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', letterSpacing: '-2px' }}>$49</span>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>/mo</span>
-                </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units</div>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20, marginBottom: 28 }}>
-                  {['Everything in Free', 'All compliance tools', 'Online rent collection', 'Document signing', 'Priority support'].map(f => (
-                    <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
-                      <span style={{ color: TEAL, fontWeight: 700, fontSize: 16 }}>✓</span> {f}
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-teal"
-                  style={{ width: '100%', background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                  Start free trial →
-                </button>
-              </div>
-            </div>
-          </div>
-          <div style={{ maxWidth: 560, margin: '20px auto 0', background: '#fff', border: `1.5px solid ${TEAL}`, borderRadius: 14, padding: '16px 22px', textAlign: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: N }}>Founding Member rate: $29/mo for life</span>
-            <span style={{ fontSize: 13, color: INK_MID }}> — first 100 California landlords only. </span>
-            <Link href="/pricing" style={{ fontSize: 13, fontWeight: 700, color: TEAL_DARK, textDecoration: 'none' }}>See details →</Link>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
-            Free forever for 1-2 units · $49/month for unlimited units + compliance tools · $2 per online payment transaction.
-          </p>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="landing-section" style={{ padding: '80px 40px', background: SURFACE }}>
-        <div className="landing-faq-grid" style={{ maxWidth: 680, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 className="landing-h2" style={{ fontSize: 36, fontWeight: 800, color: N, letterSpacing: '-0.8px', margin: '0 0 12px' }}>
-              Frequently asked questions
-            </h2>
-          </div>
-          <FAQItem q="Is Keywise legal advice?" a="No. Keywise is a compliance tool, not a law firm. We help you follow current California law correctly, but for complex situations you should consult a landlord attorney. Our calculators and notice templates reflect current statute but do not replace legal counsel." />
-          <FAQItem q="How does the AB 1482 calculator work?" a="Enter your property address and current rent. Keywise checks whether the property is exempt, pulls the current CPI for your region, calculates the maximum legal increase, and generates the required notice. Takes about 30 seconds." />
-          <FAQItem q="What if I'm not a California landlord?" a="Keywise is built specifically for California landlords right now. If you're outside California, our general property management features work, but the compliance tools are California-specific." />
-          <FAQItem q="Do I need a credit card to start?" a="No. Free for 1-2 units, no credit card required." />
-          <FAQItem q="How much does it cost after the free tier?" a="$49/month for unlimited units (or $29/month for life if you're one of the first 100 founding members). Includes all compliance tools, online rent collection ($2 per transaction), document signing, and inspections." />
-          <FAQItem q="Can I cancel anytime?" a="Yes, no contracts. Downgrade to the free tier or cancel entirely whenever you want." />
-          <FAQItem q="Is my tenant data secure?" a="Yes. Enterprise-grade encryption via Supabase and Stripe. Your data is stored in US-based data centers and never sold or shared." />
-          <FAQItem q="Will this help me win an eviction case?" a="Keywise creates a defensible paper trail — proper notices with delivery logs, inspection reports with photos and signatures, and lease documentation with signed timestamps. This is exactly what small claims and eviction courts look for. It doesn't guarantee outcomes, but it dramatically improves your position." />
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section style={{ background: `linear-gradient(135deg, ${N} 0%, #1a3a6e 50%, #0d2844 100%)`, padding: '100px 40px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: `${TEAL}08` }} />
-        <div style={{ position: 'absolute', bottom: -40, left: -40, width: 200, height: 200, borderRadius: '50%', background: `${TEAL}06` }} />
-        <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${TEAL}18`, border: `1px solid ${TEAL}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>🏠</div>
-          <h2 className="landing-final-h2" style={{ fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>
-            Ready to manage smarter?
-          </h2>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.6)', margin: '0 0 36px', lineHeight: 1.6 }}>
-            Join landlords who've replaced spreadsheets and late-night emails with Keywise.
-          </p>
-          <button onClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="landing-btn-teal"
-            style={{ background: TEAL, color: N, border: 'none', borderRadius: 14, padding: '16px 40px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 8px 32px ${TEAL}44` }}>
-            Start Free in 30 Seconds →
-          </button>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>Free for 1-2 units · No credit card · Cancel anytime</p>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer style={{ background: INK, padding: '40px 40px 32px' }}>
-        <div className="landing-footer-inner" style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32, marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <div>
-              <Logo size={24} dark />
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>Compliance-first property management for California landlords.</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Resources</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[
-                  { label: 'Free Lease Template', href: '/blog/free-lease-agreement-template' },
-                  { label: 'Late Rent Notice Template', href: '/blog/late-rent-notice' },
-                  { label: 'Move-In Inspection Checklist', href: '/blog/move-in-inspection-checklist' },
-                ].map(link => (
-                  <a key={link.label} href={link.href}
-                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
-                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Compliance Tools</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[
-                  { label: 'AB 1482 Calculator', href: '/tools/ca/ab1482-calculator' },
-                  { label: 'Move-Out Inspections', href: '/inspections' },
-                  { label: 'Eviction Notice Wizard', href: '/tools/ca/eviction-notice' },
-                ].map(link => (
-                  <a key={link.label} href={link.href}
-                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
-                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>For Tenants</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[{ label: 'Tenant Login', href: '/tenant' }, { label: 'Pay Rent Online', href: '/tenant' }].map(link => (
-                  <a key={link.label} href={link.href}
-                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
-                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Company</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[{ label: 'Blog', href: '/blog' }, { label: 'Contact', href: '/contact' }, { label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }].map(link => (
-                  <a key={link.label} href={link.href}
-                    style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontWeight: 500 }}
-                    onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
-            © 2026 Keywise. California Landlord Compliance, Done Right.
-          </div>
-        </div>
-      </footer>
-
-      {/* STICKY BOTTOM CTA */}
-      <StickyBottomCTA onSignupClick={() => { setShowHeroInput(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
-
-      {/* EXIT INTENT POPUP */}
-      {showExitIntent && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,52,96,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowExitIntent(false)}>
-          <div style={{ background: SURFACE, borderRadius: 20, padding: 36, maxWidth: 420, width: '100%', position: 'relative', boxShadow: '0 24px 80px rgba(15,52,96,0.25)' }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowExitIntent(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: INK_MUTED, lineHeight: 1, padding: 4 }}>×</button>
-            {exitSent ? (
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <div style={{ fontSize: 32, marginBottom: 16 }}>✓</div>
-                <div style={{ fontWeight: 700, fontSize: 18, color: N, marginBottom: 8 }}>Check your email!</div>
-                <div style={{ color: INK_MUTED, fontSize: 14 }}>Click the magic link to get started — no password needed.</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>👋</div>
-                  <h3 style={{ color: N, fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>Before you go...</h3>
-                  <p style={{ color: INK_MUTED, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-                    Save 5 hours every month on property management. Try Keywise free — no credit card needed.
-                  </p>
-                </div>
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  value={exitEmail}
-                  onChange={e => setExitEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendMagicLink(exitEmail, setExitLoading, setExitSent, () => {})}
-                  style={{ width: '100%', background: BG, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '13px 16px', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', color: INK, marginBottom: 10 }}
-                />
-                <button onClick={() => sendMagicLink(exitEmail, setExitLoading, setExitSent, () => {})} disabled={exitLoading || !exitEmail}
-                  className="landing-btn-primary"
-                  style={{ width: '100%', background: N, color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: !exitEmail || exitLoading ? 'default' : 'pointer', opacity: !exitEmail || exitLoading ? 0.6 : 1, fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                  {exitLoading ? 'Sending…' : 'Send Me the Free Link →'}
-                </button>
-                <div style={{ textAlign: 'center', fontSize: 12, color: INK_MUTED, marginTop: 10 }}>No password needed — we'll email you a magic link</div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {authMode && <AuthModal mode={authMode} onClose={closeAuth} />}
+ const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
+ const [email, setEmail] = useState('');
+ const [busy, setBusy] = useState(false);
+ const [sent, setSent] = useState(false);
+ const [error, setError] = useState('');
+ const [menuOpen, setMenuOpen] = useState(false);
+ const emailRef = useRef<HTMLInputElement>(null);
+ const signupRef = useRef<HTMLFormElement>(null);
+ const demoRef = useRef<HTMLElement>(null);
+ const track = (event: string, placement: string) => {
+  // Anonymous funnel events only: never send email, lease data or tenant details.
+  if (typeof window !== 'undefined' && window.gtag) window.gtag('event',event,{ placement, brand_version:'rentals-under-control-v1' });
+ };
+ const start = (placement: string) => {
+  setMenuOpen(false); track('signup_cta_clicked',placement);
+  signupRef.current?.scrollIntoView({ behavior:'smooth',block:'center' });
+  emailRef.current?.focus({ preventScroll:true });
+ };
+ useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('login') === 'true') setAuthMode('login');
+  if (params.get('signup') === 'true') emailRef.current?.focus();
+  fetch('/api/track-visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:'/',referrer:document.referrer || 'direct',user_agent:navigator.userAgent})}).catch(() => {});
+ }, []);
+ async function submit(event: React.FormEvent) {
+  event.preventDefault(); setBusy(true); setError(''); track('signup_link_requested','hero');
+  try {
+   const { error } = await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:'https://keywise.app/?welcome=true',shouldCreateUser:true}});
+   if (error) throw error;
+   setSent(true); track('signup_link_sent','hero');
+  } catch (error) { setError((error as Error).message || 'We couldn’t send your link. Please try again.'); }
+  finally { setBusy(false); }
+ }
+ return <div className="kw-marketing">
+  <style>{`
+   .kw-marketing{--kw-navy:#0F3460;--kw-ink:#253950;--kw-muted:#55677B;--kw-line:#DEE6EA;font-family:var(--font-inter),Inter,system-ui,sans-serif;background:#fff;color:var(--kw-ink);overflow-x:clip;line-height:1.6}
+   .kw-marketing *{box-sizing:border-box}.kw-marketing h1,.kw-marketing h2,.kw-marketing h3{color:var(--kw-navy);line-height:1.12;letter-spacing:-.035em}.kw-marketing h2{font-size:clamp(30px,4vw,44px);margin:0 0 18px}.kw-marketing h3{font-size:23px;margin:0 0 12px}
+   .kw-marketing a{color:inherit}.kw-shell{max-width:1180px;margin:auto;padding:0 32px}.kw-nav{display:flex;align-items:center;justify-content:space-between;min-height:82px;gap:24px}.kw-nav-links{display:flex;align-items:center;gap:26px}.kw-nav a{text-decoration:none;font-size:14px;font-weight:600}.kw-button{border:0;border-radius:10px;background:#0F3460;color:white;padding:13px 20px;font:inherit;font-size:14px;font-weight:650;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:48px;transition:background .15s}.kw-button:hover{background:#194D7C}.kw-button:disabled{opacity:.6;cursor:wait}.kw-button-light{background:white;color:#0F3460;border:1px solid #C6D3DE}.kw-button-light:hover{background:#EFF5F8}.kw-button-teal{background:#00D4AA;color:#0F3460}.kw-button-teal:hover{background:#53E7C9}.kw-marketing :focus-visible{outline:3px solid #007E68;outline-offset:4px}.kw-eyebrow{font-size:12px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:#006D5A;margin:0 0 18px}.kw-hero{background:#F3F7F7;border-bottom:1px solid var(--kw-line);padding:80px 0 72px}.kw-hero-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:center}.kw-hero h1{font-size:clamp(48px,5.5vw,72px);font-weight:760;margin:0 0 24px;line-height:1.04;max-width:580px}.kw-lede{font-size:18px;color:var(--kw-muted);max-width:510px;margin:0 0 24px}.kw-signup-row{display:flex;gap:8px;margin-top:8px}.kw-signup-row input{min-width:0;flex:1;background:white;border:1px solid #BBCBD4;border-radius:10px;padding:14px;font:inherit;font-size:15px;color:#253950}.kw-proof{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:#456070;margin:14px 0}.kw-proof span::before{content:'✓';color:#007E68;margin-right:6px}.kw-preview-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#55677B;margin-bottom:14px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}.kw-preview .landing-mockup{transform:none!important;box-shadow:0 20px 50px #0F346020!important}.kw-text-button{background:none;border:0;padding:0;font:inherit;font-weight:650;cursor:pointer;color:#0F3460;text-decoration:underline;text-underline-offset:4px}.kw-section{padding:88px 0}.kw-intro{max-width:650px;margin-bottom:42px}.kw-intro p{font-size:17px;color:var(--kw-muted);margin:0}.kw-workflows{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}.kw-workflow{border-top:2px solid #0F3460;padding-top:22px}.kw-number{font-size:13px;color:#007D68;font-weight:750;margin-bottom:22px}.kw-workflow p{font-size:15px;color:var(--kw-muted);margin:0 0 22px}.kw-example{background:#F2F6F8;border:1px solid #DFE8ED;border-radius:10px;padding:16px;font-size:13px;color:#3B526B;min-height:108px}.kw-example strong{display:block;color:#0F3460;margin-bottom:6px}.kw-onboard{background:#0F3460;color:white}.kw-onboard h2,.kw-onboard h3{color:white}.kw-onboard p{color:#C8D7E7}.kw-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin:36px 0}.kw-steps .kw-number{color:#4AE2C4;border-bottom:1px solid #456382;padding-bottom:14px}.kw-steps h3{font-size:21px}.kw-steps p{font-size:14px}.kw-tool-row{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}.kw-tools a{display:block;padding:16px 0;border-bottom:1px solid var(--kw-line);font-weight:650;text-decoration:none;color:#0F3460}.kw-founder{background:#F3F7F7;border-radius:18px;padding:32px;border:1px solid var(--kw-line)}.kw-founder p{font-size:16px;color:#55677B}.kw-pricing{display:grid;grid-template-columns:1fr 1fr;gap:24px}.kw-price-card{border:1px solid #D3DEE5;border-radius:16px;padding:32px}.kw-price-card ul{padding-left:20px;margin:22px 0;font-size:14px}.kw-price-card li{margin:8px 0}.kw-price{font-size:44px;font-weight:750;color:#0F3460;letter-spacing:-.04em}.kw-faq details{border-bottom:1px solid var(--kw-line);padding:20px 0}.kw-faq summary{cursor:pointer;font-weight:650;color:#0F3460;list-style-position:outside;margin-left:20px}.kw-faq p{color:var(--kw-muted);font-size:15px;max-width:720px;margin-bottom:0}.kw-footer{background:#F3F7F7;border-top:1px solid var(--kw-line);padding:42px 0}.kw-footer-row{display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between}.kw-footer nav{display:flex;gap:22px;flex-wrap:wrap;font-size:13px}.kw-footer p{font-size:12px;color:#55677B}.kw-menu-button{display:none}.kw-mobile-links{display:none}
+   @media(max-width:960px){.kw-hero-grid{grid-template-columns:1fr;gap:42px}.kw-hero h1{max-width:720px}.kw-preview{max-width:680px;width:100%}.kw-workflows{gap:22px}.kw-tool-row{gap:32px}.kw-nav-links{gap:18px}}
+   @media(max-width:680px){.kw-shell{padding:0 22px}.kw-hero{padding:44px 0}.kw-hero h1{font-size:48px}.kw-hero h1 br{display:none}.kw-lede{font-size:17px}.kw-nav{min-height:72px}.kw-nav-links{display:none}.kw-menu-button{display:block}.kw-mobile-links{display:flex;flex-direction:column;gap:18px;padding:8px 0 24px}.kw-section{padding:58px 0}.kw-signup-row{flex-direction:column}.kw-signup-row .kw-button{width:100%}.kw-workflows,.kw-steps,.kw-tool-row,.kw-pricing{grid-template-columns:1fr}.kw-workflows{gap:30px}.kw-preview .landing-mockup>div:nth-child(2)>div:first-child{display:none}.kw-preview .landing-mockup>div:nth-child(2){height:340px!important}.kw-founder,.kw-price-card{padding:24px}.kw-footer-row{gap:24px}.kw-preview-label{font-size:10px}}
+   @media(prefers-reduced-motion:reduce){.kw-marketing *{scroll-behavior:auto!important;transition:none!important}}
+  `}</style>
+  <a href="#main" style={{position:'absolute',left:-10000}} onFocus={e => {e.currentTarget.style.left='16px';}} onBlur={e => {e.currentTarget.style.left='-10000px';}}>Skip to content</a>
+  <header style={{borderBottom:`1px solid ${BORDER}`}}>
+   <nav className="kw-shell kw-nav" aria-label="Main navigation">
+    <Link href="/" aria-label="Keywise home" style={{textDecoration:'none'}}><Logo size={36}/></Link>
+    <div className="kw-nav-links"><a href="#how-it-works">How it works</a><Link href="/pricing">Pricing</Link><a href="/tools">California tools</a><button className="kw-text-button" onClick={() => setAuthMode('login')}>Log in</button><button className="kw-button" onClick={() => start('header')}>Start free</button></div>
+    <button className="kw-button kw-button-light kw-menu-button" aria-expanded={menuOpen} aria-controls="kw-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>Menu</button>
+   </nav>
+   {menuOpen && <div id="kw-mobile-menu" className="kw-shell kw-mobile-links"><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><Link href="/pricing">Pricing</Link><Link href="/tools">California tools</Link><button className="kw-text-button" onClick={() => {setAuthMode('login');setMenuOpen(false);}}>Log in</button><button className="kw-button" onClick={() => start('mobile-menu')}>Start free</button></div>}
+  </header>
+  <main id="main">
+   <section className="kw-hero">
+    <div className="kw-shell kw-hero-grid">
+     <div><p className="kw-eyebrow">{brand.category}</p><h1>Your rentals,<br/>under control.</h1><p className="kw-lede">{brand.description}</p>
+      <form ref={signupRef} onSubmit={submit} aria-label="Start your free Keywise account">
+       {sent ? <div role="status" style={{background:TEAL_LIGHT,border:'1px solid #B4DCCF',borderRadius:12,padding:20}}><strong>Check your email to get started.</strong><p style={{fontSize:14,margin:'8px 0'}}>Open your sign-in link, then add your first property. You can close this page.</p><button type="button" className="kw-text-button" onClick={() => {setSent(false);setError('');}}>Use a different email or resend</button></div> : <><label htmlFor="kw-start-email" style={{fontSize:13,fontWeight:650}}>Your email</label><div className="kw-signup-row"><input ref={emailRef} id="kw-start-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" aria-describedby="kw-start-details" disabled={busy}/><button className="kw-button" disabled={busy}>{busy?'Sending your link…':brand.primaryAction+' →'}</button></div><p id="kw-start-details" style={{fontSize:12,color:'#55677B',margin:'10px 0'}}>We’ll email you a sign-in link. No password to remember.</p></>}
+       {error && <p role="alert" style={{color:'#B33035',fontSize:13}}>{error}</p>}
+      </form>
+      <div className="kw-proof"><span>{brand.freeLabel}</span><span>No credit card</span><span>Invite tenants later</span></div>
+      <p style={{fontSize:11,color:'#55677B'}}>By continuing, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</p>
+      <button className="kw-text-button" style={{fontSize:14,marginTop:12}} onClick={() => {track('demo_viewed','hero');demoRef.current?.scrollIntoView({behavior:'smooth'});}}>{brand.secondaryAction} ↓</button>
+     </div>
+     <div className="kw-preview"><div className="kw-preview-label"><span>A clearer view of your rentals</span><span>Illustrative sample</span></div><DashboardMockup/><p style={{fontSize:12,color:'#55677B',marginTop:18}}>Rent, tenants and the next thing to handle. Together.</p></div>
     </div>
-  );
+   </section>
+   <section ref={demoRef} id="how-it-works" className="kw-section" style={{scrollMarginTop:24}}>
+    <div className="kw-shell"><div className="kw-intro"><p className="kw-eyebrow">Less scattered. More settled.</p><h2>Know what needs you.<br/>Then get on with your day.</h2><p>A missed payment, a leaking faucet, a lease coming up for renewal. Keep the work and its history together.</p></div>
+     <div className="kw-workflows">{brandWorkflows.map((w,i) => <article className="kw-workflow" key={w.number}><div className="kw-number">{w.number} / {w.label}</div><h3>{w.title}</h3><p>{w.detail}</p><div className="kw-example"><strong>{['Rent recorded · Unit A','Kitchen faucet · In progress','Lease renewal · Due next month'][i]}</strong>{['See what is paid, due and outstanding.','Follow the request, photos and latest update.','Open the lease and find the tenant details.'][i]}<div style={{fontSize:10,marginTop:8,color:'#55677B'}}>Illustrative example</div></div></article>)}</div>
+    </div>
+   </section>
+   <section className="kw-section kw-onboard"><div className="kw-shell"><p className="kw-eyebrow" style={{color:'#4AE2C4'}}>A small first step</p><h2>You don’t have to move everything at once.</h2><p style={{maxWidth:640,fontSize:17}}>Start with one property and one useful task. Bring the rest into Keywise at your own pace.</p><div className="kw-steps">{brandSteps.map((step,i) => <article key={step.title}><div className="kw-number">0{i+1}</div><h3>{step.title}</h3><p>{step.detail}</p></article>)}</div><button className="kw-button kw-button-teal" onClick={() => start('steps')}>{brand.primaryAction} →</button></div></section>
+   <section className="kw-section"><div className="kw-shell kw-tool-row"><div><p className="kw-eyebrow">Built from everyday experience</p><h2>For the person who owns the rental—and handles the details.</h2><p style={{fontSize:17,color:'#55677B'}}>Keywise was built by an independent landlord in Southern California. The focus is practical: make the next task easier, keep a useful record and avoid entering the same details over and over.</p><Link href="/about/chris" style={{fontWeight:650}}>Meet the founder →</Link></div><aside className="kw-founder"><p className="kw-eyebrow">Also renting in California?</p><h3>Tools for the details that deserve a closer look.</h3><p>Explore dedicated California calculators and notice tools alongside your everyday property records.</p><div className="kw-tools"><Link href="/tools/ca/ab1482-calculator">Rent increase calculator →</Link><Link href="/tools/ca/security-deposit-21-day">Security deposit deadline guide →</Link><Link href="/tools">Explore California tools →</Link></div><p style={{fontSize:12}}>California guidance is state-specific. Review your circumstances and seek professional advice when needed.</p></aside></div></section>
+   <section className="kw-section" style={{background:'#F7F9FA',borderTop:'1px solid #DEE6EA',borderBottom:'1px solid #DEE6EA'}}><div className="kw-shell"><div className="kw-intro"><p className="kw-eyebrow">Room to start. Room to grow.</p><h2>Start free. Decide what you need.</h2><p>Organize one rental first. Upgrade when the additional tools make sense for you.</p></div><div className="kw-pricing"><article className="kw-price-card" style={{background:'white'}}><h3>Free</h3><div className="kw-price">$0</div><p>{brand.freeUnits} unit · No credit card required</p><ul><li>Start your property and tenant records</li><li>Keep documents and lease details together</li><li>Record rent received outside Keywise</li></ul><button className="kw-button" onClick={() => start('free-plan')}>Start free →</button></article><article className="kw-price-card" style={{background:'white'}}><h3>Pro</h3><div className="kw-price">$49<span style={{fontSize:16,fontWeight:500,letterSpacing:0}}> / month</span></div><p>For more units and online rent collection</p><ul><li>Expanded portfolio and paid features</li><li>Online payments with an eligible account</li><li>14-day Pro trial; card required</li></ul><Link href="/pricing" className="kw-button kw-button-light" onClick={() => track('pricing_viewed','pro-plan')}>Compare plans and fees →</Link></article></div><p style={{fontSize:12,color:'#55677B',marginTop:18}}>Online rent payments carry a $2 transaction fee. See the pricing page for annual billing and any available founding-member offer.</p></div></section>
+   <section className="kw-section kw-faq"><div className="kw-shell" style={{maxWidth:850}}><p className="kw-eyebrow">Before you start</p><h2>A few things you might be wondering.</h2>{brandFaqs.map(f => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}</div></section>
+   <section className="kw-section" style={{background:'#0F3460',textAlign:'center'}}><div className="kw-shell"><h2 style={{color:'white'}}>One property. One place to start.</h2><p style={{color:'#C8D7E7',margin:'0 auto 26px',maxWidth:530}}>Bring a little more clarity to your rentals today. Start with the property you already know.</p><button className="kw-button kw-button-teal" onClick={() => start('footer')}>{brand.primaryAction} →</button><p style={{fontSize:12,color:'#C8D7E7',marginTop:16}}>{brand.freeLabel} · No credit card required</p></div></section>
+  </main>
+  <footer className="kw-footer"><div className="kw-shell"><div className="kw-footer-row"><div><Logo size={28}/><p>{brand.category}.<br/>{brand.promise}</p></div><nav aria-label="Footer"><Link href="/pricing">Pricing</Link><Link href="/tools">California tools</Link><Link href="/contact">Contact</Link><Link href="/tenant-login">Tenant login</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav></div><p>© {new Date().getFullYear()} {brand.name}</p></div></footer>
+  {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)}/>}
+ </div>;
 }

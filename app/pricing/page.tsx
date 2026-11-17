@@ -4,20 +4,20 @@ import PricingCards from './PricingCards';
 
 export const metadata: Metadata = {
   title: 'Pricing | Keywise',
-  description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
+  description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
   alternates: { canonical: 'https://keywise.app/pricing' },
   openGraph: {
     title: 'Pricing | Keywise',
-    description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
+    description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
     url: 'https://keywise.app/pricing',
     siteName: 'Keywise',
     type: 'website',
-    images: [{ url: '/og-image.png', width: 1200, height: 628 }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing | Keywise',
-    description: 'Simple pricing for California landlords. Free for 1 unit, Pro at $49/mo for unlimited.',
+    description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/mo for unlimited.',
   },
   robots: { index: true, follow: true },
 };
@@ -44,7 +44,7 @@ export default function PricingPage() {
               <rect x="17.5" y="14.75" width="8" height="2.5" rx="1.25" fill={TEAL} />
             </svg>
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: N, letterSpacing: '-0.3px' }}>keywise</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: N, letterSpacing: '-0.3px' }}>Keywise</span>
         </Link>
         <Link href="/" style={{ fontSize: 13, color: INK_MID, textDecoration: 'none', fontWeight: 500 }}>← Back to home</Link>
       </nav>
@@ -53,9 +53,9 @@ export default function PricingPage() {
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Pricing</div>
           <h1 style={{ fontSize: 40, fontWeight: 800, color: N, letterSpacing: '-1px', margin: '0 0 12px' }}>
-            Built for California landlords.<br />Priced for serious operators.
+            Start with one rental.<br />Grow at your own pace.
           </h1>
-          <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Free compliance tools for everyone. Pro features for landlords who want to automate everything.</p>
+          <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Free for 1 unit with no card required. Compare Pro when you need more units or online rent collection.</p>
         </div>
 
         <PricingCards />
@@ -85,7 +85,7 @@ export default function PricingPage() {
 
         {/* CTA */}
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
-          <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Ready to manage smarter?</h3>
+          <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Your rentals, under control.</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
             Free for 1 unit, no credit card. Or start a 14-day Pro trial — cancel before it ends and you won't be charged.
           </p>

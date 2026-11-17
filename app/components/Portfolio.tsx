@@ -98,7 +98,7 @@ function UpgradeModal({ reason, onClose }: {
         <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 10 }}>Upgrade to Keywise Pro</div>
         <div style={{ fontSize: 13, color: T.inkMuted, lineHeight: 1.7, marginBottom: 24 }}>
           Your free plan includes up to{' '}
-          {reason === 'unit' ? '2 units' : '1 building'}.{' '}
+          {reason === 'unit' ? '1 unit' : '1 building'}.{' '}
           Upgrade to Pro for:
         </div>
         <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 20px', marginBottom: 28, textAlign: 'left' }}>
