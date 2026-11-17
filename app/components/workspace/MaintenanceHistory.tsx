@@ -1,9 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { workspaceApi } from '../../lib/workspace-api';
+import RepairCompletion from './RepairCompletion';
 import { T, btn, input } from '../../lib/theme';
 
 export default function MaintenanceHistory({ id, tenant = false, readOnly = false }: { id: string; tenant?: boolean; readOnly?: boolean }) {
+ const [issue,setIssue]=useState<any>(null);
+ const [contractors,setContractors]=useState<any[]>([]);
  const [events, setEvents] = useState<any[]>([]);
  const [files, setFiles] = useState<any[]>([]);
  const [message, setMessage] = useState('');
@@ -11,7 +14,7 @@ export default function MaintenanceHistory({ id, tenant = false, readOnly = fals
  const [error, setError] = useState('');
  const [loading, setLoading] = useState(true);
  async function load() {
-  try { const data = await workspaceApi(`/api/maintenance?id=${encodeURIComponent(id)}`); setEvents(data.events); setFiles(data.files); setError(''); }
+  try { const data = await workspaceApi(`/api/maintenance?id=${encodeURIComponent(id)}`); setEvents(data.events); setFiles(data.files);setIssue(data.issue || null);setContractors(data.contractors || []); setError(''); }
   catch (e) { setError((e as Error).message); }
   finally { setLoading(false); }
  }
@@ -46,6 +49,7 @@ export default function MaintenanceHistory({ id, tenant = false, readOnly = fals
    <label style={{ fontSize: 13 }}>Update visible to tenant<textarea style={{ ...input, marginTop: 6 }} maxLength={3000} value={message} onChange={e => setMessage(e.target.value)} placeholder="e.g. Plumber booked for Tuesday, 10 am–noon." /></label>
    <button style={{ ...btn.primary, marginTop: 8 }} disabled={busy || !message.trim()} onClick={post}>{busy ? 'Saving…' : 'Post update'}</button>
   </div>}
+  {!tenant && !readOnly && issue && <RepairCompletion key={issue.workflow_revision} issue={issue} contractors={contractors} files={files} onChange={load}/>}
   {error && <p role="alert" style={{ color: T.coral }}>{error} <button style={btn.ghost} onClick={load}>Retry</button></p>}
  </section>;
 }

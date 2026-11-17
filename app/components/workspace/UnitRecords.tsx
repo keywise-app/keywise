@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { belongsToUnit, rentSummary } from '@/lib/workspace/records';
+import HistoryExport from './HistoryExport';
 import { T, btn, card } from '../../lib/theme';
 export default function UnitRecords({ unit, onClose }: { unit: { id: string; address: string }; onClose: () => void }) {
  const [records, setRecords] = useState<Record<string, any[]>>({});
@@ -35,6 +36,7 @@ export default function UnitRecords({ unit, onClose }: { unit: { id: string; add
     <h3>Tenants and leases</h3>
     {records.leases?.length === 0 && <p>No linked leases. Add a tenant from this unit to connect a lease.</p>}
     {records.leases?.map(l => <div key={l.id} style={{ borderTop: `1px solid ${T.border}`, padding: 12, fontSize: 13 }}><strong>{l.tenant_name}</strong> · {l.start_date || '—'} to {l.end_date || 'Month to month'} · {l.archived ? 'Archived' : l.status}<div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>{[['overview','View lease'],['payments','Rent history'],['documents','Documents']].map(([tab,text]) => <button key={tab} style={btn.ghost} onClick={() => navigate(`tenants&lease=${l.id}&tab=${tab}`)}>{text} →</button>)}</div></div>)}
+    {records.leases?.map(l=><HistoryExport key={l.id} leaseId={l.id}/>)}
     <h3>Maintenance</h3>
     {records.maintenance?.length === 0 && <p>No linked requests.</p>}
     {records.maintenance?.map(m => <div key={m.id} style={{ padding: '8px 0' }}><button style={btn.ghost} onClick={() => navigate(`operations&tab=maintenance&issue=${m.id}`)}>{m.issue} · {m.status} · ${Number(m.cost || 0).toLocaleString()} →</button></div>)}

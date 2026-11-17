@@ -1,63 +1,26 @@
-import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
+import { workspaceAccess, requireLease, apiError } from '@/lib/workspace/access';
 export async function POST(req: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   try {
-    const { tenant_email, tenant_name, lease_id, payment_type, mode } = await req.json();
-
-    if (!tenant_email || !lease_id) {
-      return NextResponse.json({ error: 'tenant_email and lease_id are required' }, { status: 400 });
-    }
-
-    // Find or create Stripe customer for tenant
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, stripe_customer_id')
-      .eq('email', tenant_email)
-      .single();
-
-    let customerId = profile?.stripe_customer_id;
-
-    // Validate existing customer (may be from test mode)
-    if (customerId) {
-      try { await stripe.customers.retrieve(customerId); }
-      catch { customerId = undefined; }
-    }
-
+    const {db,user} = await workspaceAccess(req);
+    const {lease_id,payment_type} = await req.json();
+    const lease = await requireLease(db,user,lease_id);
+    if (lease.tenant_user_id !== user.id) throw new Response('Only the linked tenant can set up their card.',{status:403});
+    if (!user.email) throw new Response('A verified account email is required.',{status:409});
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const {data:profile,error} = await db.from('profiles').select('stripe_customer_id').eq('id',user.id).single();
+    if (error) throw new Response('Unable to load your payment profile.',{status:503});
+    let customerId = profile.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: tenant_email,
-        name: tenant_name || tenant_email,
-        metadata: { lease_id, role: 'tenant' },
-      });
+      const customer = await stripe.customers.create({email:user.email,metadata:{workspace_user_id:user.id,role:'tenant'}},{idempotencyKey:`tenant-customer-${user.id}`});
       customerId = customer.id;
-      if (profile?.id) {
-        await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', profile.id);
-      }
+      const {error:saveError} = await db.from('profiles').update({stripe_customer_id:customerId}).eq('id',user.id);
+      if (saveError) throw new Response('Unable to save payment setup. Please try again.',{status:503});
     }
-
-    // For card updates, use a new checkout session (Stripe billing portal requires subscription)
-    const session = await stripe.checkout.sessions.create({
-      mode: 'setup',
-      currency: 'usd',
-      customer: customerId,
-      payment_method_types: ['card'],
-      success_url: `https://keywise.app/?setup_success=true&payment_type=${payment_type || 'manual'}&lease_id=${lease_id}&customer_id=${customerId}`,
-      cancel_url: 'https://keywise.app/',
-      metadata: { lease_id, tenant_email, payment_type: payment_type || 'manual' },
+    const session = await stripe.checkout.sessions.create({mode:'setup',currency:'usd',customer:customerId,payment_method_types:['card'],
+      success_url:'https://keywise.app/?setup_success=true&session_id={CHECKOUT_SESSION_ID}',cancel_url:'https://keywise.app/',
+      metadata:{lease_id,user_id:user.id,payment_type:payment_type==='autopay'?'autopay':'manual'},
     });
-
-    return NextResponse.json({ checkoutUrl: session.url });
-  } catch (err: any) {
-    console.error('[setup-payment] Error:', err.message);
-    return NextResponse.json({ error: err.message || 'Failed to set up payment' }, { status: 500 });
-  }
+    return Response.json({checkoutUrl:session.url});
+  } catch(error) {return apiError(error);}
 }

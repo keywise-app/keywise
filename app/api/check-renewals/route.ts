@@ -1,75 +1,19 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  const today = new Date();
-  const ninetyDays = new Date(today.getTime() + 90 * 86400000).toISOString().split('T')[0];
-
-  // Find leases expiring in exactly 90 days that haven't been flagged
-  const { data: expiring } = await supabase
-    .from('leases')
-    .select('id, user_id, tenant_name, property, rent, end_date, email')
-    .eq('end_date', ninetyDays)
-    .eq('archived', false)
-    .or('renewal_flagged.is.null,renewal_flagged.eq.false');
-
-  let processed = 0;
-
-  for (const lease of expiring || []) {
-    // Get landlord profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('id', lease.user_id)
-      .single();
-
-    if (!profile?.email) continue;
-
-    // Run market analysis
-    let analysis: any = {};
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
-      const res = await fetch(`${baseUrl}/api/market-analysis`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property: lease.property, current_rent: lease.rent }),
-      });
-      if (res.ok) analysis = await res.json();
-    } catch {}
-
-    // Send renewal reminder email to landlord
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
-      await fetch(`${baseUrl}/api/send-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: profile.email,
-          subject: `Lease ending in 90 days: ${lease.tenant_name}`,
-          from_name: 'Keywise',
-          html: `<div style="font-family:Arial;max-width:500px;margin:0 auto"><div style="background:#0F3460;padding:20px 28px;border-radius:12px 12px 0 0"><div style="color:#00D4AA;font-size:20px;font-weight:700">keywise</div></div><div style="background:white;padding:28px;border:1px solid #E0E6F0;border-radius:0 0 12px 12px"><h2 style="color:#0F3460;margin:0 0 12px">Lease Renewal Time</h2><p style="color:#4A5068;line-height:1.6">Hey ${profile.full_name || 'there'}, ${lease.tenant_name}'s lease at <strong>${lease.property}</strong> expires on ${new Date(lease.end_date).toLocaleDateString()}.</p>${analysis.estimated_market_rent ? `<div style="background:#F0F4FF;border-radius:10px;padding:16px;margin:16px 0"><div style="font-weight:700;color:#0F3460;margin-bottom:8px">Market Analysis</div><div style="color:#4A5068;font-size:14px">Current rent: <strong>$${lease.rent}</strong> · Market rate: <strong style="color:#00D4AA">$${analysis.estimated_market_rent}</strong></div><div style="color:#8892A4;font-size:13px;margin-top:6px">${analysis.recommendations || ''}</div></div>` : ''}<a href="https://keywise.app" style="display:inline-block;background:#0F3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Send Renewal Offer →</a></div></div>`,
-        }),
-      });
-    } catch {}
-
-    // Flag the lease
-    await supabase.from('leases').update({
-      renewal_flagged: true,
-      renewal_flagged_at: new Date().toISOString(),
-    }).eq('id', lease.id);
-
-    processed++;
-  }
-
-  return NextResponse.json({ success: true, processed });
+import {createClient} from '@supabase/supabase-js';
+import {sendWorkspaceEmail,escapeHtml} from '@/lib/workspace/email';
+export async function GET(req:Request){
+ if(!process.env.CRON_SECRET || req.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return Response.json({error:'Unauthorized'},{status:401});
+ const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false}});
+ const horizon=new Date(Date.now()+90*86400000).toISOString().slice(0,10);
+ const {data:leases,error}=await db.from('leases').select('id,user_id,tenant_name,property,end_date,lifecycle_state').eq('end_date',horizon).eq('archived',false).or('renewal_flagged.is.null,renewal_flagged.eq.false');
+ if(error)return Response.json({error:'Unable to load renewals.'},{status:503});
+ let accepted=0,failed=0;
+ for(const lease of leases || []){
+  if(['ended','archived','month_to_month'].includes(lease.lifecycle_state))continue;
+  const {data:owner}=await db.from('profiles').select('email').eq('id',lease.user_id).single();if(!owner?.email)continue;
+  try{
+   await sendWorkspaceEmail(db,{actorId:lease.user_id,leaseId:lease.id,to:owner.email,requestId:`renewal-reminder-${lease.id}-${lease.end_date}`,subject:'Lease review due in 90 days',html:`<p>${escapeHtml(lease.tenant_name || '')}: ${escapeHtml(lease.property || '')}</p><p>Recorded fixed-term end: ${lease.end_date}. Confirm the current tenancy and review renewal terms. No tenant offer or statutory notice has been sent.</p><p><a href="https://keywise.app/?page=tenants&lease=${lease.id}&tab=overview">Review tenancy</a></p>`});
+   const {error:saveError}=await db.from('leases').update({renewal_flagged:true,renewal_flagged_at:new Date().toISOString()}).eq('id',lease.id);if(saveError)throw saveError;accepted++;
+  }catch{failed++;}
+ }
+ return Response.json({provider_accepted:accepted,failed});
 }

@@ -1,122 +1,31 @@
-import { NextResponse } from 'next/server';
+import {createClient} from '@supabase/supabase-js';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-export const runtime = 'nodejs';
-export const maxDuration = 60;
-
-export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-  const today = new Date().toISOString().split('T')[0];
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://keywise.app';
-
-  // Find all pending/overdue payments due today or earlier
-  // Only auto-charge recurring rent payments, not one-off charges
-  const { data: duePayments } = await supabase
-    .from('payments')
-    .select('*, leases(email, user_id, tenant_user_id)')
-    .in('status', ['pending', 'overdue'])
-    .lte('due_date', today)
-    .or('type.is.null,type.eq.rent,type.eq.Monthly Rent');
-
-  let charged = 0;
-  let failed = 0;
-  let skipped = 0;
-
-  for (const payment of duePayments || []) {
-    const tenantUserId = payment.leases?.tenant_user_id;
-    if (!tenantUserId) { skipped++; continue; }
-
-    const { data: tenantProfile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id, stripe_payment_method_id, autopay_enabled')
-      .eq('id', tenantUserId)
-      .single();
-
-    if (!tenantProfile?.autopay_enabled || !tenantProfile?.stripe_payment_method_id) {
-      skipped++;
-      continue;
-    }
-
-    const { data: landlordProfile } = await supabase
-      .from('profiles')
-      .select('stripe_account_id, email')
-      .eq('id', payment.user_id)
-      .single();
-
-    if (!landlordProfile?.stripe_account_id) { skipped++; continue; }
-
-    try {
-      const intentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(payment.amount * 100),
-        currency: 'usd',
-        customer: tenantProfile.stripe_customer_id,
-        payment_method: tenantProfile.stripe_payment_method_id,
-        off_session: true,
-        confirm: true,
-        application_fee_amount: 200,
-        transfer_data: { destination: landlordProfile.stripe_account_id },
-        metadata: { payment_id: payment.id, lease_id: payment.lease_id },
-      };
-
-      const paymentIntent = await stripe.paymentIntents.create(intentParams);
-
-      if (paymentIntent.status === 'succeeded') {
-        await supabase.from('payments').update({
-          status: 'paid', paid_date: today, method: 'Auto-Pay (Stripe)',
-        }).eq('id', payment.id);
-        charged++;
-
-        // Send notifications
-        fetch(`${baseUrl}/api/mark-payment-paid`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ payment_id: payment.id }),
-        }).catch(() => {});
-      }
-    } catch (err: any) {
-      failed++;
-      console.error('[autopay] Charge failed:', payment.id, err.message);
-
-      // Notify tenant
-      const tenantEmail = payment.leases?.email;
-      if (tenantEmail) {
-        fetch(`${baseUrl}/api/send-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: tenantEmail,
-            subject: 'Auto-pay failed — action required',
-            from_name: 'Keywise',
-            html: `<html><body style="font-family:Arial;padding:20px;background:#F0F4FF"><div style="max-width:500px;margin:0 auto;background:white;border-radius:12px;padding:32px"><div style="color:#0F3460;font-weight:700;font-size:20px;margin-bottom:20px">Keywise</div><div style="background:#FFF0F0;border-radius:10px;padding:20px;text-align:center;margin-bottom:24px"><div style="font-size:28px">&#9888;</div><div style="font-size:18px;font-weight:700;color:#CC0000">Auto-Pay Failed</div><div style="font-size:24px;font-weight:700;color:#0F3460">$${(payment.amount || 0).toLocaleString()}</div></div><p style="color:#4A5068">Your auto-pay for ${payment.property || ''} could not be processed. Please log in to pay manually.</p><a href="https://keywise.app" style="display:inline-block;background:#0F3460;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Pay Now</a></div></body></html>`,
-          }),
-        }).catch(() => {});
-      }
-
-      // Notify landlord
-      if (landlordProfile?.email) {
-        fetch(`${baseUrl}/api/send-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: landlordProfile.email,
-            subject: `Auto-pay failed — ${payment.tenant_name}`,
-            from_name: 'Keywise',
-            html: `<html><body style="font-family:Arial;padding:20px"><p>Auto-pay of $${(payment.amount || 0).toLocaleString()} from ${payment.tenant_name} for ${payment.property || ''} failed. The tenant has been notified to pay manually.</p></body></html>`,
-          }),
-        }).catch(() => {});
-      }
-    }
-  }
-
-  return NextResponse.json({ success: true, charged, failed, skipped, total: duePayments?.length || 0, date: today });
+import {reservePayment} from '@/lib/workspace/payments';
+export const runtime='nodejs';
+export const maxDuration=60;
+export async function GET(req:Request) {
+ if(!process.env.CRON_SECRET || req.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return Response.json({error:'Unauthorized'},{status:401});
+ const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false}});
+ const stripe=new Stripe(process.env.STRIPE_SECRET_KEY!);
+ const {data:payments,error}=await db.from('payments').select('*,leases(tenant_user_id)').in('status',['pending','overdue']).lte('due_date',new Date().toISOString().slice(0,10)).or('type.is.null,type.eq.rent,type.eq.Monthly Rent');
+ if(error)return Response.json({error:'Unable to load due payments.'},{status:503});
+ let submitted=0,skipped=0,failed=0;
+ for(const payment of payments || []) {
+  try {
+   const tenantId=payment.leases?.tenant_user_id;
+   if(!tenantId){skipped++;continue;}
+   const {data:profile}=await db.from('profiles').select('autopay_enabled,stripe_customer_id,stripe_payment_method_id').eq('id',tenantId).single();
+   if(!profile?.autopay_enabled || !profile.stripe_customer_id || !profile.stripe_payment_method_id){skipped++;continue;}
+   const {attempt}=await reservePayment(db,{id:tenantId},payment.id,'saved_card');
+   const method=await stripe.paymentMethods.retrieve(profile.stripe_payment_method_id);
+   if(method.customer!==profile.stripe_customer_id){skipped++;continue;}
+   const intent=await stripe.paymentIntents.create({amount:Number(attempt.amount_cents),currency:'usd',customer:profile.stripe_customer_id,payment_method:method.id,off_session:true,confirm:true,
+    application_fee_amount:Math.min(Number(attempt.amount_cents),parseInt(process.env.KEYWISE_PLATFORM_FEE || '200',10)),transfer_data:{destination:attempt.destination},metadata:{workspace_attempt_id:attempt.id,payment_id:payment.id,owner_id:payment.user_id}},
+    {idempotencyKey:`workspace-payment-${attempt.id}`});
+   const {error:saveError}=await db.from('workspace_payment_attempts').update({provider_intent_id:intent.id}).eq('id',attempt.id);
+   if(saveError)throw saveError;
+   submitted++;
+  } catch {failed++;}
+ }
+ return Response.json({submitted,skipped,failed,confirmation:'Signed provider events confirm settlement.'});
 }

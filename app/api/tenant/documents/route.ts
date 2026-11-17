@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const { db, user } = await workspaceAccess(request);
   const lease = await requireLease(db,user,new URL(request.url).searchParams.get('lease_id') || '');
   const [docs, requests] = await Promise.all([
-   db.from('documents').select('*').eq('lease_id',lease.id).eq('user_id',lease.user_id).order('created_at',{ascending:false}),
+   db.from('documents').select('*').eq('lease_id',lease.id).eq('user_id',lease.user_id).eq('ownership_level','tenant').order('created_at',{ascending:false}),
    db.from('document_requests').select('*').eq('lease_id',lease.id).eq('status','pending').order('created_at',{ascending:false}),
   ]);
   if (docs.error || requests.error) throw docs.error || requests.error;
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
  try {
   const { db, user } = await workspaceAccess(request);
   const form = await request.formData();
-  const lease = await requireLease(db,user,String(form.get('lease_id') || ''));
+  const lease = await requireLease(db,user,String(form.get('lease_id') || ''),'write');
   if (leaseIsReadOnly(lease)) return Response.json({ error: 'This lease is read only.' },{status:403});
   const file = form.get('file');
   const types: Record<string,string> = { 'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png' };

@@ -1,4 +1,6 @@
 'use client';
+import WizardRenewal from './WizardRenewal';
+import { workspaceApi, workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
@@ -54,7 +56,10 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     return () => window.removeEventListener('resize', check);
   }, []);
   const [prLinkCopied, setPrLinkCopied] = useState<string | null>(null);
+  const [renewalLeaseId,setRenewalLeaseId]=useState<string|null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [receiptId,setReceiptId]=useState('');
+  const [receiptAmount,setReceiptAmount]=useState('');
   const [markPaidMethod, setMarkPaidMethod] = useState('Zelle');
   const [markPaidDate, setMarkPaidDate] = useState(new Date().toISOString().split('T')[0]);
   const [tenantReceiptSent, setTenantReceiptSent] = useState<string | null>(null);
@@ -170,10 +175,11 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
 
       // 4. Notify tenant
       if (tenant.email) {
-        await fetch('/api/send-email', {
+        await workspaceFetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            lease_id: tenant.id,
             to: tenant.email,
             subject: 'Your tenancy at ' + (tenant.property?.split(',')[0] || 'your property') + ' has ended',
             from_name: profile?.full_name || 'Your Landlord',
@@ -420,6 +426,8 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
 
   return (
     <div>
+      {renewalLeaseId&&<WizardRenewal initialLeaseId={renewalLeaseId} onClose={()=>setRenewalLeaseId(null)}/>}
+      {selected&&<button style={{...btn.ghost,marginBottom:12}} onClick={()=>setRenewalLeaseId(selected.id)}>Review renewal for {selected.tenant_name}</button>}
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 180px)' }}>
       {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
 
@@ -920,10 +928,11 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                               const amountNum = p.amount || 0;
                               const promises: Promise<any>[] = [];
                               if (selected.email && p.payment_link_url) {
-                                promises.push(fetch('/api/send-email', {
+                                promises.push(workspaceFetch('/api/send-email', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
+                                    lease_id: selected.id,
                                     to: selected.email,
                                     subject: `Payment Reminder: $${amountNum.toLocaleString()} due ${p.due_date}`,
                                     from_name: landlordName,
@@ -952,7 +961,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                         )}
                         {(p.status === 'pending' || p.status === 'overdue') && (
                           <button
-                            onClick={() => { setMarkingPaid(p.id); setMarkPaidMethod('Zelle'); setMarkPaidDate(new Date().toISOString().split('T')[0]); }}
+                            onClick={() => { setMarkingPaid(p.id);setReceiptId('');setReceiptAmount(''); setMarkPaidMethod('Zelle'); setMarkPaidDate(new Date().toISOString().split('T')[0]); }}
                             style={{ ...btn.primary, fontSize: 11, padding: '4px 10px' }}>
                             ✓ Mark Paid
                           </button>
@@ -970,47 +979,31 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                         )}
                       </div>
                     </div>
-                    {/* Mark Paid inline form */}
+                    {/* Offline receipt: actual received funds, including partial amounts. */}
                     {markingPaid === p.id && (
                       <div style={{ marginTop: 10, background: T.bg, borderRadius: T.radiusSm, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' as const }}>
                         <div>
+                          <label style={{...label,fontSize:11}} htmlFor="receipt-amount">Actual amount received ($; blank = remaining balance)</label>
+                          <input id="receipt-amount" type="number" min="0.01" step="0.01" value={receiptAmount} onChange={e=>{setReceiptAmount(e.target.value);setReceiptId('');}} style={input}/>
                           <label style={{ ...label, fontSize: 11 }}>Date Paid</label>
                           <input type="date" style={{ ...input, fontSize: 12, padding: '5px 8px' }} value={markPaidDate} onChange={e => setMarkPaidDate(e.target.value)} />
                         </div>
                         <div>
                           <label style={{ ...label, fontSize: 11 }}>Method</label>
                           <select style={{ ...input, fontSize: 12, padding: '5px 8px' }} value={markPaidMethod} onChange={e => setMarkPaidMethod(e.target.value)}>
-                            {['Zelle', 'Venmo', 'Cash', 'Check', 'Bank Transfer', 'Credit Card', 'Other'].map(m => <option key={m}>{m}</option>)}
+                            {['Zelle', 'Venmo', 'Cash', 'Check', 'Bank Transfer', 'Other'].map(m => <option key={m}>{m}</option>)}
                           </select>
                         </div>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
                             onClick={async () => {
-                              const { error } = await supabase.from('payments').update({ status: 'paid', paid_date: markPaidDate, method: markPaidMethod }).eq('id', p.id);
-                              if (!error) {
-                                setPayments(payments.map(x => x.id === p.id ? { ...x, status: 'paid', paid_date: markPaidDate, method: markPaidMethod } : x));
-                                setMarkingPaid(null);
-                                if (selected.email) {
-                                  const { data: { user } } = await supabase.auth.getUser();
-                                  const { data: prof } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
-                                  const { data: { session: rcptSession } } = await supabase.auth.getSession();
-                                  fetch('/api/send-receipt', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${rcptSession?.access_token}` },
-                                    body: JSON.stringify({
-                                      payment_id: p.id,
-                                      tenant_name: selected.tenant_name,
-                                      tenant_email: selected.email,
-                                      property: selected.property,
-                                      amount: p.amount,
-                                      paid_date: markPaidDate,
-                                      method: markPaidMethod,
-                                      landlord_name: prof?.full_name || '',
-                                      landlord_email: prof?.email || '',
-                                    }),
-                                  }).then(r => r.ok && (setTenantReceiptSent(selected.email), setTimeout(() => setTenantReceiptSent(null), 5000)));
-                                }
-                              }
+                              try {
+                                const id=receiptId || crypto.randomUUID();setReceiptId(id);
+                                const cents=receiptAmount ? Math.round(Number(receiptAmount)*100) : Math.round(Number(p.amount)*100)-Number(p.received_cents || 0);
+                                const data=await workspaceApi('/api/workspace/receipts',{method:'POST',body:JSON.stringify({id,payment_id:p.id,amount_cents:cents,received_on:markPaidDate,method:markPaidMethod})});
+                                setPayments(payments.map(x=>x.id===p.id?data.payment:x));setMarkingPaid(null);setReceiptId('');setReceiptAmount('');
+                              } catch(e:any) {alert(e.message);}
+
                             }}
                             style={{ ...btn.primary, fontSize: 12, padding: '6px 14px' }}>
                             Confirm
@@ -1100,21 +1093,21 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
                               notify_email: prForm.notify_email,
                               notify_sms: prForm.notify_sms,
                             };
-                            console.log('[payment-request] Sending payload:', JSON.stringify(payload));
-                            const res = await fetch('/api/payment-request', {
+
+                            const res = await workspaceFetch('/api/payment-request', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify(payload),
                             });
                             const data = await res.json();
-                            console.log('[payment-request] Response status:', res.status, '| body:', JSON.stringify(data));
+
                             setPrSending(false);
                             if (data.error) {
                               alert('Error: ' + data.error);
                             } else {
                               setShowPaymentRequest(false);
                               const count = data.payments_created || 1;
-                              setPrSuccess(`✓ Payment request sent to ${selected.tenant_name}${count > 1 ? ` (${count} payments created)` : ''}`);
+                              setPrSuccess(`Charge saved. Email: ${data.email_status?.replaceAll('_',' ') || 'not sent'}. SMS: ${data.sms_status?.replaceAll('_',' ') || 'not sent'}.`);
                               setTimeout(() => setPrSuccess(''), 5000);
                               const { data: updatedPayments } = await supabase.from('payments').select('*').order('due_date', { ascending: false });
                               if (updatedPayments) setPayments(updatedPayments);

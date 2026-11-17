@@ -1,4 +1,5 @@
 'use client';
+import { workspaceFetch } from '../lib/workspace-api';
 import Payments from './Payments';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
@@ -294,13 +295,7 @@ export default function AppRoot() {
     if (params.get('upgraded') === 'true') {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
-      // Update subscription status to active
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          supabase.from('profiles').update({ subscription_status: 'active' }).eq('id', user.id);
-          setSubscriptionStatus('active');
-        }
-      });
+      // Subscription state is loaded from the authenticated profile; URL flags never grant access.
       // Google Ads conversion event
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'conversion', {
@@ -311,34 +306,21 @@ export default function AppRoot() {
       }
     }
     if (params.get('setup_success') === 'true') {
-      const paymentType = params.get('payment_type');
-      const customerId = params.get('customer_id');
+      const setupSessionId = params.get('session_id');
       // Save payment method via server-side API (gets PM from Stripe, saves to profile)
       supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user && customerId) {
-          await fetch('/api/tenant/save-payment-method', {
+        if (user && setupSessionId) {
+          await workspaceFetch('/api/tenant/save-payment-method', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: user.id, customer_id: customerId, autopay_enabled: paymentType === 'autopay' }),
+            body: JSON.stringify({ session_id: setupSessionId }),
           });
         }
       });
-      setShowPaymentBanner(true);
-      setTimeout(() => setShowPaymentBanner(false), 5000);
     }
     if (params.get('payment_success') === 'true') {
-      const leaseId = params.get('lease_id');
-      const dueDate = params.get('due_date');
-      const paymentId = params.get('payment_id');
-      if (leaseId) {
-        // Mark payment as paid via server-side API (bypasses RLS)
-        fetch('/api/mark-payment-paid', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lease_id: leaseId, due_date: dueDate, payment_id: paymentId }),
-        }).catch(() => {});
-      }
-      setShowPaymentBanner(true);
+      // A redirect is not a payment receipt. The webhook confirms settlement.
+      setShowPaymentBanner(false);
       setPage('tenants');
       setTimeout(() => setShowPaymentBanner(false), 5000);
     }

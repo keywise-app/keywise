@@ -1,8 +1,10 @@
 'use client';
+import { workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { leaseIsReadOnly } from '@/lib/workspace/records';
 import { workspaceApi } from '../lib/workspace-api';
+import HistoryExport from './workspace/HistoryExport';
 import TenantMaintenance from './workspace/TenantMaintenance';
 import RentLedger from './workspace/RentLedger';
 import { T, btn } from '../lib/theme';
@@ -153,10 +155,11 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setPayNowLoading(prev => ({ ...prev, [p.id]: true }));
     try {
-      const res = await fetch('/api/stripe/payment-link', {
+      const res = await workspaceFetch('/api/stripe/payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          payment_id: p.id,
           lease_id: lease.id,
           tenant_name: lease.tenant_name,
           property: lease.property,
@@ -181,7 +184,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!stripeCustomerId || !stripePaymentMethodId) return;
     setChargingPayment(p.id);
     try {
-      const res = await fetch('/api/tenant/charge', {
+      const res = await workspaceFetch('/api/tenant/charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,7 +197,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       });
       const data = await res.json();
       if (data.success) {
-        setPayments(prev => prev.map(x => x.id === p.id ? { ...x, status: 'paid', paid_date: new Date().toISOString().split('T')[0], method: 'Auto-Pay (Stripe)' } : x));
+        setPayments(prev => prev.map(x => x.id === p.id ? { ...x, status: 'processing', method: 'Stripe — awaiting confirmation' } : x));
       } else {
         alert('Payment failed: ' + (data.error || 'Unknown error'));
       }
@@ -208,7 +211,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setSetupLoading(true);
     try {
-      const res = await fetch('/api/tenant/setup-payment', {
+      const res = await workspaceFetch('/api/tenant/setup-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -242,7 +245,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setSetupLoading(true);
     try {
-      const res = await fetch('/api/tenant/setup-payment', {
+      const res = await workspaceFetch('/api/tenant/setup-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,10 +280,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       }));
     }
     if (landlord?.email) {
-      promises.push(fetch('/api/send-email', {
+      promises.push(workspaceFetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          lease_id: lease?.id,
+          message: msgText,
           to: landlord.email,
           subject: `Message from ${senderName} — ${lease?.property?.split(',')[0] || lease?.property}`,
           from_name: senderName,
@@ -736,7 +741,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
-      {lease && <TenantMaintenance leaseId={lease.id} readOnly={!!isLeaseEnded || !!previewLeaseId} />}
+      {lease && <><HistoryExport leaseId={lease.id}/><TenantMaintenance leaseId={lease.id} readOnly={!!isLeaseEnded || !!previewLeaseId} /></>}
       <RentLedger payments={payments} />
       </div>{/* END LEFT COLUMN */}
 

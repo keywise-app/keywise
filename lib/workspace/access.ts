@@ -13,10 +13,16 @@ export async function workspaceAccess(request: Request) {
 export function canAccessLease(user: { id: string }, lease: { user_id: string; tenant_user_id?: string | null }) {
   return lease.user_id === user.id || lease.tenant_user_id === user.id;
 }
-export async function requireLease(db: any, user: { id: string }, id: string) {
+export async function requireLease(db: any, user: { id: string }, id: string, capability: 'read'|'write'|'pay' = 'read') {
   const { data, error } = await db.from('leases').select('*').eq('id', id).maybeSingle();
   if (error) throw new Response('Unable to load lease.', { status: 500 });
-  if (!data || !canAccessLease(user, data)) throw new Response('Lease not found.', { status: 404 });
+  if (!data) throw new Response('Lease not found.', {status:404});
+  if (data.user_id===user.id) return data;
+  const {data:member,error:memberError}=await db.from('workspace_tenancy_members').select('role,status').eq('lease_id',id).eq('user_id',user.id).maybeSingle();
+  if(memberError) throw new Response('Unable to verify tenancy membership.',{status:503});
+  const allowed=member ? member.status==='active' && (['primary','occupant'].includes(member.role) || (member.role==='former' && capability==='read')) : data.tenant_user_id===user.id;
+  // Co-signer access is denied until a separately scoped document grant exists.
+  if(!allowed)throw new Response('Lease not found.',{status:404});
   return data;
 }
 export async function apiError(error: unknown) {
