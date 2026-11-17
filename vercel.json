@@ -50,7 +50,7 @@
     },
     {
       "path": "/api/cron/apply-renewals",
-      "schedule": "15 * * * *"
+      "schedule": "15 8 * * *"
     }
   ],
   "functions": {
