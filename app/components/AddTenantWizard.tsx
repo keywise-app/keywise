@@ -268,6 +268,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
     if (!user) { setCompleting(false); return; }
 
     let propertyAddress = form.address;
+    let linkedPropertyId = form.property_id && form.property_id !== '__new' ? form.property_id : null;
 
     if (form.property_id && form.property_id !== '__new') {
       const unit = units.find(u => u.id === form.property_id);
@@ -290,7 +291,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
 
       if (bld) {
         // Create unit in properties table
-        await supabase.from('properties').insert({
+        const { data: createdUnit, error: unitError } = await supabase.from('properties').insert({
           user_id: user.id,
           building_id: bld.id,
           address: form.address + (form.unit_number ? ', Unit ' + form.unit_number : ''),
@@ -300,7 +301,9 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
           baths: parseFloat(form.baths) || 1,
           sqft: +form.sqft || null,
           current_rent: +form.monthly_rent || 0,
-        });
+        }).select('id').single();
+        if (unitError) { alert('Unable to create unit: ' + unitError.message); setCompleting(false); return; }
+        linkedPropertyId = createdUnit?.id || null;
       }
       propertyAddress = form.address + (form.unit_number ? ', Unit ' + form.unit_number : '');
     }
@@ -316,6 +319,7 @@ export default function AddTenantWizard({ onClose, onComplete, preselectedUnit }
       email: form.email || null,
       phone: form.phone || null,
       property: propertyAddress,
+      property_id: linkedPropertyId,
       rent: +form.rent || +form.monthly_rent || 0,
       deposit: +form.deposit || 0,
       start_date: form.start_date || null,

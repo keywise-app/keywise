@@ -1,10 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import MaintenanceHistory from './workspace/MaintenanceHistory';
+import { belongsToUnit, localDate } from '@/lib/workspace/records';
 import { callClaude } from '../lib/claude';
 
 type Issue = {
   id: string;
+  property_id?: string | null;
+  lease_id?: string | null;
   property: string;
   issue: string;
   category: string;
@@ -45,6 +49,10 @@ export default function Maintenance() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
+  const [propertyRecords, setPropertyRecords] = useState<any[]>([]);
+  const [leases, setLeases] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -66,7 +74,7 @@ export default function Maintenance() {
   const [showPredictions, setShowPredictions] = useState(true);
 
   const emptyForm = {
-    property: '', issue: '', category: 'General', priority: 'medium',
+    lease_id: '', property: '', issue: '', category: 'General', priority: 'medium',
     status: 'open', notes: '', vendor: '', cost: '',
     reported_date: new Date().toISOString().split('T')[0], resolved_date: '',
   };
@@ -77,13 +85,17 @@ export default function Maintenance() {
   const fetchIssues = async () => {
     setLoading(true);
     const { data, error } = await supabase.from('maintenance').select('*').order('reported_date', { ascending: false });
-    if (!error && data) setIssues(data);
+    if (error) setLoadError('Unable to load maintenance requests.');
+    else if (data) { setIssues(data); setLoadError(''); const requested = new URLSearchParams(window.location.search).get('issue'); if (requested) setExpandedHistory(requested); }
     setLoading(false);
   };
 
   const fetchProperties = async () => {
-    const { data } = await supabase.from('properties').select('address');
-    if (data) setProperties(data.map(p => p.address));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const [p, l] = await Promise.all([supabase.from('properties').select('id,address').eq('user_id', user.id), supabase.from('leases').select('id,tenant_name,property,property_id,archived,status').eq('user_id', user.id)]);
+    if (p.data) { setPropertyRecords(p.data); setProperties(p.data.map(p => p.address)); }
+    if (l.data) setLeases(l.data);
   };
 
   // Generate AI maintenance insights from history
@@ -174,12 +186,17 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
   };
 
   const saveIssue = async () => {
-    if (!form.issue) { alert('Please describe the issue.'); return; }
+    if (!form.issue.trim()) { alert('Please describe the issue.'); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
+    if (!Number.isFinite(Number(form.cost)) || Number(form.cost) < 0) { alert('Enter a valid cost of zero or more.'); setSaving(false); return; }
+    const linkedUnits = propertyRecords.filter(p => belongsToUnit({ property: form.property }, p));
+    const unit = linkedUnits.length === 1 ? linkedUnits[0] : null;
     const payload = {
+      property_id: unit?.id || null,
+      lease_id: form.lease_id || null,
       user_id: user.id,
       property: form.property,
       issue: form.issue,
@@ -190,7 +207,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
       vendor: form.vendor,
       cost: +form.cost || 0,
       reported_date: form.reported_date || null,
-      resolved_date: form.resolved_date || null,
+      resolved_date: form.status === 'resolved' ? (form.resolved_date || localDate()) : null,
     };
 
     let error;
@@ -218,13 +235,16 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
     const next = STATUS_ORDER[(STATUS_ORDER.indexOf(issue.status) + 1) % STATUS_ORDER.length];
     const update: any = { status: next };
     if (next === 'resolved') update.resolved_date = new Date().toISOString().split('T')[0];
-    await supabase.from('maintenance').update(update).eq('id', issue.id);
+    const { error } = await supabase.from('maintenance').update(update).eq('id', issue.id);
+    if (error) { alert('Status was not saved: ' + error.message); return; }
+    setExpandedHistory(null);
     setIssues(issues.map(i => i.id === issue.id ? { ...i, ...update } : i));
   };
 
   const removeIssue = async (id: string) => {
     if (!confirm('Remove this issue?')) return;
-    await supabase.from('maintenance').delete().eq('id', id);
+    const { error } = await supabase.from('maintenance').delete().eq('id', id);
+    if (error) { alert('Request was not removed: ' + error.message); return; }
     setIssues(issues.filter(i => i.id !== id));
   };
 
@@ -232,7 +252,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
     setEditingIssue(issue);
     setInputMode('form');
     setForm({
-      property: issue.property || '', issue: issue.issue || '',
+      lease_id: issue.lease_id || '', property: issue.property || '', issue: issue.issue || '',
       category: issue.category || 'General', priority: issue.priority || 'medium',
       status: issue.status || 'open', notes: issue.notes || '',
       vendor: issue.vendor || '', cost: issue.cost || '',
@@ -395,7 +415,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
 
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['all', 'open', 'in-progress', 'resolved'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
               style={{
@@ -416,7 +436,8 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
 
       {loading && <div style={{ textAlign: 'center', padding: 40, color: '#8C8070' }}>Loading issues…</div>}
 
-      {!loading && issues.length === 0 && (
+      {loadError && <p role="alert">{loadError} <button onClick={fetchIssues}>Retry</button></p>}
+      {!loading && !loadError && issues.length === 0 && (
         <div style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 40, textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🔧</div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>No maintenance issues</div>
@@ -429,7 +450,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
       )}
 
       {filtered.map(issue => (
-        <div key={issue.id} style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div key={issue.id} id={`maintenance-${issue.id}`} style={{ background: 'white', border: '1px solid #E8E3D8', borderRadius: 12, padding: 20, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: isMobile ? 12 : 0 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -475,6 +496,8 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
             </div>
           </div>
 
+          <button style={{ marginTop: 12, padding: '8px 12px', cursor: 'pointer' }} aria-expanded={expandedHistory === issue.id} onClick={() => setExpandedHistory(expandedHistory === issue.id ? null : issue.id)}>Updates, photos and receipts →</button>
+          {expandedHistory === issue.id && <MaintenanceHistory id={issue.id} />}
           {aiAssessments[issue.id] && (
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#1A472A', marginBottom: 8 }}>✦ AI Assessment</div>
@@ -509,7 +532,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={() => { setShowAdd(false); setEditingIssue(null); setForm(emptyForm); setFreeText(''); setAiAssessmentNew(''); setInputMode('freetext'); }}>
-          <div style={{ background: 'white', borderRadius: 16, padding: 32, width: 580, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
+          <div style={{ background: 'white', borderRadius: 16, padding: 32, width: 580, maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{editingIssue ? 'Edit Issue' : 'Log Maintenance Issue'}</div>
             <div style={{ fontSize: 13, color: '#8C8070', marginBottom: 20 }}>Describe the issue and let AI assess priority and cost.</div>
@@ -553,7 +576,7 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>Property</label>
                   {properties.length > 0 ? (
-                    <select style={inputStyle} value={form.property} onChange={e => setForm({ ...form, property: e.target.value })}>
+                    <select style={inputStyle} value={form.property} onChange={e => setForm({ ...form, property: e.target.value, lease_id: '' })}>
                       <option value="">Select property…</option>
                       {properties.map(p => <option key={p}>{p}</option>)}
                     </select>
@@ -564,6 +587,8 @@ Keep seasonal_alerts to 2-3 items, predicted_issues to 3-4, recommendations to 2
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Share with tenant</label>
+                  <select aria-label="Linked tenant" style={{ ...inputStyle, marginBottom: 14 }} value={form.lease_id} onChange={e => setForm({ ...form, lease_id: e.target.value })}><option value="">No tenant linked</option>{leases.filter(l => l.id === form.lease_id || (!l.archived && l.property === form.property)).map(l => <option key={l.id} value={l.id}>{l.tenant_name}</option>)}</select>
                   <label style={labelStyle}>Issue Description *</label>
                   <textarea value={form.issue} onChange={e => setForm({ ...form, issue: e.target.value })}
                     placeholder="e.g. Leaky faucet in master bathroom"

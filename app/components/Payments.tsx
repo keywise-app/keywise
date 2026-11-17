@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
+import RentLedger from './workspace/RentLedger';
 import { getLimits } from '../lib/planLimits';
 
 type Payment = {
@@ -353,6 +354,7 @@ export default function Payments() {
         ))}
       </div>
 
+      <RentLedger payments={payments} onOpen={id => window.dispatchEvent(new CustomEvent('kw:navigate', { detail: `tenants&lease=${id}&tab=payments` }))} />
       {/* Set up schedules prompt */}
       {leasesWithoutSchedules.length > 0 && (
         <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '14px 18px', marginBottom: 20 }}>

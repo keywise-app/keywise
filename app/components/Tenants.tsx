@@ -83,9 +83,12 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     ]);
     if (lRes.data) {
       setLeases(lRes.data);
+      const requested = new URLSearchParams(window.location.search);
+      const target = lRes.data.find((l: any) => l.id === requested.get('lease'));
+      if (target) { setSelected(target); const requestedTab = requested.get('tab'); if (['overview','payments','documents','communications','transition','inspections'].includes(requestedTab || '')) setTab(requestedTab as any); }
       const active = lRes.data.filter((l: any) => !l.archived);
-      if (active.length > 0 && !selected) setSelected(active[0]);
-      else if (active.length === 0) setSelected(null);
+      if (!target && active.length > 0 && !selected) setSelected(active[0]);
+      else if (!target && active.length === 0) setSelected(null);
     }
     if (pRes.data) setPayments(pRes.data);
     if (profRes.data) {

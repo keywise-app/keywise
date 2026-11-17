@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
 import { getLimits } from '../lib/planLimits';
+import UnitRecords from './workspace/UnitRecords';
+import { belongsToUnit } from '@/lib/workspace/records';
 import AddressInput from './AddressInput';
 import AddTenantWizard from './AddTenantWizard';
 
@@ -125,6 +127,7 @@ function UpgradeModal({ reason, onClose }: {
 }
 
 export default function Portfolio() {
+  const [recordsUnit, setRecordsUnit] = useState<Unit | null>(null);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [leases, setLeases] = useState<Lease[]>([]);
@@ -420,7 +423,7 @@ export default function Portfolio() {
     setAnalyzing(building.id);
     const buildingUnits = units.filter(u => u.building_id === building.id);
     const totalRent = buildingUnits.reduce((s, u) => {
-      const lease = leases.find(l => l.property?.includes(building.address || ''));
+      const lease = leases.find(l => l.status !== 'archived' && belongsToUnit(l, u));
       return s + (lease?.rent || u.current_rent || 0);
     }, 0);
     const monthlyFixed = (building.mortgage || 0) + (building.insurance || 0) + (building.hoa_fee || 0);
@@ -435,7 +438,7 @@ export default function Portfolio() {
     if (!building) return { totalRent: 0, fixed: 0, net: 0 };
     const buildingUnits = units.filter(u => u.building_id === building.id);
     const totalRent = buildingUnits.reduce((s, u) => {
-      const lease = leases.find(l => l.property?.includes(u.address || building.address || ''));
+      const lease = leases.find(l => !l.status?.includes('archived') && belongsToUnit(l, u));
       return s + (lease?.rent || u.current_rent || 0);
     }, 0);
     const fixed = (building.mortgage || 0) + (building.insurance || 0) + (building.hoa_fee || 0);
@@ -449,7 +452,7 @@ export default function Portfolio() {
   };
 
   const getUnitLease = (unit: Unit) =>
-    leases.find(l => (unit.address && l.property === unit.address) || (unit.unit_number && l.property?.includes('Unit ' + unit.unit_number)));
+    leases.find(l => l.status !== 'archived' && belongsToUnit(l, unit));
 
   const getDaysLeft = (endDate: string) =>
     Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / 86400000);
@@ -467,6 +470,7 @@ export default function Portfolio() {
 
   return (
     <div>
+      {recordsUnit && <UnitRecords unit={recordsUnit} onClose={() => setRecordsUnit(null)} />}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ fontSize: 13, color: T.inkMuted }}>
@@ -622,6 +626,7 @@ export default function Portfolio() {
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 14, color: T.ink }}>
                               {unit.unit_number ? 'Unit ' + unit.unit_number : unit.address}
+                              <button style={{ ...btn.ghost, display: 'block', marginTop: 8 }} onClick={() => setRecordsUnit(unit)}>View connected records →</button>
                             </div>
                             <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 2 }}>
                               {unit.beds === 0 ? 'Studio' : (unit.beds || 1) + 'bd'} · {formatBaths(unit.baths)}ba

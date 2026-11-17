@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, btn, card } from '../lib/theme';
 import FmvRefineModal, { type FmvContext } from './FmvRefineModal';
+import Attention from './workspace/Attention';
+import Tasks from './workspace/Tasks';
+import RentLedger from './workspace/RentLedger';
+import { belongsToUnit } from '@/lib/workspace/records';
 import ComplianceWidget from './ComplianceWidget';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -51,6 +55,7 @@ function OnboardingChecklist({ onNavigate }: { onNavigate: (p: string) => void }
   const dismiss = () => { localStorage.setItem('kw_onboarding_dismissed', '1'); setDismissed(true); };
 
   if (dismissed) return null;
+  if (loadError) return <div role="alert" style={card}>{loadError} <button style={btn.ghost} onClick={fetchAll}>Retry</button></div>;
   if (loading) return (
     <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Skeleton h={14} w="60%" /><Skeleton h={8} /><Skeleton h={32} /><Skeleton h={32} />
@@ -84,76 +89,6 @@ function OnboardingChecklist({ onNavigate }: { onNavigate: (p: string) => void }
           {!s.done && <span style={{ fontSize: 12, color: T.tealDark, fontWeight: 600 }}>→</span>}
         </div>
       ))}
-    </div>
-  );
-}
-
-// ── SMART ACTIONS (proactive AI suggestions) ─────────────────────────────────
-function SmartActions({ leases, payments, maintenance, onNavigate, isMobile }: {
-  leases: any[]; payments: any[]; maintenance: any[]; onNavigate: (p: string) => void; isMobile?: boolean;
-}) {
-  const now = new Date();
-  const actions: { icon: string; title: string; desc: string; action: string; priority: 'high' | 'medium' | 'low'; page: string }[] = [];
-
-  // Check for leases expiring in 60-90 days (time to send renewal)
-  leases.filter(l => l.end_date).forEach(l => {
-    const days = Math.ceil((new Date(l.end_date).getTime() - now.getTime()) / 86400000);
-    if (days > 30 && days <= 90) {
-      actions.push({ icon: '📄', title: `Send renewal offer to ${l.tenant_name}`, desc: `Lease expires in ${days} days. Send a renewal offer now to avoid vacancy.`, action: 'Draft Renewal', priority: 'high', page: 'tenants' });
-    }
-  });
-
-  // Check for overdue payments with no reminder sent recently
-  const overdue = payments.filter(p => p.status === 'overdue');
-  if (overdue.length > 0) {
-    actions.push({ icon: '💰', title: `${overdue.length} overdue payment${overdue.length > 1 ? 's' : ''} need attention`, desc: `Send a payment reminder or late notice to collect faster.`, action: 'View Payments', priority: 'high', page: 'tenants' });
-  }
-
-  // Check for open maintenance issues older than 7 days
-  const staleMaint = maintenance.filter(m => m.status !== 'resolved' && m.created_at && (now.getTime() - new Date(m.created_at).getTime()) > 7 * 86400000);
-  if (staleMaint.length > 0) {
-    actions.push({ icon: '🔧', title: `${staleMaint.length} maintenance issue${staleMaint.length > 1 ? 's' : ''} open > 7 days`, desc: 'Send tenant an update to keep them informed.', action: 'View Issues', priority: 'medium', page: 'operations' });
-  }
-
-  // Check for tenants without insurance
-  const noInsurance = leases.filter(l => l.status === 'active');
-  if (noInsurance.length > 0) {
-    actions.push({ icon: '🛡️', title: 'Request renter\'s insurance from tenants', desc: 'Protect yourself — request proof of insurance from all active tenants.', action: 'Request Docs', priority: 'low', page: 'tenants' });
-  }
-
-  // Check for vacant units (leases expired or no lease)
-  const expired = leases.filter(l => l.end_date && new Date(l.end_date) < now);
-  if (expired.length > 0) {
-    actions.push({ icon: '🏠', title: `${expired.length} unit${expired.length > 1 ? 's' : ''} may be vacant`, desc: 'Generate a property listing to find your next tenant faster.', action: 'Create Listing', priority: 'medium', page: 'tenants' });
-  }
-
-  if (actions.length === 0) return null;
-
-  const priorityColors = { high: { bg: '#FFF0F0', border: '#FF4444', dot: T.coral }, medium: { bg: '#FFF8E0', border: '#FFB347', dot: '#9A6500' }, low: { bg: T.bg, border: T.border, dot: T.inkMuted } };
-
-  return (
-    <div style={{ ...card }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span style={{ fontSize: 16 }}>✦</span>
-        <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Smart Actions</div>
-        <span style={{ fontSize: 11, color: T.tealDark, background: T.tealLight, padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>AI-powered</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {actions.slice(0, 5).map((a, i) => {
-          const c = priorityColors[a.priority];
-          return (
-            <div key={i} onClick={() => onNavigate(a.page)}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: c.bg, borderLeft: `3px solid ${c.border}`, borderRadius: T.radiusSm, cursor: 'pointer' }}>
-              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{a.icon}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: T.ink, marginBottom: 2 }}>{a.title}</div>
-                <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.5 }}>{a.desc}</div>
-              </div>
-              <span style={{ fontSize: 12, color: T.tealDark, fontWeight: 600, flexShrink: 0, marginTop: 2 }}>{a.action} →</span>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -588,7 +523,7 @@ function buildUnitItems(units: any[], leases: any[], buildings: any[] = []): Uni
     const lease = activeLeases.find(l => {
       if (usedLeaseIds.has(l.id)) return false;
       const la = (l.property || '').toLowerCase().trim();
-      return la === unitAddr || la.startsWith(unitAddr) || unitAddr.startsWith(la);
+      return belongsToUnit(l, unit);
     });
     if (lease) usedLeaseIds.add(lease.id);
 
@@ -988,6 +923,7 @@ function MarketInsights({ units, leases, buildings, onNavigate, isMobile }: { un
 }
 
 export default function Dashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const [loadError, setLoadError] = useState('');
   const [leases, setLeases] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [buildings, setBuildings] = useState<any[]>([]);
@@ -1011,18 +947,19 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError('');
     try {
       const now = new Date();
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().slice(0, 10);
       const [lRes, pRes, mRes, eRes, uRes, bRes] = await Promise.all([
         supabase.from('leases').select('*').order('end_date', { ascending: true }),
-        supabase.from('payments').select('*').gte('due_date', sixMonthsAgo).order('due_date', { ascending: false }),
-        supabase.from('maintenance').select('*').order('created_at', { ascending: false }).limit(30),
+        supabase.from('payments').select('*').order('due_date', { ascending: false }),
+        supabase.from('maintenance').select('*').order('created_at', { ascending: false }),
         supabase.from('expenses').select('*').gte('date', sixMonthsAgo).order('date', { ascending: false }),
         supabase.from('properties').select('id, address, unit_number, building_id, beds, baths, sqft, current_rent, differentiators, estimated_market_rent, market_value_updated_at, fmv_cache, fmv_calculated_at, updated_at').eq('is_unit', true).order('address'),
         supabase.from('buildings').select('id, address, num_units').order('address'),
       ]);
+      if ([lRes,pRes,mRes,eRes,uRes,bRes].some(result => result.error)) throw new Error('Some portfolio records could not be loaded.');
       if (lRes.data) setLeases(lRes.data);
       if (pRes.data) setPayments(pRes.data);
       if (mRes.data) setMaintenance(mRes.data);
@@ -1037,6 +974,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
         .then(({ data }) => { if (data) setRecentCalcs(data); });
     } catch (err) {
       console.error('[dashboard] fetchAll error:', err);
+      setLoadError('Unable to load your complete portfolio. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -1106,64 +1044,18 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
         </div>
       )}
 
+      <RentLedger payments={payments} onOpen={id => onNavigate(`tenants&lease=${id}&tab=payments`)} />
+      <Attention leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} />
+      <Tasks />
       {leases.length > 0 && (
         <>
           {/* ══════════════════════════════════════════════════
               ABOVE THE FOLD — primary glance
               ══════════════════════════════════════════════════ */}
 
-          {/* 1. RENT COLLECTION STATUS — hero widget */}
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: isMobile ? 18 : 24, boxShadow: T.shadow }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, color: T.navy }}>Rent Collection</div>
-              <div style={{ fontSize: 12, color: T.inkMuted }}>
-                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <div style={{ height: 10, background: T.bg, borderRadius: 5, overflow: 'hidden', marginBottom: 12 }}>
-              <div style={{ height: '100%', borderRadius: 5, width: `${collectionPct}%`, background: collectionPct >= 90 ? T.green : collectionPct >= 50 ? T.amber : T.coral, transition: 'width 0.6s' }} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 12 }}>
-              <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: T.navy, letterSpacing: '-0.5px' }}>${totalRent.toLocaleString()}</div>
-                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Expected</div>
-              </div>
-              <div style={{ background: T.greenLight, borderRadius: T.radiusSm, padding: '14px 16px' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: T.greenDark, letterSpacing: '-0.5px' }}>${collectedThisMonth.toLocaleString()}</div>
-                <div style={{ fontSize: 11, color: T.greenDark, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Collected ({collectionPct}%)</div>
-              </div>
-              <div style={{ background: lateThisMonth.length > 0 ? T.coralLight : T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: lateThisMonth.length > 0 ? T.coral : T.inkMid, letterSpacing: '-0.5px' }}>{lateThisMonth.length}</div>
-                <div style={{ fontSize: 11, color: lateThisMonth.length > 0 ? T.coral : T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Late</div>
-              </div>
-              <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: '14px 16px' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: T.inkMid, letterSpacing: '-0.5px' }}>{pendingThisMonth.length}</div>
-                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 2 }}>Pending</div>
-              </div>
-            </div>
-
-            {/* Late tenant details */}
-            {lateThisMonth.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                {lateThisMonth.map(p => (
-                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13 }}>⚠</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: T.coral }}>{p.tenant_name}</span>
-                      <span style={{ fontSize: 12, color: T.inkMuted }}>${(p.amount || 0).toLocaleString()}</span>
-                    </div>
-                    <button onClick={() => onNavigate('tenants')} style={{ background: 'none', border: 'none', color: T.navy, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>View →</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* 2. UPCOMING ACTIONS — what needs you this week */}
-          <SmartActions leases={leases} payments={payments} maintenance={maintenance} onNavigate={onNavigate} isMobile={isMobile} />
+          <button style={btn.ghost} onClick={() => onNavigate('payments')}>Manage all rent and payment schedules →</button>
 
           {/* ══════════════════════════════════════════════════
               BELOW THE FOLD — click to expand
