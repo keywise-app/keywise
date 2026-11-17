@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   try {
     const {db,user} = await workspaceAccess(req);
     const {lease_id,payment_type} = await req.json();
-    const lease = await requireLease(db,user,lease_id);
+    const lease = await requireLease(db,user,lease_id,'pay');
     if (lease.tenant_user_id !== user.id) throw new Response('Only the linked tenant can set up their card.',{status:403});
     if (!user.email) throw new Response('A verified account email is required.',{status:409});
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);

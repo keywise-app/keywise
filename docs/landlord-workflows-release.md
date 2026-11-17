@@ -1,39 +1,47 @@
-# Landlord workflow release
+# Keywise landlord workflow implementation
 
-## Audit and scope
+## Implemented source scope
 
-Repository inspected from main at 876d7fb. This is a source audit, not a claim that existing production workflows passed an authenticated browser test.
+The branch combines independent-landlord branding, connected property records, an attention queue and dated tasks with the following workflow changes:
 
-| Area | Existing implementation | Change in this release |
-| --- | --- | --- |
-| Dashboard | Rent cards, inferred smart actions, charts, renewal notices | Recorded-charge ledger, deterministic attention queue with record destinations, dated tasks |
-| Property records | Buildings and units, address-based lease matching | Stable lease/unit and maintenance/unit links, exact legacy fallback, connected-record view |
-| Maintenance | Landlord CRUD, priority, vendor, cost and resolution date | Tenant requests, tenant-visible updates, automatic status history, private photo/receipt attachments, error handling |
-| Tenant portal | Lease, payment history, documents, Stripe payment UI | Maintenance submission/tracking, reconciled rent summary, authenticated lease/document/payment reads, verified document uploads |
-| Rent tracking | Charges, schedules, manual paid recording, Stripe processing | Shared scheduled/paid/outstanding/overdue/processing totals, direct access from dashboard and navigation |
-| Tasks | No persistent dated landlord task list found | Owner-scoped tasks with due dates, property links, completion and reopening |
+- Authenticated tenant and owner APIs derive payment/customer/destination and message-recipient identity from stored records. Checkout, subscription and Connect setup use the authenticated account. Browser return flags cannot settle rent, link a destination account or grant a paid plan. Profile write guards protect provider identity and entitlement fields.
+- Persistent payment attempts reserve exact amounts and destinations under a database lock. Provider events reconcile exact attempt/payment/owner/currency/amount identity, tolerate replay and stale ordering, and fail for retry on durable write errors. Partial refunds preserve net confirmed funds; disputes remain blocked for reconciliation. Legacy name/date settlement fallbacks are removed.
+- Offline receipts use integer-cent allocations and append-only reversal records. Pending attempts do not count as received funds. Deposits and other non-rent charges stay out of the rent summary. Direct edits cannot fabricate confirmation or remove settled payment history.
+- Occupied-rental setup uses private source files, server drafts, optimistic revisions, typed extraction suggestions, explicit tenancy state, a bounded schedule/defer decision, and a final exact-record preview. Unit, tenancy and charges commit atomically. Repeating an approval returns the same tenancy. No invitation or notice is sent automatically.
+- Lease extraction accepts owner-scoped storage objects rather than arbitrary URLs. Sources have a private bucket, size/type limits, PDF page limits, content checks and durable rate limits. Unknown/conflicting facts remain reviewable; model excerpts and page suggestions are not labeled verified evidence.
+- Tenancy dates do not implicitly terminate continued month-to-month occupancy. Membership controls permit explicit linked occupants and revocation. Co-signers are denied pending separately scoped document grants. Former-member sharing needs the release review below.
+- Tenant repairs support retry identities, shared updates/photos and private owner receipts. Contractor/access snapshots and approved estimates stay private. Completion records actual invoice cost with one expense identity; reopening retains cost and cumulative history.
+- Renewal offers persist as proposals and do not change rent when emailed. Applying terms requires a separate executed-source approval, checks the base revision and existing future activity, creates/replaces only reviewed future charges, and applies current rent on the property's effective civil date through a guarded cron.
+- Email approvals persist content digests and provider-acceptance state. Recipient identity is derived on the server, duplicate submissions share a provider idempotency key, and uncertain delivery is not labeled delivered.
+- Selected history exports produce authenticated JSON manifests with expiring original-file links and tenant filtering. They are not bundled archives. Fixed-schema server outcomes measure import, payment and renewal milestones without message/document content or financial amounts.
 
-Record IDs win over addresses. The legacy fallback requires exact normalized addresses; it never matches on a building prefix or a unit letter alone. Ambiguous historical rows are left unlinked. Existing expenses and maintenance cost estimates are displayed separately to avoid counting the same repair twice.
+Existing commercial plan definitions remain unchanged. The PRD's P2 intake integrations and pricing experiments are not enabled.
 
-Tenant read APIs authenticate bearer sessions and verify the lease owner or linked tenant. Invitation linking uses the authenticated account's verified email, not an email or user ID supplied by a caller. Name-only payment lookup has been removed because names are not a reliable ownership boundary. Historical charges without lease IDs must be reviewed and linked by an operator rather than automatically exposed to tenants.
+## Repeatable validation
 
-Photos are shared with the linked tenant. Receipts and landlord notes/vendor costs remain in the landlord workspace. An explicit tenant-visible update is separate from landlord notes. Archived/ended leases cannot submit new requests or documents through these endpoints. The final lease calendar day remains editable.
+Run `npm ci`, then `npm run test:workspace`. PGlite is a committed development dependency; no temporary external install is required. The command runs:
 
-## Rollout order
+1. Domain tests for tenancy lifecycle, confirmed/partial rent arithmetic, unit identity, calendar schedules, extraction unknowns, approval digests and membership isolation.
+2. Real route-handler boundary tests with network access prohibited for anonymous requests.
+3. Disposable PostgreSQL-compatible integration tests covering all new migrations, injected atomic rollback, stale/repeated approvals, unit limits, fractional-dollar storage, foreign IDs, partial receipts/refunds, reversals, provider replay/order, repair expense identity, renewal conflicts and effective civil dates, financial/profile write guards and RLS.
 
-1. Back up the target database and apply `supabase/migrations/20261117000000_landlord_workflows.sql` through the project's established Supabase migration process. The migration is transactional and additive. It assumes the existing application tables and Supabase auth/storage schemas already exist.
-2. Confirm server environment contains `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and the client build contains the existing public URL/anon key. No credentials are committed.
-3. Deploy this branch to a preview using the existing Vercel project. Keep its current audience and environment configuration.
-4. With synthetic landlord and tenant accounts: create a unit and tenant; confirm the property link; add a task and complete/reopen it; record a charge and manual payment; submit a maintenance request with a photo as tenant; post an update, attach a receipt, and resolve as landlord. Confirm the tenant sees the update/photo but not the receipt. Confirm a second tenant/landlord cannot read those records. Revisit through dashboard actions, URL reload, Back and Forward on desktop/mobile.
-5. Promote the verified deployment using the existing release process. Keep the additive schema if rolling the application back. Do not undo migration columns or drop tables containing user records.
+Build using the normal deployment environment and `npm run build`. Local builds used nonfunctional placeholders for required provider variables and a 6 GB Node heap; passing does not establish provider connectivity or live-schema compatibility.
 
-Existing Stripe charge, checkout, subscription, Connect and webhook flows are preserved. This release does not introduce a payment provider or enable a new payment method. Provider/fund-flow review remains necessary before expanding actual collection behavior.
+## Required release gates
 
-## Validation
+This remains a draft implementation, not a production release. Do not merge or promote it solely because local checks pass.
 
-- `bash scripts/test-workspace.sh`: rent arithmetic, status classification, date boundaries, address isolation, lease authorization and unauthenticated API rejection.
-- `PGLITE_MODULE=/path/to/@electric-sql/pglite node test/workspace-migration.cjs`: run the migration against a disposable Postgres-compatible database with synthetic prerequisite tables. Checks backfills, event triggers, invalid cross-owner links and RLS. This does not establish compatibility with every untracked production schema change.
-- `npx tsc --noEmit`: application type checking.
-- `npm run build`: compile and prerender using environment placeholders in this workspace. This does not validate external service connectivity or signed-in browser flows.
+1. Inventory and back up the actual schema and reconcile legacy money units, manually marked paid rows, active payment links and in-flight attempts. The registered legacy `payments.amount` column is dollars; the migration widens it to `numeric(12,2)` without changing units. No automatic ambiguous historical backfill is authorized.
+2. Apply the ordered `20261117*` migrations to an isolated copy of the real schema and validate data reconciliation. The disposable fixture cannot establish compatibility with untracked production schema changes. Deploy schema and application as a coordinated release; financial guards intentionally reject legacy direct-paid mutations.
+3. Complete operational reconciliation for failed/expired attempts, dispute resolution and old payment links. A 23-hour retry limit fails closed before provider idempotency retention expires. No automatic fresh charge is created after that limit.
+4. Complete scoped co-signer sharing and review former-occupant history boundaries, revocable invitations and all older RLS/service-role routes. Verify member revocation with real signed-in accounts and expired sessions.
+5. Verify executed renewal source integrity, correction authors/version evidence, approval replay and conflicting concurrent edits against real provider sandboxes. Statutory notices remain a separately reviewed process. Sending a proposal is not tenant acceptance.
+6. Exercise all legacy rent/schedule/expense screens against the new guards; verify partial-balance presentation throughout, online/manual retry recovery and document export expiry/missing originals.
+7. Run signed-in browser E2E and human keyboard/screen-reader checks at 320/390/768/1280 px and 200% zoom. Verify dialog focus restoration, draft resumption, back/reload context, tenant privacy and all error/empty states.
+8. Expand outcome instrumentation for repairs, failures/reversals and second-rent-cycle retention. Run the pre-specified RentSpree and TurboTenant task study before making any 30% faster claim.
 
-Production rollout is blocked until the migration and authenticated acceptance checks are complete. No production database migration has been executed from this workspace.
+## Deployment access
+
+The connected Vercel account still returned HTTP 403 for the `keywise-apps-projects` team during this work. Team authorization is required before preview/deployment inspection. No production migration, real-money charge, tenant message or statutory notice was executed by this development session.
+
+Preserve all user records on rollback. Keeping the new financial guards while reverting to a legacy application can intentionally block old direct-paid flows; reconcile deployment compatibility rather than dropping history or disabling safety checks casually.

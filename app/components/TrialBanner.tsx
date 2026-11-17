@@ -1,4 +1,5 @@
 'use client';
+import {workspaceFetch} from '../lib/workspace-api';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -29,7 +30,7 @@ export default function TrialBanner({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       const { data: profile } = await supabase.from('profiles').select('email, full_name').eq('id', user.id).single();
-      const res = await fetch('/api/stripe/checkout', {
+      const res = await workspaceFetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.id, email: profile?.email || user.email, name: profile?.full_name || '', return_path: 'portfolio' }),

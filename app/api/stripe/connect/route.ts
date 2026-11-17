@@ -1,83 +1,26 @@
-import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-export async function POST(req: Request) {
-  try {
-    const { user_id } = await req.json();
-
-    if (!user_id) {
-      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
-    }
-
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user || user.id !== user_id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Create a new Express connected account
-    const account = await stripe.accounts.create({
-      type: 'express',
-      metadata: { user_id },
-    });
-
-    // Save the account ID to the profiles table.
-    // upsert handles both missing and existing rows.
-    const { data: upsertData, error: dbError } = await supabase
-      .from('profiles')
-      .upsert({ id: user_id, stripe_account_id: account.id }, { onConflict: 'id' })
-      .select('id, stripe_account_id');
-
-    if (dbError) {
-      console.error('[stripe/connect] Failed to save stripe_account_id:', dbError.message, dbError.code, dbError.details);
-      // Don't block the flow — pass the account_id back so the client can save it as a fallback
-    }
-
-    // Include account_id in the return_url so the client can save it as a backup
-    const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: 'https://keywise.app/?page=settings',
-      return_url: `https://keywise.app/?page=settings&stripe=connected&account_id=${account.id}`,
-      type: 'account_onboarding',
-    });
-
-    return NextResponse.json({ url: accountLink.url, account_id: account.id });
-  } catch (err: any) {
-    console.error('[stripe/connect] Unexpected error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to create Stripe Connect link.' }, { status: 500 });
+import {workspaceAccess,apiError} from '@/lib/workspace/access';
+export async function POST(req:Request){
+ try{
+  const {db,user}=await workspaceAccess(req);const stripe=new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const {data:profile,error}=await db.from('profiles').select('stripe_account_id').eq('id',user.id).single();
+  if(error)throw new Response('Unable to load your payment account.',{status:503});
+  let accountId=profile.stripe_account_id;
+  if(!accountId){
+   const account=await stripe.accounts.create({type:'express',metadata:{user_id:user.id}},{idempotencyKey:`workspace-connect-${user.id}`});accountId=account.id;
+   const {error:saveError}=await db.from('profiles').update({stripe_account_id:accountId}).eq('id',user.id);
+   if(saveError)throw new Response('Unable to save your connected account. Retry to recover the same account.',{status:503});
   }
+  const link=await stripe.accountLinks.create({account:accountId,type:'account_onboarding',refresh_url:'https://keywise.app/?page=settings',return_url:'https://keywise.app/?page=settings&stripe=connected'});
+  return Response.json({url:link.url});
+ }catch(error){return apiError(error);}
 }
-
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const account_id = searchParams.get('account_id');
-
-    if (!account_id) {
-      return NextResponse.json({ error: 'account_id is required' }, { status: 400 });
-    }
-
-    const account = await stripe.accounts.retrieve(account_id);
-    return NextResponse.json({
-      account_id: account.id,
-      charges_enabled: account.charges_enabled,
-      payouts_enabled: account.payouts_enabled,
-      details_submitted: account.details_submitted,
-    });
-  } catch (err: any) {
-    console.error('[stripe/connect] Account retrieve error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to retrieve account.' }, { status: 500 });
-  }
+export async function GET(req:Request){
+ try{
+  const {db,user}=await workspaceAccess(req);
+  const {data:profile,error}=await db.from('profiles').select('stripe_account_id').eq('id',user.id).single();
+  if(error||!profile?.stripe_account_id)throw new Response('Connected account not found.',{status:404});
+  const account=await new Stripe(process.env.STRIPE_SECRET_KEY!).accounts.retrieve(profile.stripe_account_id);
+  return Response.json({account_id:account.id,charges_enabled:account.charges_enabled,payouts_enabled:account.payouts_enabled,details_submitted:account.details_submitted});
+ }catch(error){return apiError(error);}
 }

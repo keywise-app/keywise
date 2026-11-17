@@ -84,7 +84,14 @@ export async function POST(request: Request) {
   const lease = await requireLease(db, user, body.lease_id,'write');
   if (leaseIsReadOnly(lease)) return Response.json({ error: 'This lease is read only.' }, { status: 403 });
   if (typeof body.issue !== 'string' || !body.issue.trim() || body.issue.length > 3000) return Response.json({ error: 'Describe the issue in up to 3,000 characters.' }, { status: 400 });
-  const { data, error } = await db.from('maintenance').insert({ user_id: lease.user_id, lease_id: lease.id, property_id: lease.property_id || null, property: lease.property, issue: body.issue.trim(), category: 'General', priority: ['low','medium','high'].includes(body.priority) ? body.priority : 'medium', status: 'open', reported_date: new Date().toISOString().slice(0,10) }).select('id').single();
+  if(typeof body.request_id!=='string' || !/^[0-9a-f-]{36}$/i.test(body.request_id))throw new Response('A request identity is required. Reload before submitting.',{status:400});
+  const {data:existing,error:lookupError}=await db.from('maintenance').select('id,lease_id,issue,priority').eq('id',body.request_id).maybeSingle();
+  if(lookupError)throw new Response('Unable to reconcile this request. Retry the same submission.',{status:503});
+  if(existing){
+   if(existing.lease_id!==lease.id || existing.issue!==body.issue.trim() || existing.priority!==body.priority)throw new Response('The request changed. Review and submit again.',{status:409});
+   return Response.json({id:existing.id,duplicate:true});
+  }
+  const { data, error } = await db.from('maintenance').insert({ id:body.request_id,user_id: lease.user_id, lease_id: lease.id, property_id: lease.property_id || null, property: lease.property, issue: body.issue.trim(), category: 'General', priority: ['low','medium','high'].includes(body.priority) ? body.priority : 'medium', status: 'open', reported_date: new Date().toISOString().slice(0,10) }).select('id').single();
   if (error) throw error;
   return Response.json({ id: data.id }, { status: 201 });
  } catch (error) { return apiError(error); }

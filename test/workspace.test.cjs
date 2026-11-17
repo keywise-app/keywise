@@ -116,3 +116,13 @@ test('money adapter rejects ambiguous units and provider identity requires exact
  assert.equal(intentMatches(a,i),true);
  for(const patch of [{amount:200001},{currency:'eur'},{transfer_data:{destination:'acct_b'}},{metadata:{...i.metadata,owner_id:'other'}}])assert.equal(intentMatches(a,{...i,...patch}),false);
 });
+
+test('membership revocation overrides a legacy linked tenant and former occupants cannot mutate',async()=>{
+ const lease={id:'lease',user_id:'owner',tenant_user_id:'tenant'};
+ const mock=member=>({from:table=>{const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:table==='leases'?lease:member})};return q;}});
+ await assert.rejects(requireLease(mock({role:'primary',status:'revoked'}),{id:'tenant'},'lease'),e=>e.status===404);
+ assert.equal((await requireLease(mock({role:'occupant',status:'active'}),{id:'occupant'},'lease','write')).id,'lease');
+ assert.equal((await requireLease(mock({role:'former',status:'active'}),{id:'former'},'lease','read')).id,'lease');
+ await assert.rejects(requireLease(mock({role:'former',status:'active'}),{id:'former'},'lease','write'),e=>e.status===404);
+ await assert.rejects(requireLease(mock({role:'cosigner',status:'active'}),{id:'cosigner'},'lease','read'),e=>e.status===404);
+});

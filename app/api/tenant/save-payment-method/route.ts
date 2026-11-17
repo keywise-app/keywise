@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const session = await stripe.checkout.sessions.retrieve(session_id,{expand:['setup_intent']});
     if (session.mode!=='setup' || session.status!=='complete' || session.metadata?.user_id!==user.id) throw new Response('Setup session not found.',{status:404});
-    const lease = await requireLease(db,user,session.metadata.lease_id);
+    const lease = await requireLease(db,user,session.metadata.lease_id,'pay');
     if (lease.tenant_user_id!==user.id) throw new Response('Setup session not found.',{status:404});
     const {data:profile,error} = await db.from('profiles').select('stripe_customer_id').eq('id',user.id).single();
     const setup = session.setup_intent as Stripe.SetupIntent;

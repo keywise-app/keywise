@@ -62,10 +62,18 @@ export async function POST(req: Request) {
           const status = event.type === 'charge.refunded' || event.type === 'charge.dispute.created' ? 'review' :
             intent.status === 'succeeded' ? 'succeeded' : intent.status === 'processing' ? 'processing' :
             ['canceled','requires_payment_method'].includes(intent.status) ? 'failed' : 'processing';
+          let refundedCents=0;
+          if(event.type==='charge.refunded') {
+            const charge=await stripe.charges.retrieve(object.id);
+            if(charge.payment_intent!==intent.id || charge.amount!==intent.amount || charge.currency!==intent.currency)throw new Error('Refund identity mismatch');
+            refundedCents=charge.amount_refunded;
+          } else if(event.type==='charge.dispute.created') {
+            refundedCents=intent.amount; // Held funds remain unavailable until explicit reconciliation.
+          }
           const {error} = await supabase.rpc('workspace_apply_payment_event',{
             p_event_id:event.id,p_attempt_id:attemptId,p_intent_id:intent.id,p_amount_cents:intent.amount,
             p_currency:intent.currency,p_destination:typeof intent.transfer_data?.destination === 'string' ? intent.transfer_data.destination : intent.transfer_data?.destination?.id,
-            p_owner:intent.metadata.owner_id,p_payment_id:intent.metadata.payment_id,p_status:status,p_event_created:event.created,
+            p_owner:intent.metadata.owner_id,p_payment_id:intent.metadata.payment_id,p_status:status,p_event_created:event.created,p_refund_cents:refundedCents,
           });
           if (error) throw new Error('Rent event could not be reconciled');
         }

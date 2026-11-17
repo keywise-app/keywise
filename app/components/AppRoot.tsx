@@ -272,19 +272,7 @@ export default function AppRoot() {
     if (params.get('stripe') === 'connected') {
       setStripeSuccess(true);
       setTimeout(() => setStripeSuccess(false), 5000);
-      const accountId = params.get('account_id');
-      if (accountId) {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) {
-            supabase.from('profiles')
-              .upsert({ id: user.id, stripe_account_id: accountId }, { onConflict: 'id' })
-              .then(({ error }) => {
-                if (error) console.error('Client-side stripe_account_id save failed:', error.message);
-                else console.log('Client-side stripe_account_id saved:', accountId);
-              });
-          }
-        });
-      }
+      // The authenticated server owns Stripe account linkage; return URLs carry no authority.
     }
     if (params.get('tenant_preview') === 'true' && params.get('lease_id')) {
       setPreviewLeaseId(params.get('lease_id'));
@@ -296,14 +284,7 @@ export default function AppRoot() {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
       // Subscription state is loaded from the authenticated profile; URL flags never grant access.
-      // Google Ads conversion event
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18416062236/iSgECJ6Oru8cEJyeu81E',
-          value: 49.0,
-          currency: 'USD',
-        });
-      }
+      // Confirmed subscription outcomes are measured on the server, not from URL flags.
     }
     if (params.get('setup_success') === 'true') {
       const setupSessionId = params.get('session_id');

@@ -1,4 +1,5 @@
 'use client';
+import TenancyAccess from './workspace/TenancyAccess';
 import WizardRenewal from './WizardRenewal';
 import { workspaceApi, workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect, useRef } from 'react';
@@ -427,6 +428,7 @@ Keep it warm, clear, and under 180 words. No bullet points. Format as a letter.`
   return (
     <div>
       {renewalLeaseId&&<WizardRenewal initialLeaseId={renewalLeaseId} onClose={()=>setRenewalLeaseId(null)}/>}
+      {selected&&<TenancyAccess leaseId={selected.id}/>}
       {selected&&<button style={{...btn.ghost,marginBottom:12}} onClick={()=>setRenewalLeaseId(selected.id)}>Review renewal for {selected.tenant_name}</button>}
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20, height: isMobile ? 'auto' : 'calc(100vh - 180px)' }}>
       {showWizard && <AddTenantWizard onClose={() => setShowWizard(false)} onComplete={() => { fetchAll(); setShowWizard(false); }} />}
