@@ -55,7 +55,6 @@ function OnboardingChecklist({ onNavigate }: { onNavigate: (p: string) => void }
   const dismiss = () => { localStorage.setItem('kw_onboarding_dismissed', '1'); setDismissed(true); };
 
   if (dismissed) return null;
-  if (loadError) return <div role="alert" style={card}>{loadError} <button style={btn.ghost} onClick={fetchAll}>Retry</button></div>;
   if (loading) return (
     <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Skeleton h={14} w="60%" /><Skeleton h={8} /><Skeleton h={32} /><Skeleton h={32} />
@@ -1009,6 +1008,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (page: string) =
 
   const urgentCount = overduePayments.length + expiringLeases.length + highPrioMaint.length;
 
+  if (loadError) return <div role="alert" style={card}>{loadError} <button style={btn.ghost} onClick={fetchAll}>Retry</button></div>;
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
