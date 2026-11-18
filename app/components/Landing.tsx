@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import { acquisitionSource, captureAcquisition, trackGrowth } from '../lib/growth';
+import { currentAcquisitionSource, captureAcquisition, trackGrowth } from '../lib/growth';
 import { brand, brandWorkflows, brandSteps, brandFaqs } from '../lib/brand';
 
 const N = '#0F3460';
@@ -319,7 +319,7 @@ export default function Landing() {
  async function submit(event: React.FormEvent) {
   event.preventDefault(); setBusy(true); setError(''); track('signup_link_requested','hero');
   try {
-   const { error } = await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:`https://keywise.app/?welcome=true&source=${acquisitionSource(sessionStorage.getItem('kw_acquisition_v1'))}`,shouldCreateUser:true}});
+   const { error } = await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:`https://keywise.app/?welcome=true&source=${currentAcquisitionSource()}`,shouldCreateUser:true}});
    if (error) throw error;
    setSent(true); track('signup_link_sent','hero');
   } catch (error) { setError((error as Error).message || 'We couldn’t send your link. Please try again.'); }

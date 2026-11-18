@@ -26,6 +26,7 @@ let network=0;global.fetch=async()=>{network++;throw new Error('A route attempte
  const measured=metrics.workflowMetrics(outcomes)[0];assert.equal(measured.started,2);assert.equal(measured.completed,1);assert.equal(measured.median_elapsed_seconds,120);assert.equal(metrics.workflowMetrics([])[0].median_elapsed_seconds,null);assertions+=4;
  const growthRoute=require(path.join(root,'app/api/growth-events/route.ts'));
  for(const [body,status] of [[{event:'tenant_email',source:'direct'},400],[{event:'import_saved',source:'private@example.test'},400]]){assert.equal((await growthRoute.POST(new Request('https://example.test/api/growth-events',{method:'POST',body:JSON.stringify(body)}))).status,status);assertions++;}
+ const acquisition=require(path.join(root,'app/lib/growth.ts'));assert.equal(acquisition.currentAcquisitionSource(),'direct','unavailable browser storage cannot block signup');assertions++;
  assert.equal(network,0);assertions++;
  console.log(`Route boundaries: ${assertions} assertions passed; no provider or database request before authentication.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

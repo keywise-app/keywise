@@ -1,6 +1,6 @@
 'use client';
 import { workspaceFetch } from '../lib/workspace-api';
-import { trackGrowth,trackWorkspaceVisit } from '../lib/growth';
+import { trackGrowth,trackWorkspaceVisit,captureAcquisition } from '../lib/growth';
 import Payments from './Payments';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
@@ -107,13 +107,29 @@ export default function AppRoot() {
   const [stripeSuccess, setStripeSuccess] = useState(false);
   const [userRole, setUserRoleRaw] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('kw_role') as string | null;
+    try { return localStorage.getItem('kw_role') as string | null; } catch { return null; }
   });
   const setUserRole = (role: string | null) => {
     setUserRoleRaw(role);
-    if (role) localStorage.setItem('kw_role', role);
-    else localStorage.removeItem('kw_role');
+    try {
+      if (role) localStorage.setItem('kw_role', role);
+      else localStorage.removeItem('kw_role');
+    } catch { /* Role cache is optional; the authenticated profile remains authoritative. */ }
   };
+  const observedVisit = useRef('');
+  useEffect(() => {
+    if (!session?.access_token || !userRole || userRole==='tenant') return;
+    const recordVisit = () => {
+      if (document.visibilityState !== 'visible') return;
+      const key = `${session.user.id}:${new Date().toISOString().slice(0,10)}`;
+      if (observedVisit.current === key) return;
+      void trackWorkspaceVisit(session.access_token).then(ok => { if(ok) observedVisit.current=key; });
+    };
+    recordVisit();
+    window.addEventListener('focus',recordVisit);
+    document.addEventListener('visibilitychange',recordVisit);
+    return () => { window.removeEventListener('focus',recordVisit); document.removeEventListener('visibilitychange',recordVisit); };
+  },[session?.access_token,userRole]);
   const [previewLeaseId, setPreviewLeaseId] = useState<string | null>(null);
   const [activeWizard, setActiveWizard] = useState<'onboard' | 'renewal' | 'fmv' | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -335,8 +351,9 @@ export default function AppRoot() {
       try {
       setSession(session);
       if (!session) { setLoading(false); return; }
+      captureAcquisition();
       trackGrowth('workspace_opened', 'workspace');
-      void trackWorkspaceVisit(session.access_token);
+
 
       console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 

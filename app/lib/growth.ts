@@ -4,6 +4,9 @@ export const growthSources = ['direct','landlord-community','agent-referral','fo
 export function acquisitionSource(value: string | null): typeof growthSources[number] {
   return growthSources.includes(value as typeof growthSources[number]) ? value as typeof growthSources[number] : 'direct';
 }
+export function currentAcquisitionSource() {
+  try { return acquisitionSource(sessionStorage.getItem('kw_acquisition_v1')); } catch { return 'direct' as const; }
+}
 export function captureAcquisition() {
   try {
     const value = new URLSearchParams(window.location.search).get('source');
@@ -14,7 +17,7 @@ export function trackGrowth(event: string, placement: string) {
   if (typeof window === 'undefined' || !growthEvents.includes(event as typeof growthEvents[number])) return;
   try {
     if (navigator.doNotTrack === '1') return;
-    const source = acquisitionSource(sessionStorage.getItem('kw_acquisition_v1'));
+    const source = currentAcquisitionSource();
     // Aggregate interactions only; repeat events are not unique people or conversions.
     void fetch('/api/growth-events', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,source}),keepalive:true}).catch(()=>{});
     window.gtag?.('event',event,{placement,acquisition_source:source,brand_version:'occupied-rental-v2'});
@@ -23,9 +26,10 @@ export function trackGrowth(event: string, placement: string) {
 
 export async function trackWorkspaceVisit(token:string) {
   try {
-    if(navigator.doNotTrack==='1')return;
+    if(navigator.doNotTrack==='1')return false;
     captureAcquisition();
-    const source=acquisitionSource(sessionStorage.getItem('kw_acquisition_v1'));
-    await fetch('/api/workspace/visit',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({source})});
-  } catch { /* Analytics never interrupts the workspace. */ }
+    const source=currentAcquisitionSource();
+    const response=await fetch('/api/workspace/visit',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({source})});
+    return response.ok;
+  } catch { return false; /* Analytics never interrupts the workspace. */ }
 }
