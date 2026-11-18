@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {supabase} from '../lib/supabase';
 import {workspaceApi} from '../lib/workspace-api';
+import {trackGrowth} from '../lib/growth';
 import {T,input,label,btn} from '../lib/theme';
 
 type Props={onClose:()=>void;onComplete?:(lease:any)=>void;preselectedUnit?:{id:string;address?:string;unit_number?:string;building_id?:string;current_rent?:number}|null};
@@ -32,6 +33,7 @@ export default function AddTenantWizard({onClose,onComplete,preselectedUnit}:Pro
     if(d && (!preselectedUnit || d.payload.form?.property_id===preselectedUnit.id)) {
      draft.current={id:d.id,revision:d.revision};setForm({...blank,...d.payload.form});setSource(d.payload.source || null);setFields(d.payload.fields || {});setSaved('Restored your saved draft.');
     }
+    trackGrowth(d ? 'import_resumed' : 'import_opened', 'occupied-import');
     setReady(true);
    } catch(e:any) {if(active)setError(e.message);}
   })();
@@ -79,14 +81,14 @@ export default function AddTenantWizard({onClose,onComplete,preselectedUnit}:Pro
  };
  const review=async()=>{
   setBusy(true);setError('');
-  try {const result=await persist('preview',{form,source,fields});setPreview(result.preview);setStep(2);} catch(e:any){setError(e.message);} finally{setBusy(false);}
+  try {const result=await persist('preview',{form,source,fields});setPreview(result.preview);setStep(2);trackGrowth('import_reviewed','occupied-import');} catch(e:any){setError(e.message);} finally{setBusy(false);}
  };
  const commit=async()=>{
   if(!preview)return;setBusy(true);setError('');
   try {
    await queue.current;
    const result=await workspaceApi('/api/workspace/imports',{method:'POST',body:JSON.stringify({...draft.current,operation:'commit',digest:preview.digest})});
-   setCreated(result.lease);setSaved('Rental saved.');
+   setCreated(result.lease);setSaved('Rental saved.');trackGrowth('import_saved','occupied-import');
   }catch(e:any){setError(e.message);}finally{setBusy(false);}
  };
  const field=(key:keyof typeof blank,title:string,type='text')=><div key={key} style={{marginBottom:14}}><label style={label} htmlFor={`import-${key}`}>{title}</label><input id={`import-${key}`} type={type} style={{...input,width:'100%',boxSizing:'border-box',outline:'auto'}} value={String(form[key])} onChange={e=>change(key,e.target.value)}/>{fields[key]&&<details style={{fontSize:12,color:T.inkMuted,marginTop:5}}><summary>Source: {fields[key].status} — verify before saving</summary><p>{fields[key].quote || 'No supporting excerpt was found.'}{fields[key].suggested_page?` (Suggested page ${fields[key].suggested_page}; unverified)` : ''}</p></details>}</div>;

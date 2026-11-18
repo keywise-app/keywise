@@ -20,6 +20,12 @@ let network=0;global.fetch=async()=>{network++;throw new Error('A route attempte
   assert.equal(response.status,401);assertions++;
  }
  const exportResponse=await require(path.join(root,'app/api/workspace/export/route.ts')).GET(new Request('https://example.test/api/workspace/export?lease_id=foreign'));assert.equal(exportResponse.status,401);assertions++;
+ const growth=await require(path.join(root,'app/api/admin/growth/route.ts')).GET(new Request('https://example.test/api/admin/growth'));assert.equal(growth.status,401);assertions++;
+ const metrics=require(path.join(root,'lib/workspace/growth-metrics.ts'));
+ const outcomes=[{user_id:'a',workflow_id:'one',workflow:'occupied_import',event:'started',occurred_at:'2026-11-01T00:00:00Z'},{user_id:'a',workflow_id:'one',workflow:'occupied_import',event:'completed',occurred_at:'2026-11-01T00:02:00Z'},{user_id:'b',workflow_id:'two',workflow:'occupied_import',event:'started',occurred_at:'2026-11-01T00:00:00Z'}];
+ const measured=metrics.workflowMetrics(outcomes)[0];assert.equal(measured.started,2);assert.equal(measured.completed,1);assert.equal(measured.median_elapsed_seconds,120);assert.equal(metrics.workflowMetrics([])[0].median_elapsed_seconds,null);assertions+=4;
+ const growthRoute=require(path.join(root,'app/api/growth-events/route.ts'));
+ for(const [body,status] of [[{event:'tenant_email',source:'direct'},400],[{event:'import_saved',source:'private@example.test'},400]]){assert.equal((await growthRoute.POST(new Request('https://example.test/api/growth-events',{method:'POST',body:JSON.stringify(body)}))).status,status);assertions++;}
  assert.equal(network,0);assertions++;
  console.log(`Route boundaries: ${assertions} assertions passed; no provider or database request before authentication.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

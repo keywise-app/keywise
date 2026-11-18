@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
+import { captureAcquisition, trackGrowth } from '../lib/growth';
 import { brand, brandWorkflows, brandSteps, brandFaqs } from '../lib/brand';
 
 const N = '#0F3460';
@@ -301,8 +302,7 @@ export default function Landing() {
  const signupRef = useRef<HTMLFormElement>(null);
  const demoRef = useRef<HTMLElement>(null);
  const track = (event: string, placement: string) => {
-  // Anonymous funnel events only: never send email, lease data or tenant details.
-  if (typeof window !== 'undefined' && window.gtag) window.gtag('event',event,{ placement, brand_version:'rentals-under-control-v1' });
+  trackGrowth(event, placement);
  };
  const start = (placement: string) => {
   setMenuOpen(false); track('signup_cta_clicked',placement);
@@ -310,6 +310,7 @@ export default function Landing() {
   emailRef.current?.focus({ preventScroll:true });
  };
  useEffect(() => {
+  captureAcquisition();
   const params = new URLSearchParams(window.location.search);
   if (params.get('login') === 'true') setAuthMode('login');
   if (params.get('signup') === 'true') emailRef.current?.focus();
@@ -337,15 +338,15 @@ export default function Landing() {
   <header style={{borderBottom:`1px solid ${BORDER}`}}>
    <nav className="kw-shell kw-nav" aria-label="Main navigation">
     <Link href="/" aria-label="Keywise home" style={{textDecoration:'none'}}><Logo size={36}/></Link>
-    <div className="kw-nav-links"><a href="#how-it-works">How it works</a><Link href="/pricing">Pricing</Link><a href="/tools">California tools</a><button className="kw-text-button" onClick={() => setAuthMode('login')}>Log in</button><button className="kw-button" onClick={() => start('header')}>Start free</button></div>
+    <div className="kw-nav-links"><a href="#how-it-works">How it works</a><Link href="/pricing">Pricing</Link><a href="/tools">California tools</a><button className="kw-text-button" onClick={() => setAuthMode('login')}>Log in</button><button className="kw-button" onClick={() => start('header')}>Set up my rental</button></div>
     <button className="kw-button kw-button-light kw-menu-button" aria-expanded={menuOpen} aria-controls="kw-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>Menu</button>
    </nav>
-   {menuOpen && <div id="kw-mobile-menu" className="kw-shell kw-mobile-links"><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><Link href="/pricing">Pricing</Link><Link href="/tools">California tools</Link><button className="kw-text-button" onClick={() => {setAuthMode('login');setMenuOpen(false);}}>Log in</button><button className="kw-button" onClick={() => start('mobile-menu')}>Start free</button></div>}
+   {menuOpen && <div id="kw-mobile-menu" className="kw-shell kw-mobile-links"><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><Link href="/pricing">Pricing</Link><Link href="/tools">California tools</Link><button className="kw-text-button" onClick={() => {setAuthMode('login');setMenuOpen(false);}}>Log in</button><button className="kw-button" onClick={() => start('mobile-menu')}>Set up my rental</button></div>}
   </header>
   <main id="main">
    <section className="kw-hero">
     <div className="kw-shell kw-hero-grid">
-     <div><p className="kw-eyebrow">{brand.category}</p><h1>Your rentals,<br/>under control.</h1><p className="kw-lede">{brand.description}</p>
+     <div><p className="kw-eyebrow">{brand.category}</p><h1>Your rental is already running.<br/>Get it under control.</h1><p className="kw-lede">{brand.description}</p>
       <form ref={signupRef} onSubmit={submit} aria-label="Start your free Keywise account">
        {sent ? <div role="status" style={{background:TEAL_LIGHT,border:'1px solid #B4DCCF',borderRadius:12,padding:20}}><strong>Check your email to get started.</strong><p style={{fontSize:14,margin:'8px 0'}}>Open your sign-in link, then add your first property. You can close this page.</p><button type="button" className="kw-text-button" onClick={() => {setSent(false);setError('');}}>Use a different email or resend</button></div> : <><label htmlFor="kw-start-email" style={{fontSize:13,fontWeight:650}}>Your email</label><div className="kw-signup-row"><input ref={emailRef} id="kw-start-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" aria-describedby="kw-start-details" disabled={busy}/><button className="kw-button" disabled={busy}>{busy?'Sending your link…':brand.primaryAction+' →'}</button></div><p id="kw-start-details" style={{fontSize:12,color:'#55677B',margin:'10px 0'}}>We’ll email you a sign-in link. No password to remember.</p></>}
        {error && <p role="alert" style={{color:'#B33035',fontSize:13}}>{error}</p>}

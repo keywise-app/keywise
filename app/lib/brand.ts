@@ -5,11 +5,11 @@ export const brand = {
  name: 'Keywise',
  category: 'Property management for independent landlords',
  promise: 'Your rentals, under control.',
- description: 'Keep rent, repairs, leases and tenant records together. See what needs attention and take the next step in one place.',
+ description: 'Already have tenants? Bring your existing lease, rent records and repairs together. Start with one occupied rental and see what needs attention—before moving payments or inviting tenants.',
  title: 'Keywise | Property Management for Independent Landlords',
  freeUnits: PLAN_LIMITS.free.maxUnits,
  freeLabel: `Free for ${PLAN_LIMITS.free.maxUnits} unit`,
- primaryAction: 'Start with one property',
+ primaryAction: 'Set up my rental',
  secondaryAction: 'See how it works',
 };
 export const brandWorkflows = [
@@ -18,7 +18,7 @@ export const brandWorkflows = [
  { number: '03', title: 'Find the record you need', detail: 'Keep tenants, leases and documents connected to the right property, with tasks to track what comes next.', label: 'Everything in its place' },
 ];
 export const brandSteps = [
- { title: 'Add one property', detail: 'Start with a single unit. Bring in a lease PDF or enter the details you already have.' },
+ { title: 'Bring your existing lease', detail: 'Start with one occupied unit. Upload a lease PDF or enter the details you already have.' },
  { title: 'Review your details', detail: 'Check extracted lease terms, connect the tenant and set up your records.' },
  { title: 'See your next step', detail: 'Track rent, follow up on a repair or find a document from your workspace. Invite your tenant when you’re ready.' },
 ];
