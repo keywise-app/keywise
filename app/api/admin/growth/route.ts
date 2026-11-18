@@ -1,5 +1,6 @@
 import {createClient} from '@supabase/supabase-js';
 import {verifyAdminToken} from '@/lib/admin-auth';
+import {growthEvents,growthSources} from '@/app/lib/growth';
 import {workflowMetrics} from '@/lib/workspace/growth-metrics';
 export async function GET(req:Request){
   const token=req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
@@ -19,7 +20,7 @@ export async function GET(req:Request){
   try{
     const [outcomes,visits]=await Promise.all([load('workspace_workflow_outcomes','workflow_id,user_id,workflow,event,occurred_at','occurred_at'),load('page_views','page,referrer,visited_at','visited_at')]);
     const interactions:Record<string,Record<string,number>>={};
-    for(const row of visits.rows){if(!row.page?.startsWith('growth:'))continue;const source=row.referrer;interactions[source]||={};interactions[source][row.page.slice(7)]=(interactions[source][row.page.slice(7)]||0)+1;}
+    for(const row of visits.rows){if(!row.page?.startsWith('growth:') || !growthEvents.includes(row.page.slice(7)) || !growthSources.includes(row.referrer))continue;const source=row.referrer;interactions[source]||={};interactions[source][row.page.slice(7)]=(interactions[source][row.page.slice(7)]||0)+1;}
     return Response.json({window_days:30,interactions,workflows:workflowMetrics(outcomes.rows),capped:outcomes.capped||visits.capped,limitations:['Interactions are anonymous, client reported and may repeat; they are not unique signups.','Workflow completions are server recorded. Elapsed time includes pauses and assisted work.','Workflow start may precede the window. Repair outcomes and rent-cycle retention are not yet instrumented.','Anonymous channels cannot yet be joined to confirmed activation or payment.']},{headers:{'Cache-Control':'private, no-store'}});
   }catch{return Response.json({error:'Unable to load metrics. No zero-count substitute was returned.'},{status:503});}
 }
