@@ -55,7 +55,7 @@ export default function PrivacyPage() {
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: TEAL_DARK, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>Legal</div>
           <h1 style={{ fontSize: 40, fontWeight: 800, color: N, letterSpacing: '-1px', margin: '0 0 16px', lineHeight: 1.1 }}>Privacy Policy</h1>
-          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: May 13, 2026</p>
+          <p style={{ fontSize: 14, color: INK_MUTED, margin: 0 }}>Effective date: May 13, 2026 · Usage measurement updated November 17, 2026</p>
         </div>
 
         <div style={{ fontSize: 15, color: INK_MID, lineHeight: 1.8 }}>
@@ -71,6 +71,8 @@ export default function PrivacyPage() {
               <li><strong>SMS consent records:</strong> the timestamp, source, IP address, and device information of every opt-in or opt-out event tied to a phone number we send messages to.</li>
             </ul>
           </Section>
+
+          <p>To improve rental setup, we record fixed-name interactions and referral channels. For signed-in owners, private analytics also link the account identifier to daily workspace visits and confirmed workflow completion. These analytics do not copy lease text, tenant contact details, rent amounts or document contents. The new interaction and owner-visit tracking respects the browser’s Do Not Track setting; operational and financial records remain necessary to provide the service.</p>
 
           <Section title="2. How We Use Your Information">
             <p>We use the information we collect to:</p>

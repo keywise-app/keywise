@@ -20,3 +20,12 @@ export function trackGrowth(event: string, placement: string) {
     window.gtag?.('event',event,{placement,acquisition_source:source,brand_version:'occupied-rental-v2'});
   } catch { /* Disabled storage or analytics never blocks the product. */ }
 }
+
+export async function trackWorkspaceVisit(token:string) {
+  try {
+    if(navigator.doNotTrack==='1')return;
+    captureAcquisition();
+    const source=acquisitionSource(sessionStorage.getItem('kw_acquisition_v1'));
+    await fetch('/api/workspace/visit',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({source})});
+  } catch { /* Analytics never interrupts the workspace. */ }
+}

@@ -19,8 +19,10 @@ export async function GET(req:Request){
   }
   try{
     const [outcomes,visits]=await Promise.all([load('workspace_workflow_outcomes','workflow_id,user_id,workflow,event,occurred_at','occurred_at'),load('page_views','page,referrer,visited_at','visited_at')]);
+    const {data:funnel,error:funnelError}=await db.rpc('workspace_growth_funnel');
+    if(funnelError)throw funnelError;
     const interactions:Record<string,Record<string,number>>={};
     for(const row of visits.rows){if(!row.page?.startsWith('growth:') || !growthEvents.includes(row.page.slice(7)) || !growthSources.includes(row.referrer))continue;const source=row.referrer;interactions[source]||={};interactions[source][row.page.slice(7)]=(interactions[source][row.page.slice(7)]||0)+1;}
-    return Response.json({window_days:30,interactions,workflows:workflowMetrics(outcomes.rows),capped:outcomes.capped||visits.capped,limitations:['Interactions are anonymous, client reported and may repeat; they are not unique signups.','Workflow completions are server recorded. Elapsed time includes pauses and assisted work.','Workflow start may precede the window. Repair outcomes and rent-cycle retention are not yet instrumented.','Anonymous channels cannot yet be joined to confirmed activation or payment.']},{headers:{'Cache-Control':'private, no-store'}});
+    return Response.json({window_days:30,funnel,interactions,workflows:workflowMetrics(outcomes.rows),capped:outcomes.capped||visits.capped,limitations:['Interactions are anonymous, client reported and may repeat; they are not unique signups.','Workflow completions are server recorded. Elapsed time includes pauses and assisted work.','Workflow start may precede the window. Repair and offline-receipt events begin at instrumentation rollout.','Owner cohorts preserve the first observed channel. Cross-device attribution may be missing. Rent-cycle return uses UTC days and requires a full seven-day observation window after the next scheduled rent date.']},{headers:{'Cache-Control':'private, no-store'}});
   }catch{return Response.json({error:'Unable to load metrics. No zero-count substitute was returned.'},{status:503});}
 }

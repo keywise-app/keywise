@@ -1,6 +1,6 @@
 'use client';
 import { workspaceFetch } from '../lib/workspace-api';
-import { trackGrowth } from '../lib/growth';
+import { trackGrowth,trackWorkspaceVisit } from '../lib/growth';
 import Payments from './Payments';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
@@ -336,6 +336,7 @@ export default function AppRoot() {
       setSession(session);
       if (!session) { setLoading(false); return; }
       trackGrowth('workspace_opened', 'workspace');
+      void trackWorkspaceVisit(session.access_token);
 
       console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 
