@@ -18,12 +18,12 @@ export default function PricingCards() {
 
   useEffect(() => {
     fetch('/api/founding-member-count')
-      .then(r => r.json())
-      .then(d => setRemaining(d.remaining ?? 100))
-      .catch(() => setRemaining(100));
+      .then(r => { if (!r.ok) throw new Error('Offer unavailable'); return r.json(); })
+      .then(d => setRemaining(typeof d.remaining === 'number' && Number.isFinite(d.remaining) ? Math.max(0, Math.floor(d.remaining)) : null))
+      .catch(() => setRemaining(null));
   }, []);
 
-  const showFounding = remaining === null || remaining > 0;
+  const showFounding = remaining !== null && remaining > 0;
 
   return (
     <div>
@@ -80,7 +80,7 @@ export default function PricingCards() {
             {billing === 'annual' && (
               <div style={{ fontSize: 12, color: TEAL, fontWeight: 600, marginBottom: 4 }}>$390 billed annually</div>
             )}
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units · 14-day free trial</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>Unlimited units · 14-day trial · Card required</div>
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20, marginBottom: 28 }}>
               {['Everything in Free', 'Unlimited units', 'Online rent collection', 'Compliance alerts', 'AI lease extraction', 'Tenant portal & messaging', 'PDF generation', 'Priority support'].map(f => (
                 <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>

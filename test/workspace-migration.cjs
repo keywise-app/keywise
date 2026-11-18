@@ -1,0 +1,38 @@
+// Run with: PGLITE_MODULE=/path/to/@electric-sql/pglite node test/workspace-migration.cjs
+const { PGlite } = require(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+const { readFileSync } = require('node:fs');
+const assert = require('node:assert/strict');
+(async () => {
+ const db = new PGlite();
+ const owner = '11111111-1111-4111-8111-111111111111', tenant = '22222222-2222-4222-8222-222222222222', other = '33333333-3333-4333-8333-333333333333';
+ const unit = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', foreign = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const lease = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', issue = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+ await db.exec(`create role authenticated; create schema auth; create schema storage;
+ create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ create table public.properties(id uuid primary key,user_id uuid,address text);
+ create table public.leases(id uuid primary key,user_id uuid,property text);
+ create table public.maintenance(id uuid primary key,user_id uuid,property text,status text);
+ create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+ insert into auth.users values ('${owner}'),('${tenant}'),('${other}');
+ insert into properties values ('${unit}','${owner}','10 Test St, Unit A'),('${foreign}','${other}','Other Property');
+ insert into leases values ('${lease}','${owner}','10 Test St, Unit A');
+ insert into maintenance values ('${issue}','${owner}','10 Test St, Unit A','open');`);
+ await db.exec(readFileSync('supabase/migrations/20261117000000_landlord_workflows.sql','utf8'));
+ assert.equal((await db.query('select property_id from leases')).rows[0].property_id,unit,'backfills exact owned property');
+ assert.equal((await db.query('select property_id from maintenance')).rows[0].property_id,unit,'backfills maintenance');
+ await db.exec(`update maintenance set lease_id='${lease}',status='in-progress' where id='${issue}'`);
+ assert.equal((await db.query('select count(*)::int as count from maintenance_events')).rows[0].count,1,'status change creates history');
+ await db.exec(`update maintenance set status='resolved' where id='${issue}'`);
+ assert.equal((await db.query('select count(*)::int as count from maintenance_events')).rows[0].count,2,'history is cumulative');
+ await assert.rejects(db.exec(`update maintenance set property_id='${foreign}' where id='${issue}'`),/Property must belong/);
+ await assert.rejects(db.exec(`update leases set property_id='${foreign}' where id='${lease}'`),/Property must belong/);
+ await db.exec(`grant usage on schema public,auth to authenticated; grant select on properties to authenticated; grant all on workspace_tasks to authenticated; grant select on maintenance_events,maintenance_files to authenticated; set role authenticated; set request.jwt.claim.sub='${owner}';`);
+ await db.exec(`insert into workspace_tasks(user_id,property_id,title,due_date) values ('${owner}','${unit}','Review repair','2026-11-17')`);
+ await assert.rejects(db.exec(`insert into workspace_tasks(user_id,property_id,title,due_date) values ('${owner}','${foreign}','Wrong property','2026-11-17')`),/row-level security/);
+ assert.equal((await db.query('select count(*)::int as count from workspace_tasks')).rows[0].count,1);
+ await db.exec(`set request.jwt.claim.sub='${other}'`);
+ assert.equal((await db.query('select count(*)::int as count from workspace_tasks')).rows[0].count,0,'RLS hides another landlord tasks');
+ assert.equal((await db.query('select count(*)::int as count from maintenance_events')).rows[0].count,0,'no direct tenant or foreign history access');
+ await db.close();
+ console.log('Migration passed: syntax, exact backfills, cumulative history, cross-account link rejection and task/evidence RLS.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

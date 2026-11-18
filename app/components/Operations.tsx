@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
 import { T } from '../lib/theme';
+import Tasks from './workspace/Tasks';
 import Maintenance from './Maintenance';
 import Expenses from './Expenses';
 import Documents from './Documents';
 import PropertyValuation from './PropertyValuation';
 
 export default function Operations() {
-  const [tab, setTab] = useState<'maintenance' | 'expenses' | 'documents' | 'valuation'>('maintenance');
+  const [tab, setTab] = useState<'maintenance' | 'expenses' | 'documents' | 'valuation' | 'tasks'>(() => typeof window !== 'undefined' && ['maintenance','expenses','documents','valuation','tasks'].includes(new URLSearchParams(window.location.search).get('tab') || '') ? new URLSearchParams(window.location.search).get('tab') as any : 'maintenance');
 
   const tabs = [
+    { id: 'tasks', label: 'Tasks' },
     { id: 'maintenance', label: '🔧 Maintenance' },
     { id: 'expenses', label: '💰 Expenses' },
     { id: 'documents', label: '📁 Documents' },
@@ -33,6 +35,7 @@ export default function Operations() {
         ))}
       </div>
 
+      {tab === 'tasks' && <Tasks />}
       {tab === 'maintenance' && <Maintenance />}
       {tab === 'expenses' && <Expenses />}
       {tab === 'documents' && <Documents />}

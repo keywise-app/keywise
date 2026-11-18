@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { brand } from "./lib/brand";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -12,9 +13,9 @@ const inter = Inter({
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Keywise — California Landlord Compliance, Done Right",
+  title: brand.title,
   description:
-    "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
+    brand.description + " " + brand.freeLabel + ". No credit card required.",
   metadataBase: new URL("https://keywise.app"),
   alternates: { canonical: "https://keywise.app" },
   robots: {
@@ -23,17 +24,17 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   openGraph: {
-    title: "Keywise — California Landlord Compliance, Done Right",
+    title: brand.title,
     description:
-      "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
+      brand.description + " " + brand.freeLabel + ". No credit card required.",
     url: "https://keywise.app",
-    siteName: "Keywise",
+    siteName: brand.name,
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
-        height: 628,
-        alt: "Keywise — California Landlord Compliance, Done Right",
+        height: 630,
+        alt: brand.title,
       },
     ],
     locale: "en_US",
@@ -41,10 +42,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Keywise — California Landlord Compliance, Done Right",
+    title: brand.title,
     description:
-      "Don't lose your next eviction over a missing notice. Keywise catches California landlord compliance mistakes before they cost you thousands. AB 1482 rent caps, just-cause eviction notices, AB 2801 move-out inspections — all in one place. Free for 1-2 units.",
-    images: ["/og-image.png"],
+      brand.description + " " + brand.freeLabel + ". No credit card required.",
+    images: ["/opengraph-image"],
   },
   icons: {
     icon: [
@@ -87,11 +88,11 @@ gtag('config', 'AW-18416062236');`}
               operatingSystem: "Web",
               offers: {
                 "@type": "Offer",
-                price: "29.00",
+                price: "0",
                 priceCurrency: "USD",
               },
               description:
-                "AI-powered property management software for independent landlords.",
+                brand.description,
               url: "https://keywise.app",
             }),
           }}

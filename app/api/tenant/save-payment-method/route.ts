@@ -1,44 +1,22 @@
-import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
+import { workspaceAccess, requireLease, apiError } from '@/lib/workspace/access';
 export async function POST(req: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   try {
-    const { user_id, customer_id, autopay_enabled } = await req.json();
-
-    if (!user_id || !customer_id) {
-      return NextResponse.json({ error: 'user_id and customer_id required' }, { status: 400 });
-    }
-
-    // Get the latest payment method from Stripe customer
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: customer_id,
-      type: 'card',
-    });
-
-    const defaultPM = paymentMethods.data[0];
-
-    const { error } = await supabase.from('profiles').update({
-      stripe_customer_id: customer_id,
-      stripe_payment_method_id: defaultPM?.id || null,
-      autopay_enabled: autopay_enabled || false,
-    }).eq('id', user_id);
-
-    if (error) {
-      console.error('[save-payment-method] Update error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, payment_method_id: defaultPM?.id });
-  } catch (err: any) {
-    console.error('[save-payment-method] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+    const {db,user} = await workspaceAccess(req);
+    const {session_id} = await req.json();
+    if (typeof session_id !== 'string' || !session_id.startsWith('cs_')) throw new Response('A completed setup session is required.',{status:400});
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const session = await stripe.checkout.sessions.retrieve(session_id,{expand:['setup_intent']});
+    if (session.mode!=='setup' || session.status!=='complete' || session.metadata?.user_id!==user.id) throw new Response('Setup session not found.',{status:404});
+    const lease = await requireLease(db,user,session.metadata.lease_id,'pay');
+    if (lease.tenant_user_id!==user.id) throw new Response('Setup session not found.',{status:404});
+    const {data:profile,error} = await db.from('profiles').select('stripe_customer_id').eq('id',user.id).single();
+    const setup = session.setup_intent as Stripe.SetupIntent;
+    if (error || !profile || session.customer!==profile.stripe_customer_id || setup?.status!=='succeeded' || setup.customer!==profile.stripe_customer_id) throw new Response('Payment setup is awaiting verification.',{status:409});
+    const methodId = typeof setup.payment_method === 'string' ? setup.payment_method : setup.payment_method?.id;
+    if (!methodId) throw new Response('No verified payment method found.',{status:409});
+    const {error:saveError} = await db.from('profiles').update({stripe_payment_method_id:methodId,autopay_enabled:session.metadata.payment_type==='autopay'}).eq('id',user.id);
+    if (saveError) throw new Response('Unable to save your payment method.',{status:503});
+    return Response.json({success:true,payment_method_id:methodId});
+  } catch(error) {return apiError(error);}
 }

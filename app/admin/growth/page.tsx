@@ -1,0 +1,9 @@
+'use client';
+import {useState} from 'react';
+import Link from 'next/link';
+import {workspaceApi} from '../../lib/workspace-api';
+export default function GrowthReport(){
+ const [report,setReport]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function load(){setBusy(true);setError('');try{setReport(await workspaceApi('/api/admin/growth'));}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ return <main style={{maxWidth:1000,margin:'40px auto',padding:24,color:'#0F3460'}}><Link href="/">Keywise home</Link><h1>Acquisition and activation</h1><p>Last 30 days. Sign in to Keywise with the administrator account first.</p><button onClick={load} disabled={busy}>{busy?'Loading…':'Load report'}</button>{error&&<p role="alert">{error}</p>}{report&&<><h2>Confirmed workflows</h2>{report.capped&&<p role="alert">Record limit reached. These are partial results.</p>}<div style={{overflowX:'auto'}}><table style={{width:'100%',textAlign:'left'}}><thead><tr>{['Workflow','Started','Completed','Owners completing','Paired elapsed median'].map(t=><th key={t} scope="col">{t}</th>)}</tr></thead><tbody>{report.workflows.map((r:any)=><tr key={r.workflow}><th scope="row">{r.workflow.replaceAll('_',' ')}</th><td>{r.started}</td><td>{r.completed}</td><td>{r.completed_owners}</td><td>{r.median_elapsed_seconds===null?'No paired observations':`${Math.round(r.median_elapsed_seconds)} sec`}</td></tr>)}</tbody></table></div><h2>Anonymous channel interactions</h2>{Object.keys(report.interactions).length?<pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(report.interactions,null,2)}</pre>:<p>No interactions recorded in this window.</p>}<ul>{report.limitations.map((s:string)=><li key={s}>{s}</li>)}</ul></>}</main>;
+}

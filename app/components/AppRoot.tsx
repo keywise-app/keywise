@@ -1,4 +1,7 @@
 'use client';
+import { workspaceFetch } from '../lib/workspace-api';
+import { trackGrowth } from '../lib/growth';
+import Payments from './Payments';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { T } from '../lib/theme';
@@ -20,6 +23,7 @@ import WizardMarketAnalysis from './WizardMarketAnalysis';
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
   { id: 'portfolio', label: 'Portfolio', icon: '⌂' },
+  { id: 'payments', label: 'Rent', icon: '▤' },
   { id: 'tenants', label: 'Tenants', icon: '◈' },
   { id: 'compliance', label: 'Compliance', icon: '⚖️' },
   { id: 'operations', label: 'Operations', icon: '⚙' },
@@ -30,6 +34,7 @@ const PAGE_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
   portfolio: 'Portfolio',
   tenants: 'Tenants',
+  payments: 'Rent',
   compliance: 'Compliance',
   operations: 'Operations',
   settings: 'Settings',
@@ -97,6 +102,7 @@ export default function AppRoot() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState('dashboard');
+  const [routeKey, setRouteKey] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stripeSuccess, setStripeSuccess] = useState(false);
   const [userRole, setUserRoleRaw] = useState<string | null>(() => {
@@ -158,7 +164,8 @@ export default function AppRoot() {
 
   // Navigate with history integration — use this instead of bare setPage()
   const navigateTo = useCallback((target: string) => {
-    setPage(target);
+    setRouteKey(target);
+    setPage(target.split('&')[0]);
     window.history.pushState({ page: target }, '', target === 'dashboard' ? '/' : `/?page=${target}`);
   }, []);
 
@@ -173,7 +180,8 @@ export default function AppRoot() {
   useEffect(() => {
     const handler = (e: PopStateEvent) => {
       const target = e.state?.page ?? new URLSearchParams(window.location.search).get('page') ?? 'dashboard';
-      setPage(target);
+      setRouteKey(window.location.search);
+      setPage(target.split('&')[0]);
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
@@ -261,23 +269,11 @@ export default function AppRoot() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('page') === 'settings') setPage('settings');
+    if (['dashboard','portfolio','tenants','operations','payments','settings','compliance'].includes(params.get('page') || '')) setPage(params.get('page')!);
     if (params.get('stripe') === 'connected') {
       setStripeSuccess(true);
       setTimeout(() => setStripeSuccess(false), 5000);
-      const accountId = params.get('account_id');
-      if (accountId) {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) {
-            supabase.from('profiles')
-              .upsert({ id: user.id, stripe_account_id: accountId }, { onConflict: 'id' })
-              .then(({ error }) => {
-                if (error) console.error('Client-side stripe_account_id save failed:', error.message);
-                else console.log('Client-side stripe_account_id saved:', accountId);
-              });
-          }
-        });
-      }
+      // The authenticated server owns Stripe account linkage; return URLs carry no authority.
     }
     if (params.get('tenant_preview') === 'true' && params.get('lease_id')) {
       setPreviewLeaseId(params.get('lease_id'));
@@ -288,51 +284,25 @@ export default function AppRoot() {
     if (params.get('upgraded') === 'true') {
       setShowUpgradedBanner(true);
       setTimeout(() => setShowUpgradedBanner(false), 5000);
-      // Update subscription status to active
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          supabase.from('profiles').update({ subscription_status: 'active' }).eq('id', user.id);
-          setSubscriptionStatus('active');
-        }
-      });
-      // Google Ads conversion event
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'conversion', {
-          send_to: 'AW-18416062236/iSgECJ6Oru8cEJyeu81E',
-          value: 49.0,
-          currency: 'USD',
-        });
-      }
+      // Subscription state is loaded from the authenticated profile; URL flags never grant access.
+      // Confirmed subscription outcomes are measured on the server, not from URL flags.
     }
     if (params.get('setup_success') === 'true') {
-      const paymentType = params.get('payment_type');
-      const customerId = params.get('customer_id');
+      const setupSessionId = params.get('session_id');
       // Save payment method via server-side API (gets PM from Stripe, saves to profile)
       supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user && customerId) {
-          await fetch('/api/tenant/save-payment-method', {
+        if (user && setupSessionId) {
+          await workspaceFetch('/api/tenant/save-payment-method', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: user.id, customer_id: customerId, autopay_enabled: paymentType === 'autopay' }),
+            body: JSON.stringify({ session_id: setupSessionId }),
           });
         }
       });
-      setShowPaymentBanner(true);
-      setTimeout(() => setShowPaymentBanner(false), 5000);
     }
     if (params.get('payment_success') === 'true') {
-      const leaseId = params.get('lease_id');
-      const dueDate = params.get('due_date');
-      const paymentId = params.get('payment_id');
-      if (leaseId) {
-        // Mark payment as paid via server-side API (bypasses RLS)
-        fetch('/api/mark-payment-paid', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lease_id: leaseId, due_date: dueDate, payment_id: paymentId }),
-        }).catch(() => {});
-      }
-      setShowPaymentBanner(true);
+      // A redirect is not a payment receipt. The webhook confirms settlement.
+      setShowPaymentBanner(false);
       setPage('tenants');
       setTimeout(() => setShowPaymentBanner(false), 5000);
     }
@@ -365,6 +335,7 @@ export default function AppRoot() {
       try {
       setSession(session);
       if (!session) { setLoading(false); return; }
+      trackGrowth('workspace_opened', 'workspace');
 
       console.log('[auth] Session for:', session.user.email, 'tenant flow:', isTenantFlow);
 
@@ -379,7 +350,7 @@ export default function AppRoot() {
       }
 
       const linkLeaseByEmail = async () => {
-        const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(session.user.email || '')}&user_id=${session.user.id}`);
+        const res = await fetch('/api/tenant-lease', { headers: { Authorization: `Bearer ${session.access_token}` } });
         const { lease } = await res.json();
         console.error('[tenant] Lease from API:', lease?.id, lease?.tenant_name || 'NOT FOUND');
       };
@@ -543,9 +514,10 @@ export default function AppRoot() {
     switch (page) {
       case 'dashboard': return <Dashboard onNavigate={navigateTo} />;
       case 'portfolio': return <Portfolio />;
-      case 'tenants': return <Tenants autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
+      case 'payments': return <Payments />;
+      case 'tenants': return <Tenants key={routeKey} autoOpenWizard={openWizardOnTenants} onWizardOpen={() => setOpenWizardOnTenants(false)} />;
       case 'compliance': return <CompliancePlaceholder />;
-      case 'operations': return <Operations />;
+      case 'operations': return <Operations key={routeKey} />;
       case 'settings': return <Profile onImport={() => setShowOnboarding(true)} />;
       default: return <Dashboard onNavigate={navigateTo} />;
     }
@@ -765,7 +737,7 @@ export default function AppRoot() {
       {/* Bottom tab bar — mobile only */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, background: T.surface, borderTop: `1px solid ${T.border}`, display: 'flex', boxShadow: '0 -2px 12px rgba(15,52,96,0.08)' }}>
-          {NAV.map(item => {
+          {NAV.filter(item => item.id !== 'payments').map(item => {
             const active = page === item.id;
             return (
               <button key={item.id} onClick={() => navigateTo(item.id)}

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "cache:bust": "bash scripts/bust-cache.sh"
+    "cache:bust": "bash scripts/bust-cache.sh",
+    "test:workspace": "bash scripts/test-workspace.sh && node test/workspace-routes.cjs && node test/workspace-transactions.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
@@ -29,6 +30,7 @@
     "twilio": "^5.13.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

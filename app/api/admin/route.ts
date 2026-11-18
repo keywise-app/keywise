@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'overdue'),
         supabase.from('feedback').select('*').order('created_at', { ascending: false }),
-        supabase.from('page_views').select('page, referrer, user_agent, date').gte('date', new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]),
+        supabase.from('page_views').select('page, referrer, user_agent, date').not('page','like','growth:%').gte('date', new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]),
       ]);
 
       // Exclude the founder's own dogfooding account from every customer-facing number.

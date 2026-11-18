@@ -1,4 +1,5 @@
 'use client';
+import { workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
@@ -123,16 +124,15 @@ export default function Leases() {
     setExtracting(true);
     setExtractError('');
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch('/api/extract-lease', {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Please sign in again.');
+      const path = `${user.id}/lease-${crypto.randomUUID()}`;
+      const {error:uploadError} = await supabase.storage.from('workspace-sources').upload(path,file);
+      if (uploadError) throw uploadError;
+      const res = await workspaceFetch('/api/extract-lease', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, fileType: file.type }),
+        body: JSON.stringify({ storage_path:path, fileType:file.type }),
       });
       const data = await res.json();
       if (data.error) {
@@ -154,23 +154,7 @@ export default function Leases() {
           late_fee_type: data.late_fee_type || 'percent',
           lease_terms_raw: data.late_fee_clause || '',
         });
-        if (data.property) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: existing } = await supabase.from('properties').select('id').eq('user_id', user.id).ilike('address', data.property.trim()).single();
-            if (!existing) {
-              await supabase.from('properties').insert({
-                user_id: user.id, address: data.property,
-                type: data.property_type || 'apartment',
-                beds: +data.beds || null, baths: +data.baths || null,
-                sqft: +data.sqft || null, pets: data.pets || 'no pets',
-                parking: data.parking || 'street', laundry: data.laundry || 'shared',
-                utilities_included: data.utilities_included || 'none',
-              });
-              setExtractError('✓ Property automatically added to your Properties page.');
-            }
-          }
-        }
+
       }
     } catch (err) {
       setExtractError('Could not read file. Please try again.');
@@ -193,7 +177,7 @@ export default function Leases() {
     if (leaseFile) {
       const ext = leaseFile.name.split('.').pop();
       filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, leaseFile);
+      const { error: uploadError } = await supabase.storage.from('workspace-sources').upload(filePath, leaseFile);
       if (uploadError) {
         alert('File upload failed: ' + uploadError.message);
         setSaving(false);
@@ -224,7 +208,7 @@ export default function Leases() {
 
     if (error) {
       // Clean up uploaded file if lease insert failed
-      if (filePath) await supabase.storage.from('documents').remove([filePath]);
+      if (filePath) await supabase.storage.from('workspace-sources').remove([filePath]);
       alert('Error saving: ' + error.message);
     } else {
       // Create document record linking file to lease

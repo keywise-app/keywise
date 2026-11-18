@@ -1,55 +1,25 @@
-import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const PLATFORM_FEE_CENTS = parseInt(process.env.KEYWISE_PLATFORM_FEE || '200', 10);
-
+import { workspaceAccess, apiError } from '@/lib/workspace/access';
+import { reservePayment } from '@/lib/workspace/payments';
 export async function POST(req: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   try {
-    const { payment_id, customer_id, payment_method_id, amount, landlord_stripe_account_id } = await req.json();
-
-    if (!payment_id || !customer_id || !payment_method_id || !amount) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    const amountCents = Math.round(amount * 100);
-    const intentParams: Stripe.PaymentIntentCreateParams = {
-      amount: amountCents,
-      currency: 'usd',
-      customer: customer_id,
-      payment_method: payment_method_id,
-      off_session: true,
-      confirm: true,
-    };
-
-    // If landlord has connected Stripe, route payment to them
-    if (landlord_stripe_account_id) {
-      intentParams.application_fee_amount = PLATFORM_FEE_CENTS;
-      intentParams.transfer_data = { destination: landlord_stripe_account_id };
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create(intentParams);
-
-    if (paymentIntent.status === 'succeeded') {
-      const today = new Date().toISOString().split('T')[0];
-      await supabase.from('payments').update({
-        status: 'paid',
-        paid_date: today,
-        method: 'Auto-Pay (Stripe)',
-      }).eq('id', payment_id);
-
-      return NextResponse.json({ success: true, payment_intent_id: paymentIntent.id });
-    }
-
-    return NextResponse.json({ error: 'Payment not completed: ' + paymentIntent.status }, { status: 400 });
-  } catch (err: any) {
-    console.error('[tenant/charge] Error:', err.message);
-    return NextResponse.json({ error: err.message || 'Payment failed' }, { status: 500 });
-  }
+    const {db,user} = await workspaceAccess(req);
+    const {payment_id} = await req.json();
+    const {attempt,lease} = await reservePayment(db,user,payment_id,'saved_card');
+    if (lease.tenant_user_id !== user.id) throw new Response('Only the linked tenant can use a saved card.',{status:403});
+    const {data: profile,error} = await db.from('profiles').select('stripe_customer_id,stripe_payment_method_id').eq('id',user.id).single();
+    if (error || !profile?.stripe_customer_id || !profile.stripe_payment_method_id) throw new Response('Set up a payment method first.',{status:409});
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const method = await stripe.paymentMethods.retrieve(profile.stripe_payment_method_id);
+    if (method.customer !== profile.stripe_customer_id) throw new Response('Payment method needs verification.',{status:409});
+    const intent = await stripe.paymentIntents.create({amount:Number(attempt.amount_cents),currency:'usd',customer:profile.stripe_customer_id,
+      payment_method:method.id,confirm:true,off_session:true,
+      application_fee_amount: Math.min(Number(attempt.amount_cents),parseInt(process.env.KEYWISE_PLATFORM_FEE || '200',10)),
+      transfer_data:{destination:attempt.destination},metadata:{workspace_attempt_id:attempt.id,payment_id,owner_id:lease.user_id},
+    },{idempotencyKey:`workspace-payment-${attempt.id}`});
+    const {error: saveError} = await db.from('workspace_payment_attempts').update({provider_intent_id:intent.id}).eq('id',attempt.id);
+    if (saveError) throw new Response('Payment submitted; confirmation is pending. Do not submit another payment.',{status:503});
+    // Only the verified webhook settles the ledger. A synchronous response is not a receipt.
+    return Response.json({success:true,status:'processing',payment_intent_id:intent.id});
+  } catch(error) {return apiError(error);}
 }

@@ -1,6 +1,12 @@
 'use client';
+import { workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { leaseIsReadOnly } from '@/lib/workspace/records';
+import { workspaceApi } from '../lib/workspace-api';
+import HistoryExport from './workspace/HistoryExport';
+import TenantMaintenance from './workspace/TenantMaintenance';
+import RentLedger from './workspace/RentLedger';
 import { T, btn } from '../lib/theme';
 
 export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: string } = {}) {
@@ -8,6 +14,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const [payments, setPayments] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [landlord, setLandlord] = useState<any>(null);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [msgText, setMsgText] = useState('');
   const [msgSending, setMsgSending] = useState(false);
@@ -44,28 +51,20 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!user) { setLoading(false); return; }
 
     let leaseData: any = null;
-
-    if (previewLeaseId) {
-      // Preview mode — fetch by ID using service role API
-      const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`);
-      const { lease } = await res.json();
-      leaseData = lease;
-    } else {
-      // Use server-side API to bypass RLS (lease belongs to landlord)
-      const res = await fetch(`/api/tenant-lease?email=${encodeURIComponent(user.email || '')}&user_id=${user.id}`);
-      const { lease } = await res.json();
-      leaseData = lease;
-    }
+    try {
+      const data = await workspaceApi('/api/tenant-lease' + (previewLeaseId ? `?lease_id=${encodeURIComponent(previewLeaseId)}` : ''));
+      leaseData = data.lease;
+    } catch (error) { setLoadError((error as Error).message); setLoading(false); return; }
 
     if (!leaseData) { setLoading(false); return; }
     setLease(leaseData);
 
     // Use server-side APIs to bypass RLS
     const [payRes, landlordRes, docRes] = await Promise.all([
-      fetch(`/api/tenant/payments?lease_id=${leaseData.id}&tenant_name=${encodeURIComponent(leaseData.tenant_name || '')}`).then(r => r.json()),
-      fetch(`/api/tenant/landlord-info?lease_id=${leaseData.id}`).then(r => r.json()),
-      fetch(`/api/tenant/documents?lease_id=${leaseData.id}`).then(r => r.json()),
-    ]);
+      workspaceApi(`/api/tenant/payments?lease_id=${leaseData.id}`),
+      workspaceApi(`/api/tenant/landlord-info?lease_id=${leaseData.id}`),
+      workspaceApi(`/api/tenant/documents?lease_id=${leaseData.id}`),
+    ]).catch((error: Error) => { setLoadError(error.message); return [{}, {}, {}] as any; });
 
     if (payRes.payments) setPayments(payRes.payments);
     if (landlordRes.landlord) setLandlord(landlordRes.landlord);
@@ -156,10 +155,11 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setPayNowLoading(prev => ({ ...prev, [p.id]: true }));
     try {
-      const res = await fetch('/api/stripe/payment-link', {
+      const res = await workspaceFetch('/api/stripe/payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          payment_id: p.id,
           lease_id: lease.id,
           tenant_name: lease.tenant_name,
           property: lease.property,
@@ -184,7 +184,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!stripeCustomerId || !stripePaymentMethodId) return;
     setChargingPayment(p.id);
     try {
-      const res = await fetch('/api/tenant/charge', {
+      const res = await workspaceFetch('/api/tenant/charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -197,7 +197,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       });
       const data = await res.json();
       if (data.success) {
-        setPayments(prev => prev.map(x => x.id === p.id ? { ...x, status: 'paid', paid_date: new Date().toISOString().split('T')[0], method: 'Auto-Pay (Stripe)' } : x));
+        setPayments(prev => prev.map(x => x.id === p.id ? { ...x, status: 'processing', method: 'Stripe — awaiting confirmation' } : x));
       } else {
         alert('Payment failed: ' + (data.error || 'Unknown error'));
       }
@@ -211,7 +211,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setSetupLoading(true);
     try {
-      const res = await fetch('/api/tenant/setup-payment', {
+      const res = await workspaceFetch('/api/tenant/setup-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,7 +245,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     if (!lease) return;
     setSetupLoading(true);
     try {
-      const res = await fetch('/api/tenant/setup-payment', {
+      const res = await workspaceFetch('/api/tenant/setup-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,10 +280,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
       }));
     }
     if (landlord?.email) {
-      promises.push(fetch('/api/send-email', {
+      promises.push(workspaceFetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          lease_id: lease?.id,
+          message: msgText,
           to: landlord.email,
           subject: `Message from ${senderName} — ${lease?.property?.split(',')[0] || lease?.property}`,
           from_name: senderName,
@@ -343,6 +345,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
     return { pct, daysLeft };
   };
 
+  if (loadError) return <div role="alert" style={{ padding: 24 }}>{loadError} <button onClick={() => { setLoadError(''); setLoading(true); void fetchData(); }}>Retry</button></div>;
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: T.inkMuted, fontSize: 14 }}>
       Loading your dashboard…
@@ -367,7 +370,7 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
   const propertyShort = unitPart ? parts[0].trim() + ', ' + unitPart.trim() : parts[0]?.trim() || lease.property;
   const progress = leaseProgress();
 
-  const isLeaseEnded = lease.archived || (lease.end_date && new Date(lease.end_date) < new Date());
+  const isLeaseEnded = leaseIsReadOnly(lease);
 
   return (
     <div style={{ maxWidth: isMobile ? '100%' : 800, margin: '0 auto', padding: isMobile ? '0 0 40px' : '0 24px 40px' }}>
@@ -683,21 +686,12 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
                   const file = e.target.files?.[0];
                   if (!file || !lease) return;
                   setUploading(true);
-                  const { data: { user } } = await supabase.auth.getUser();
-                  const path = `${user?.id || 'tenant'}/tenant-docs/${Date.now()}-${file.name}`;
-                  const { error: upErr } = await supabase.storage.from('documents').upload(path, file);
-                  if (upErr) { alert('Upload failed: ' + upErr.message); setUploading(false); return; }
-                  await fetch('/api/tenant/documents', { method: 'GET' }); // just to verify route works
-                  // Insert via direct supabase (tenant has insert permission)
-                  const { error: dbErr } = await supabase.from('documents').insert({
-                    user_id: lease.user_id, name: file.name.replace(/\.[^/.]+$/, ''),
-                    type: 'insurance_renters', ownership_level: 'tenant',
-                    tenant_name: lease.tenant_name, lease_id: lease.id,
-                    file_path: path, property: lease.property || '', file_url: '', size: (file.size / 1024).toFixed(0) + ' KB',
-                  });
-                  if (dbErr) alert('Save failed: ' + dbErr.message);
-                  else { fetchData(); }
-                  setUploading(false);
+                  try {
+                    const form = new FormData(); form.set('lease_id', lease.id); form.set('file',file);
+                    await workspaceApi('/api/tenant/documents', { method:'POST', body:form });
+                    await fetchData();
+                  } catch (error) { alert((error as Error).message); }
+                  finally { setUploading(false); }
                   e.target.value = '';
                 }} />
             </label>
@@ -747,6 +741,8 @@ export default function TenantDashboard({ previewLeaseId }: { previewLeaseId?: s
         </div>
       )}
 
+      {lease && <><HistoryExport leaseId={lease.id}/><TenantMaintenance leaseId={lease.id} readOnly={!!isLeaseEnded || !!previewLeaseId} /></>}
+      <RentLedger payments={payments} />
       </div>{/* END LEFT COLUMN */}
 
       {/* RIGHT COLUMN */}

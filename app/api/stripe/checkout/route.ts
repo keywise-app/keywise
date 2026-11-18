@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { workspaceAccess, apiError } from '@/lib/workspace/access';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' });
 
@@ -12,17 +12,10 @@ const PRICE_IDS: Record<string, string | undefined> = {
 
 export async function POST(req: Request) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { user_id, email, name, return_path, plan } = await req.json();
-
-    if (!user_id || !email) {
-      return NextResponse.json({ error: 'user_id and email are required' }, { status: 400 });
-    }
-
+    const {db:supabase,user}=await workspaceAccess(req);
+    const {plan,return_path}=await req.json();
+    const user_id=user.id,email=user.email,name=user.user_metadata?.full_name || '';
+    if(!email)throw new Response('A verified account email is required.',{status:409});
     const selectedPlan = plan || 'monthly';
     const priceId = PRICE_IDS[selectedPlan];
 
@@ -57,13 +50,14 @@ export async function POST(req: Request) {
     }
 
     if (!customerId) {
-      const customer = await stripe.customers.create({ email, name: name || email });
+      const customer = await stripe.customers.create({ email, name: name || email },{idempotencyKey:`workspace-customer-${user_id}`});
       customerId = customer.id;
-      await supabase.from('profiles').upsert({ id: user_id, stripe_customer_id: customerId }, { onConflict: 'id' });
+      const {error:saveError}=await supabase.from('profiles').update({stripe_customer_id:customerId}).eq('id',user_id);
+      if(saveError)throw new Response('Unable to save checkout setup.',{status:503});
     }
 
-    const successUrl = `https://keywise.app/?page=${return_path ?? 'portfolio'}&upgraded=true`;
-    const cancelUrl  = `https://keywise.app/?page=${return_path ?? 'portfolio'}`;
+    const successUrl = `https://keywise.app/?page=${['portfolio','settings'].includes(return_path)?return_path:'portfolio'}&upgraded=true`;
+    const cancelUrl  = `https://keywise.app/?page=${['portfolio','settings'].includes(return_path)?return_path:'portfolio'}`;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -77,8 +71,5 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ checkoutUrl: session.url });
-  } catch (err: any) {
-    console.error('[checkout] Error:', err.message);
-    return NextResponse.json({ error: err.message || 'Failed to create checkout session.' }, { status: 500 });
-  }
+  } catch (error) {return apiError(error);}
 }

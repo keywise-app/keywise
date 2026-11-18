@@ -9,7 +9,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Webhook handler must use service-role key to bypass RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 async function updateProfileByCustomer(
@@ -49,46 +49,36 @@ export async function POST(req: Request) {
   }
 
   try {
-    // ── Rent payment succeeded ──────────────────────────────────────────────
-    if (event.type === 'payment_intent.succeeded') {
-      const intent = event.data.object as Stripe.PaymentIntent;
-      const { lease_id, tenant_name, due_date } = intent.metadata || {};
-      const today = new Date().toISOString().split('T')[0];
-
-      if (lease_id && due_date) {
-        const { data: existing } = await supabase
-          .from('payments')
-          .select('id, status')
-          .eq('lease_id', lease_id)
-          .eq('due_date', due_date)
-          .neq('status', 'paid')
-          .single();
-
-        if (existing) {
-          await supabase
-            .from('payments')
-            .update({ status: 'paid', paid_date: today, method: 'Stripe' })
-            .eq('id', existing.id);
-          return NextResponse.json({ received: true });
+    // Rent settlement is isolated from subscription events and never matches names or dates.
+    if (event.type.startsWith('payment_intent.') || event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
+      const object = event.data.object as any;
+      const intentId = event.type.startsWith('payment_intent.') ? object.id : (typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id);
+      if (intentId) {
+        const intent = await stripe.paymentIntents.retrieve(intentId);
+        const attemptId = intent.metadata?.workspace_attempt_id;
+        if (attemptId) {
+          // All rent intents are created on the platform with an explicit transfer destination.
+          if (event.account) throw new Error('Unexpected connected-account rent event');
+          const status = event.type === 'charge.refunded' || event.type === 'charge.dispute.created' ? 'review' :
+            intent.status === 'succeeded' ? 'succeeded' : intent.status === 'processing' ? 'processing' :
+            ['canceled','requires_payment_method'].includes(intent.status) ? 'failed' : 'processing';
+          let refundedCents=0;
+          if(event.type==='charge.refunded') {
+            const charge=await stripe.charges.retrieve(object.id);
+            if(charge.payment_intent!==intent.id || charge.amount!==intent.amount || charge.currency!==intent.currency)throw new Error('Refund identity mismatch');
+            refundedCents=charge.amount_refunded;
+          } else if(event.type==='charge.dispute.created') {
+            refundedCents=intent.amount; // Held funds remain unavailable until explicit reconciliation.
+          }
+          const {error} = await supabase.rpc('workspace_apply_payment_event',{
+            p_event_id:event.id,p_attempt_id:attemptId,p_intent_id:intent.id,p_amount_cents:intent.amount,
+            p_currency:intent.currency,p_destination:typeof intent.transfer_data?.destination === 'string' ? intent.transfer_data.destination : intent.transfer_data?.destination?.id,
+            p_owner:intent.metadata.owner_id,p_payment_id:intent.metadata.payment_id,p_status:status,p_event_created:event.created,p_refund_cents:refundedCents,
+          });
+          if (error) throw new Error('Rent event could not be reconciled');
         }
       }
-
-      if (tenant_name && due_date) {
-        const { data: existing } = await supabase
-          .from('payments')
-          .select('id, status')
-          .eq('tenant_name', tenant_name)
-          .eq('due_date', due_date)
-          .neq('status', 'paid')
-          .single();
-
-        if (existing) {
-          await supabase
-            .from('payments')
-            .update({ status: 'paid', paid_date: today, method: 'Stripe' })
-            .eq('id', existing.id);
-        }
-      }
+      return NextResponse.json({received:true});
     }
 
     // ── Checkout session completed (Payment Links + Subscriptions) ──────
@@ -166,47 +156,7 @@ export async function POST(req: Request) {
         }
       }
 
-      const { lease_id, tenant_name, due_date } = session.metadata || {};
-      const today = new Date().toISOString().split('T')[0];
-
-      // Try to match by metadata first (lease_id + due_date)
-      if (lease_id && due_date) {
-        const { error } = await supabase
-          .from('payments')
-          .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
-          .eq('lease_id', lease_id)
-          .eq('due_date', due_date)
-          .neq('status', 'paid');
-        if (error) console.error('[webhook] checkout update error (lease_id):', error);
-      }
-      // Fallback: match by tenant_name + due_date
-      else if (tenant_name && due_date) {
-        const { error } = await supabase
-          .from('payments')
-          .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
-          .eq('tenant_name', tenant_name)
-          .eq('due_date', due_date)
-          .neq('status', 'paid');
-        if (error) console.error('[webhook] checkout update error (tenant):', error);
-      }
-      // Last resort: match by payment_link URL
-      else if (session.payment_link) {
-        const linkId = typeof session.payment_link === 'string' ? session.payment_link : session.payment_link;
-        // Fetch the payment link to get its URL
-        try {
-          const link = await stripe.paymentLinks.retrieve(linkId as string);
-          if (link.url) {
-            const { error } = await supabase
-              .from('payments')
-              .update({ status: 'paid', paid_date: today, method: 'Online (Stripe)' })
-              .eq('payment_link_url', link.url)
-              .neq('status', 'paid');
-            if (error) console.error('[webhook] checkout update error (link url):', error);
-          }
-        } catch (e: any) {
-          console.error('[webhook] Could not retrieve payment link:', e.message);
-        }
-      }
+      // Checkout completion is a handoff, never evidence of rent settlement.
     }
 
     // ── Subscription created ────────────────────────────────────────────────
@@ -361,7 +311,8 @@ export async function POST(req: Request) {
     }
   } catch (err: any) {
     console.error('[webhook] Handler error:', err.message);
-    // Don't return 500 — Stripe retries on non-2xx, we don't want retry loops
+    // Retry failed durable writes rather than silently acknowledging lost events.
+    return NextResponse.json({error:'Event processing is pending.'},{status:500});
   }
 
   return NextResponse.json({ received: true });

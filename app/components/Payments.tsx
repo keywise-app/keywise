@@ -1,8 +1,10 @@
 'use client';
+import { workspaceApi, workspaceFetch } from '../lib/workspace-api';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
+import RentLedger from './workspace/RentLedger';
 import { getLimits } from '../lib/planLimits';
 
 type Payment = {
@@ -10,6 +12,7 @@ type Payment = {
   tenant_name: string;
   property: string;
   amount: number;
+  received_cents?:number|null;
   due_date: string;
   paid_date: string | null;
   status: string;
@@ -42,6 +45,8 @@ export default function Payments() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
   const [method, setMethod] = useState('Zelle');
+  const [receiptAmount,setReceiptAmount]=useState('');
+  const [receiptId,setReceiptId]=useState('');
   const [paidDate, setPaidDate] = useState(new Date().toISOString().split('T')[0]);
   const [filter, setFilter] = useState('all');
   const [aiReminder, setAiReminder] = useState('');
@@ -209,38 +214,13 @@ export default function Payments() {
 
   const confirmPayment = async () => {
     if (!selectedPayment) return;
-    const { error } = await supabase.from('payments').update({
-      status: 'paid', paid_date: paidDate, method,
-    }).eq('id', selectedPayment.id);
-    if (!error) {
-      setPayments(payments.map(p => p.id === selectedPayment.id
-        ? { ...p, status: 'paid', paid_date: paidDate, method } : p));
-
-      // Send receipt email if tenant has email on file
-      const lease = leases.find(l => l.id === selectedPayment.lease_id) as any;
-      if (lease?.email) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
-        const { data: { session: rcptSession } } = await supabase.auth.getSession();
-        fetch('/api/send-receipt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${rcptSession?.access_token}` },
-          body: JSON.stringify({
-            payment_id: selectedPayment.id,
-            tenant_name: selectedPayment.tenant_name,
-            tenant_email: lease.email,
-            property: selectedPayment.property,
-            amount: selectedPayment.amount,
-            paid_date: paidDate,
-            method,
-            landlord_name: profile?.full_name || '',
-            landlord_email: profile?.email || '',
-          }),
-        }).then(r => r.ok && (setReceiptSent(lease.email), setTimeout(() => setReceiptSent(null), 5000)));
-      }
-    }
-    setShowRecord(false);
-    setSelectedPayment(null);
+    try {
+      const id=receiptId || crypto.randomUUID();setReceiptId(id);
+      const cents=receiptAmount?Math.round(Number(receiptAmount)*100):Math.round(Number(selectedPayment.amount)*100)-Number(selectedPayment.received_cents || 0);
+      const data=await workspaceApi('/api/workspace/receipts',{method:'POST',body:JSON.stringify({id,payment_id:selectedPayment.id,amount_cents:cents,received_on:paidDate,method})});
+      setPayments(payments.map(p=>p.id===selectedPayment.id?data.payment:p));
+      setShowRecord(false);setSelectedPayment(null);setReceiptId('');setReceiptAmount('');
+    }catch(e:any){alert(e.message);}
   };
 
   const draftReminder = async (payment: Payment) => {
@@ -288,10 +268,11 @@ export default function Payments() {
   const openPayNow = async (p: Payment) => {
     setPayNowLoading(prev => ({ ...prev, [p.id]: true }));
     try {
-      const res = await fetch('/api/stripe/payment-link', {
+      const res = await workspaceFetch('/api/stripe/payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          payment_id: p.id,
           lease_id: p.lease_id,
           tenant_name: p.tenant_name,
           property: p.property,
@@ -353,6 +334,7 @@ export default function Payments() {
         ))}
       </div>
 
+      <RentLedger payments={payments} onOpen={id => window.dispatchEvent(new CustomEvent('kw:navigate', { detail: `tenants&lease=${id}&tab=payments` }))} />
       {/* Set up schedules prompt */}
       {leasesWithoutSchedules.length > 0 && (
         <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: '14px 18px', marginBottom: 20 }}>
@@ -485,7 +467,7 @@ export default function Payments() {
                         <div>
                           <div style={{ display: 'flex', gap: 6, marginBottom: p.status !== 'paid' ? 4 : 0 }}>
                             {p.status !== 'paid' && (
-                              <button onClick={() => { setSelectedPayment(p); setShowRecord(true); }}
+                              <button onClick={() => { setSelectedPayment(p); setReceiptId('');setReceiptAmount('');setShowRecord(true); }}
                                 style={{ background: T.greenLight, color: T.greenDark, border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                 Mark Paid
                               </button>
@@ -742,6 +724,8 @@ export default function Payments() {
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={label}>Date Received</label>
+              <label htmlFor="actual-receipt-amount" style={label}>Actual received ($; blank = remaining balance)</label>
+              <input id="actual-receipt-amount" type="number" step="0.01" min="0.01" value={receiptAmount} onChange={e=>{setReceiptAmount(e.target.value);setReceiptId('');}} style={input}/>
               <input type="date" value={paidDate} onChange={e => setPaidDate(e.target.value)} style={input} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -833,7 +817,7 @@ export default function Payments() {
               <label style={label}>Status</label>
               <select style={input} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                 <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
+
                 <option value="overdue">Overdue</option>
               </select>
             </div>
