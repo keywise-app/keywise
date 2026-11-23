@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "cache:bust": "bash scripts/bust-cache.sh",
-    "test:workspace": "bash scripts/test-workspace.sh && node test/workspace-routes.cjs && node test/workspace-transactions.cjs"
+    "test:workspace": "bash scripts/test-workspace.sh && node test/workspace-routes.cjs && node test/workspace-transactions.cjs && node test/lease-onboarding.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
