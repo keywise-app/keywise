@@ -28,7 +28,7 @@ begin
   if exists(select 1 from public.properties where user_id=p_actor and building_id=b and lower(trim(coalesce(unit_number,'')))=lower(trim(coalesce(p->>'unit_number','')))) then raise exception 'Unit already exists; select it'; end if;
   u=gen_random_uuid();
   insert into public.properties(id,user_id,building_id,address,unit_number,is_unit,current_rent,timezone) values(u,p_actor,b,addr,nullif(p->>'unit_number',''),true,(p->>'rent_cents')::numeric/100,p->>'timezone');
-  update public.buildings set num_units=(select count(*) from public.properties where building_id=b and is_unit=true),type=case when (select count(*) from public.properties where building_id=b and is_unit=true)=2 then 'Duplex' when (select count(*) from public.properties where building_id=b and is_unit=true)>2 then 'Multi-Family' else type end where id=b;
+  update public.buildings set num_units=greatest(coalesce(num_units,0),(select count(*)::integer from public.properties where building_id=b and is_unit=true)) where id=b;
  end if;
  if exists(select 1 from public.leases where user_id=p_actor and property_id=u and coalesce(archived,false)=false and coalesce(status,'active') not in ('ended','terminated','inactive','archived')) then raise exception 'Existing tenancy needs review'; end if;
  insert into public.leases(id,user_id,property_id,property,tenant_name,email,phone,rent,deposit,start_date,end_date,status,lifecycle_state,payment_day)
@@ -55,15 +55,17 @@ begin
 end $$;
 create function public.workspace_commit_import_batch(p_actor uuid,p_items jsonb,p_max_units integer)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
-declare item jsonb; results jsonb='[]'::jsonb; l jsonb;
+declare item jsonb; results jsonb='[]'::jsonb; l jsonb; existing_buildings uuid[];
 begin
  if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 10 then raise exception 'Invalid batch'; end if;
  if (select count(distinct value->>'id') from jsonb_array_elements(p_items))<>jsonb_array_length(p_items) then raise exception 'Duplicate draft'; end if;
  perform pg_advisory_xact_lock(hashtextextended(p_actor::text,3));
+ select coalesce(array_agg(id),array[]::uuid[]) into existing_buildings from public.buildings where user_id=p_actor;
  for item in select value from jsonb_array_elements(p_items) order by value->>'id' loop
   l=public.workspace_commit_import((item->>'id')::uuid,p_actor,(item->>'revision')::integer,item->>'digest',p_max_units);
   results=results || jsonb_build_array(l);
  end loop;
+ update public.buildings set type=case num_units when 1 then 'Single Family' when 2 then 'Duplex' when 3 then 'Triplex' when 4 then 'Fourplex' else 'Multi-Unit (5+)' end where user_id=p_actor and not(id=any(existing_buildings));
  return results;
 end $$;
 revoke all on function public.workspace_save_import_batch(uuid,jsonb) from public;
