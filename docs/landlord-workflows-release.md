@@ -45,3 +45,29 @@ This remains a draft implementation, not a production release. Do not merge or p
 The connected Vercel account still returned HTTP 403 for the `keywise-apps-projects` team during this work. Team authorization is required before preview/deployment inspection. No production migration, real-money charge, tenant message or statutory notice was executed by this development session.
 
 Preserve all user records on rollback. Keeping the new financial guards while reverting to a legacy application can intentionally block old direct-paid flows; reconcile deployment compatibility rather than dropping history or disabling safety checks casually.
+
+## Batch lease onboarding (November 23)
+
+The lease tracker, tenant onboarding and portfolio onboarding now share the same
+occupied-rental import flow. Landlords can drop up to ten documents, extract two
+concurrently, review all rentals together, apply one shared building address and
+approve the batch. Manual entry uses the same path. Per-document errors retain
+uploaded sources for retries; unsupported formats and missing browser MIME types
+receive explicit handling. Optional contact and schedule fields are expandable.
+Current terms and occupancy still require owner review; dates do not establish
+continued occupancy. Existing unit/plan limits remain enforced.
+
+Apply `20261123000000_batch_lease_onboarding.sql` after the existing migrations
+before deploying this source. It adds service-role-only batch save/commit RPCs
+and updates occupied-import creation to reuse an owner-scoped building. Commits
+are atomic across the batch and replay the same approved draft identities.
+A failed unit rolls back the entire batch, including newly created buildings.
+The migration does not rewrite historical properties or merge existing buildings.
+
+Validation includes regression coverage for missing file metadata, actionable
+storage failures, private source ownership, duplicate rental identities, batch
+rollback, unit caps, replay and stale drafts. `npm run test:workspace` includes
+these checks. A production build with placeholder provider variables verifies
+compilation only. Live upload/extraction and signed-in browser acceptance still
+require verification. Under-five-minute duplex onboarding remains a target,
+not a measured performance claim.
