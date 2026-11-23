@@ -4,7 +4,13 @@ import { importPlan } from '@/lib/workspace/imports';
 export async function GET(req:Request) {
  try {
   const {db,user}=await workspaceAccess(req);
-  const id=new URL(req.url).searchParams.get('id');
+  const params=new URL(req.url).searchParams;
+  const id=params.get('id');
+  if(params.get('all')==='1') {
+   const {data,error}=await db.from('workspace_import_drafts').select('*').eq('user_id',user.id).eq('state','draft').order('updated_at',{ascending:false}).limit(10);
+   if(error) throw new Response('Unable to load saved drafts.',{status:503});
+   return Response.json({drafts:data || []});
+  }
   let query=db.from('workspace_import_drafts').select('*').eq('user_id',user.id);
   query=id?query.eq('id',id):query.eq('state','draft').order('updated_at',{ascending:false}).limit(1);
   const {data,error}=await query.maybeSingle();
@@ -38,4 +44,14 @@ export async function POST(req:Request) {
   if(error) throw new Response('This draft changed in another session. Reload the saved version before editing.',{status:409});
   return Response.json({draft:data,preview});
  } catch(error) {return apiError(error);}
+}
+export async function DELETE(req:Request) {
+ try {
+  const {db,user}=await workspaceAccess(req);
+  const {id,revision}=await req.json();
+  if(typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id)||!Number.isInteger(revision)) throw new Response('Reload your draft.',{status:400});
+  const {data,error}=await db.from('workspace_import_drafts').delete().eq('id',id).eq('user_id',user.id).eq('state','draft').eq('revision',revision).select('id');
+  if(error||!data?.length) throw new Response('The draft changed. Reopen setup before removing it.',{status:409});
+  return Response.json({removed:true});
+ }catch(error){return apiError(error);}
 }
