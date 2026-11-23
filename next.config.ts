@@ -8,7 +8,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdfkit'],
+  serverExternalPackages: ['pdfkit', 'pdf-parse'],
   experimental: {
     serverActions: {
       bodySizeLimit: '20mb',
