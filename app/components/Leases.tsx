@@ -351,63 +351,258 @@ export default function Leases() {
                       <div style={{ fontWeight: 700, fontSize: 16, color: T.ink }}>{lease.tenant_name}</div>
                       <span style={{ background: status.bg, color: status.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{status.label}</span>
                     </div>
-                    <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: …5677 tokens truncated…e approval, checks the base revision and existing future activity, creates/replaces only reviewed future charges, and applies current rent on the property's effective civil date through a guarded cron.
-- Email approvals persist content digests and provider-acceptance state. Recipient identity is derived on the server, duplicate submissions share a provider idempotency key, and uncertain delivery is not labeled delivered.
-- Selected history exports produce authenticated JSON manifests with expiring original-file links and tenant filtering. They are not bundled archives. Fixed-schema server outcomes measure import, payment and renewal milestones without message/document content or financial amounts.
+                    <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 14 }}>{lease.property}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 10 }}>
+                      {[
+                        { label: 'Monthly Rent', value: '$' + lease.rent.toLocaleString() },
+                        { label: 'Deposit', value: '$' + (lease.deposit || 0).toLocaleString() },
+                        { label: 'Start Date', value: lease.start_date },
+                        { label: 'End Date', value: lease.end_date + ' · ' + formatDaysLeft(days) },
+                      ].map(item => (
+                        <div key={item.label}>
+                          <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{item.label}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, color: T.ink }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
 
-Existing commercial plan definitions remain unchanged. The PRD's P2 intake integrations and pricing experiments are not enabled.
+                    {/* Late fee terms */}
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {(lease.payment_day || lease.payment_frequency) && (
+                        <span style={{ fontSize: 12, color: T.inkMuted }}>
+                          💳 Due {lease.payment_day || 1}{[1,2,3].includes(lease.payment_day) ? ['st','nd','rd'][lease.payment_day-1] : 'th'} · {lease.payment_frequency || 'monthly'}
+                        </span>
+                      )}
+                      {lease.late_fee_percent > 0 && (
+                        <span style={{ fontSize: 12, color: T.inkMuted }}>
+                          ⚠ Late fee: {lease.late_fee_type === 'fixed' ? '$' + lease.late_fee_percent : lease.late_fee_percent + '%'} after {lease.late_fee_days || 3} days
+                          {lease.lease_terms_raw && <span style={{ color: T.tealDark, marginLeft: 4 }}>✓ from contract</span>}
+                        </span>
+                      )}
+                    </div>
 
-## Repeatable validation
+                    {(lease.email || lease.phone) && (
+                      <div style={{ fontSize: 12, color: T.inkMuted }}>
+                        {lease.email && <span>📧 {lease.email}</span>}
+                        {lease.email && lease.phone && <span> · </span>}
+                        {lease.phone && <span>📞 {lease.phone}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
+                    <button onClick={() => openRenewalWizard(lease)} disabled={draftingId === lease.id}
+                      style={{ ...btn.primary, fontSize: 12, padding: '7px 14px', whiteSpace: 'nowrap' as const }}>
+                      {draftingId === lease.id ? 'Drafting…' : '✦ Renewal Wizard'}
+                    </button>
+                    <button onClick={() => openEdit(lease)}
+                      style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>
+                      ✏️ Edit
+                    </button>
+                    <button onClick={() => removeLease(lease.id)}
+                      style={{ ...btn.danger, fontSize: 12, padding: '7px 14px' }}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
 
-Run `npm ci`, then `npm run test:workspace`. PGlite is a committed development dependency; no temporary external install is required. The command runs:
+                {renewalDrafts[lease.id] && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.navy, marginBottom: 8 }}>✦ Renewal Letter Draft</div>
+                    <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.75, whiteSpace: 'pre-wrap', color: T.ink }}>
+                      {renewalDrafts[lease.id]}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={() => navigator.clipboard.writeText(renewalDrafts[lease.id])}
+                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>📋 Copy</button>
+                      <button onClick={() => {
+                        const subject = encodeURIComponent('Lease Renewal Offer — ' + lease.property);
+                        const body = encodeURIComponent(renewalDrafts[lease.id]);
+                        window.open('mailto:' + (lease.email || '') + '?subject=' + subject + '&body=' + body);
+                      }}
+                        style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>✉️ Open in Email</button>
+                      <button onClick={() => setRenewalDrafts(prev => { const n = { ...prev }; delete n[lease.id]; return n; })}
+                        style={{ ...btn.danger, fontSize: 12, padding: '6px 14px' }}>Dismiss</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-1. Domain tests for tenancy lifecycle, confirmed/partial rent arithmetic, unit identity, calendar schedules, extraction unknowns, approval digests and membership isolation.
-2. Real route-handler boundary tests with network access prohibited for anonymous requests.
-3. Disposable PostgreSQL-compatible integration tests covering all new migrations, injected atomic rollback, stale/repeated approvals, unit limits, fractional-dollar storage, foreign IDs, partial receipts/refunds, reversals, provider replay/order, repair expense identity, renewal conflicts and effective civil dates, financial/profile write guards and RLS.
+      {tab === 'generator' && (
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 20 }}>Lease Details</div>
+            {[
+              { label: 'Tenant Full Name', key: 'tenant', type: 'text', placeholder: 'John Smith' },
+              { label: 'Property Address', key: 'property', type: 'text', placeholder: '42 Maple St, Unit 1' },
+              { label: 'Monthly Rent ($)', key: 'rent', type: 'number', placeholder: '1800' },
+              { label: 'Security Deposit ($)', key: 'deposit', type: 'number', placeholder: '3600' },
+              { label: 'Lease Start', key: 'start', type: 'date', placeholder: '' },
+              { label: 'Lease End', key: 'end', type: 'date', placeholder: '' },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 14 }}>
+                <label style={label}>{f.label}</label>
+                <input type={f.type} placeholder={f.placeholder} value={form[f.key as keyof typeof form]}
+                  onChange={e => setForm({ ...form, [f.key]: e.target.value })} style={input} />
+              </div>
+            ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+              {[
+                { label: 'State', key: 'state', options: ['California', 'New York', 'Texas', 'Florida', 'Illinois', 'Washington', 'Arizona', 'Colorado', 'Other'] },
+                { label: 'Pets', key: 'pets', options: ['no pets', 'cats only', 'small dogs', 'all pets'] },
+                { label: 'Parking', key: 'parking', options: ['included', 'not included', 'additional fee'] },
+                { label: 'Laundry', key: 'laundry', options: ['in-unit', 'shared', 'none'] },
+              ].map(s => (
+                <div key={s.key}>
+                  <label style={label}>{s.label}</label>
+                  <select value={form[s.key as keyof typeof form]} onChange={e => setForm({ ...form, [s.key]: e.target.value })}
+                    style={input}>
+                    {s.options.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <button onClick={generateLease} disabled={generating}
+              style={{ ...btn.primary, width: '100%', justifyContent: 'center' }}>
+              {generating ? 'Generating…' : '✦ Generate Lease Agreement'}
+            </button>
+          </div>
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Generated Agreement</div>
+              {generatedLease && (
+                <button onClick={() => navigator.clipboard.writeText(generatedLease)}
+                  style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>📋 Copy</button>
+              )}
+            </div>
+            {generatedLease
+              ? <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 12.5, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 600, overflowY: 'auto', color: T.ink }}>{generatedLease}</div>
+              : <div style={{ color: T.inkMuted, fontSize: 13, lineHeight: 1.7 }}>Fill in the details and click Generate to create a complete, state-specific lease agreement.</div>
+            }
+          </div>
+        </div>
+      )}
 
-Build using the normal deployment environment and `npm run build`. Local builds used nonfunctional placeholders for required provider variables and a 6 GB Node heap; passing does not establish provider connectivity or live-schema compatibility.
+      {showAdd && <AddTenantWizard initialFiles={importFiles} onClose={() => { setShowAdd(false); setImportFiles([]); }} onComplete={() => { void fetchLeases(); }} />}
 
-## Required release gates
+      {/* Edit Lease Modal */}
+      {editingLease && editForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => { setEditingLease(null); setEditForm(null); }}>
+          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: T.shadowMd }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Edit Lease</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 20 }}>{editingLease.tenant_name}</div>
+            {renderLeaseFormFields(editForm, setEditForm)}
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button onClick={saveLease} disabled={saving} style={{ ...btn.primary }}>
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button onClick={() => { setEditingLease(null); setEditForm(null); }}
+                style={{ ...btn.ghost }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-This remains a draft implementation, not a production release. Do not merge or promote it solely because local checks pass.
+      {/* Renewal Wizard Modal */}
+      {renewalWizard && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => setRenewalWizard(null)}>
+          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 500, boxShadow: T.shadowMd }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>✦ Renewal Wizard</div>
+            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 24 }}>{renewalWizard.tenant_name} · {renewalWizard.property}</div>
 
-1. Inventory and back up the actual schema and reconcile legacy money units, manually marked paid rows, active payment links and in-flight attempts. The registered legacy `payments.amount` column is dollars; the migration widens it to `numeric(12,2)` without changing units. No automatic ambiguous historical backfill is authorized.
-2. Apply the ordered `20261117*` migrations to an isolated copy of the real schema and validate data reconciliation. The disposable fixture cannot establish compatibility with untracked production schema changes. Deploy schema and application as a coordinated release; financial guards intentionally reject legacy direct-paid mutations.
-3. Complete operational reconciliation for failed/expired attempts, dispute resolution and old payment links. A 23-hour retry limit fails closed before provider idempotency retention expires. No automatic fresh charge is created after that limit.
-4. Complete scoped co-signer sharing and review former-occupant history boundaries, revocable invitations and all older RLS/service-role routes. Verify member revocation with real signed-in accounts and expired sessions.
-5. Verify executed renewal source integrity, correction authors/version evidence, approval replay and conflicting concurrent edits against real provider sandboxes. Statutory notices remain a separately reviewed process. Sending a proposal is not tenant acceptance.
-6. Exercise all legacy rent/schedule/expense screens against the new guards; verify partial-balance presentation throughout, online/manual retry recovery and document export expiry/missing originals.
-7. Run signed-in browser E2E and human keyboard/screen-reader checks at 320/390/768/1280 px and 200% zoom. Verify dialog focus restoration, draft resumption, back/reload context, tenant privacy and all error/empty states.
-8. Expand outcome instrumentation for repairs, failures/reversals and second-rent-cycle retention. Run the pre-specified RentSpree and TurboTenant task study before making any 30% faster claim.
+            <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 24, display: 'flex', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Current Rent</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: T.navy }}>${renewalWizard.rent.toLocaleString()}/mo</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lease Expires</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: T.ink }}>{renewalWizard.end_date}</div>
+              </div>
+            </div>
 
-## Deployment access
+            <div style={{ marginBottom: 20 }}>
+              <label style={label}>Rent Increase Type</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { id: 'percent', label: '% Increase' },
+                  { id: 'fixed', label: '$ Fixed Amount' },
+                  { id: 'market', label: '✦ Research Market Rate' },
+                ].map(opt => (
+                  <button key={opt.id} onClick={() => setRenewalOptions({ ...renewalOptions, increaseType: opt.id as any })}
+                    style={{
+                      flex: 1, padding: '8px 6px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: renewalOptions.increaseType === opt.id ? T.navy : T.bg,
+                      color: renewalOptions.increaseType === opt.id ? 'white' : T.inkMid,
+                      border: `1px solid ${renewalOptions.increaseType === opt.id ? T.navy : T.border}`,
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-The connected Vercel account still returned HTTP 403 for the `keywise-apps-projects` team during this work. Team authorization is required before preview/deployment inspection. No production migration, real-money charge, tenant message or statutory notice was executed by this development session.
+            {renewalOptions.increaseType !== 'market' && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={label}>{renewalOptions.increaseType === 'percent' ? 'Percentage Increase (%)' : 'Dollar Amount Increase ($)'}</label>
+                <input style={input} type="number" value={renewalOptions.increaseValue}
+                  onChange={e => setRenewalOptions({ ...renewalOptions, increaseValue: e.target.value })} />
+                {renewalOptions.increaseValue && (
+                  <div style={{ fontSize: 12, color: T.tealDark, marginTop: 6, fontWeight: 600 }}>
+                    New rent: ${renewalOptions.increaseType === 'percent'
+                      ? Math.round(renewalWizard.rent * (1 + +renewalOptions.increaseValue / 100)).toLocaleString()
+                      : (renewalWizard.rent + +renewalOptions.increaseValue).toLocaleString()
+                    }/mo
+                  </div>
+                )}
+              </div>
+            )}
 
-Preserve all user records on rollback. Keeping the new financial guards while reverting to a legacy application can intentionally block old direct-paid flows; reconcile deployment compatibility rather than dropping history or disabling safety checks casually.
+            {renewalOptions.increaseType === 'market' && (
+              <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 12, marginBottom: 20, fontSize: 13, color: T.tealDark }}>
+                ✦ Claude will research comparable rentals in your area and propose a competitive market rate.
+              </div>
+            )}
 
-## Batch lease onboarding (November 23)
+            <div style={{ marginBottom: 20 }}>
+              <label style={label}>New Lease Term</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ id: '12', label: '12 Months' }, { id: '6', label: '6 Months' }, { id: 'month-to-month', label: 'Month-to-Month' }].map(opt => (
+                  <button key={opt.id} onClick={() => setRenewalOptions({ ...renewalOptions, newTerm: opt.id as any })}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: renewalOptions.newTerm === opt.id ? T.navy : T.bg,
+                      color: renewalOptions.newTerm === opt.id ? 'white' : T.inkMid,
+                      border: `1px solid ${renewalOptions.newTerm === opt.id ? T.navy : T.border}`,
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-The lease tracker, tenant onboarding and portfolio onboarding now share the same
-occupied-rental import flow. Landlords can drop up to ten documents, extract two
-concurrently, review all rentals together, apply one shared building address and
-approve the batch. Manual entry uses the same path. Per-document errors retain
-uploaded sources for retries; unsupported formats and missing browser MIME types
-receive explicit handling. Optional contact and schedule fields are expandable.
-Current terms and occupancy still require owner review; dates do not establish
-continued occupancy. Existing unit/plan limits remain enforced.
+            <div style={{ marginBottom: 24 }}>
+              <label style={label}>Additional Notes for Claude (optional)</label>
+              <textarea value={renewalOptions.notes}
+                onChange={e => setRenewalOptions({ ...renewalOptions, notes: e.target.value })}
+                placeholder="e.g. tenant has been great, offer discount if they sign early..."
+                style={{ ...input, minHeight: 70, resize: 'vertical' as const }} />
+            </div>
 
-Apply `20261123000000_batch_lease_onboarding.sql` after the existing migrations
-before deploying this source. It adds service-role-only batch save/commit RPCs
-and updates occupied-import creation to reuse an owner-scoped building. Commits
-are atomic across the batch and replay the same approved draft identities.
-A failed unit rolls back the entire batch, including newly created buildings.
-The migration does not rewrite historical properties or merge existing buildings.
-
-Validation includes regression coverage for missing file metadata, actionable
-storage failures, private source ownership, duplicate rental identities, batch
-rollback, unit caps, replay and stale drafts. `npm run test:workspace` includes
-these checks. A production build with placeholder provider variables verifies
-compilation only. Live upload/extraction and signed-in browser acceptance still
-require verification. Under-five-minute duplex onboarding remains a target,
-not a measured performance claim.
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={draftRenewal} style={{ ...btn.primary }}>✦ Draft Renewal Letter</button>
+              <button onClick={() => setRenewalWizard(null)} style={{ ...btn.ghost }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
