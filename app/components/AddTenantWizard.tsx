@@ -59,26 +59,27 @@ export default function AddTenantWizard({onClose,onComplete,preselectedUnit,init
   const base=onlyEmpty?[]:old;
   if(base.length+files.length>10){setError('Add up to ten leases at a time.');return;}
   if(preselectedUnit&&base.length+files.length>1){setError('This unit accepts one lease. Start from Leases to add several units.');return;}
-  const next=files.map(file=>({...newEntry(onlyEmpty?old[0].form:{}),file}));
+  const next=files.map(file=>({...newEntry(onlyEmpty?old[0].form:preselectedUnit?{property_id:preselectedUnit.id,address:preselectedUnit.address || '',unit_number:preselectedUnit.unit_number || '',rent:String(preselectedUnit.current_rent || '')}:{}),file}));
   setEntries([...base,...next]);items.current=[...base,...next];setReviewing(false);setError('');
   // Two documents at a time keeps requests responsive without overwhelming extraction.
   let cursor=0;
   await Promise.all(Array.from({length:Math.min(2,next.length)},async()=>{while(cursor<next.length){const e=next[cursor++];await readLease(e,e.file);}}));
  };
  useEffect(()=>{
+  let cancelled=false;
   active.current=true;returnFocus.current=document.activeElement as HTMLElement;heading.current?.focus();
   (async()=>{try{
    const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Please sign in again.');owner.current=user.id;
    const [{data,error:unitError},drafts]=await Promise.all([supabase.from('properties').select('id,address,unit_number,current_rent,building_id').eq('user_id',user.id).eq('is_unit',true).order('address'),workspaceApi('/api/workspace/imports?all=1')]);
-   if(unitError)throw new Error('Unable to load existing units.');if(!active.current)return;
+   if(unitError)throw new Error('Unable to load existing units.');if(cancelled||!active.current)return;
    setUnits(data || []);
    const restored=initialFiles?.length?[]:drafts.drafts.filter((d:any)=>!preselectedUnit||d.payload.form?.property_id===preselectedUnit.id);
    const next:Entry[]=restored.length?restored.map((d:any)=>({id:d.id,revision:d.revision,form:{...blank,...d.payload.form},source:d.payload.source,fields:d.payload.fields || {},current:false})): [newEntry(preselectedUnit?{property_id:preselectedUnit.id,address:preselectedUnit.address || '',unit_number:preselectedUnit.unit_number || '',rent:String(preselectedUnit.current_rent || '')}:{})];
    items.current=next;setEntries(next);setReady(true);setSaved(restored.length?'Restored your saved rentals.':'');trackGrowth('import_opened','occupied-import');
    if(initialFiles?.length)await addFiles(initialFiles);
-  }catch(e:any){if(active.current)setError(e.message);}})();
-  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{if(owner.current&&session?.user.id!==owner.current){active.current=false;items.current=[];setEntries([]);setReady(false);setError('Your session changed. Close setup and sign in again.');}});
-  return()=>{active.current=false;subscription.unsubscribe();returnFocus.current?.focus();};
+  }catch(e:any){if(!cancelled&&active.current)setError(e.message);}})();
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{if(owner.current&&session?.user.id!==owner.current){active.current=false;items.current=[];setEntries([]);setBusy(false);setReady(false);setError('Your session changed. Close setup and sign in again.');}});
+  return()=>{cancelled=true;active.current=false;subscription.unsubscribe();returnFocus.current?.focus();};
  },[]);
  useEffect(()=>{
   if(!ready||busy||reviewing||created||!entries.length)return;
