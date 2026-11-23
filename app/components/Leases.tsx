@@ -1,6 +1,7 @@
 'use client';
+import AddTenantWizard from './AddTenantWizard';
 import { workspaceFetch } from '../lib/workspace-api';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
@@ -68,9 +69,8 @@ export default function Leases() {
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [extractError, setExtractError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [renewalDrafts, setRenewalDrafts] = useState<{ [key: string]: string }>({});
   const [draftingId, setDraftingId] = useState<string | null>(null);
@@ -80,16 +80,6 @@ export default function Leases() {
   });
   const [editingLease, setEditingLease] = useState<Lease | null>(null);
   const [editForm, setEditForm] = useState<any>(null);
-  const [leaseFile, setLeaseFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [newLease, setNewLease] = useState({
-    tenant_name: '', property: '', rent: '', deposit: '',
-    start_date: '', end_date: '', email: '', phone: '',
-    payment_day: '1', payment_frequency: 'monthly',
-    late_fee_percent: '5', late_fee_days: '3',
-    late_fee_type: 'percent', lease_terms_raw: '',
-  });
 
   const [form, setForm] = useState({
     tenant: '', property: '', rent: '', deposit: '',
@@ -115,125 +105,6 @@ export default function Leases() {
     setLoading(false);
   };
 
-  const extractLeaseData = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setExtractError('File too large. Maximum size is 10 MB.');
-      return;
-    }
-    setLeaseFile(file);
-    setExtracting(true);
-    setExtractError('');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please sign in again.');
-      const path = `${user.id}/lease-${crypto.randomUUID()}`;
-      const {error:uploadError} = await supabase.storage.from('workspace-sources').upload(path,file);
-      if (uploadError) throw uploadError;
-      const res = await workspaceFetch('/api/extract-lease', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storage_path:path, fileType:file.type }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setExtractError(data.error);
-      } else {
-        setNewLease({
-          tenant_name: data.tenant_name || '',
-          property: data.property || '',
-          rent: data.rent || '',
-          deposit: data.deposit || '',
-          start_date: data.start_date || '',
-          end_date: data.end_date || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          payment_day: data.payment_day || '1',
-          payment_frequency: data.payment_frequency || 'monthly',
-          late_fee_percent: data.late_fee_percent || data.late_fee_fixed || '5',
-          late_fee_days: data.late_fee_days || '3',
-          late_fee_type: data.late_fee_type || 'percent',
-          lease_terms_raw: data.late_fee_clause || '',
-        });
-
-      }
-    } catch (err) {
-      setExtractError('Could not read file. Please try again.');
-    }
-    setExtracting(false);
-  };
-
-  const addLease = async () => {
-    if (!newLease.tenant_name || !newLease.property || !newLease.rent || !newLease.start_date || !newLease.end_date) {
-      alert('Please fill in tenant name, property, rent, and both dates.');
-      return;
-    }
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-
-    // Upload lease file to storage if one was provided
-    let filePath = '';
-    let fileSize = '';
-    if (leaseFile) {
-      const ext = leaseFile.name.split('.').pop();
-      filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('workspace-sources').upload(filePath, leaseFile);
-      if (uploadError) {
-        alert('File upload failed: ' + uploadError.message);
-        setSaving(false);
-        return;
-      }
-      fileSize = (leaseFile.size / 1024).toFixed(0) + ' KB';
-    }
-
-    // Create lease record
-    const { data: leaseData, error } = await supabase.from('leases').insert({
-      user_id: user.id,
-      tenant_name: newLease.tenant_name,
-      property: newLease.property,
-      rent: +newLease.rent,
-      deposit: +newLease.deposit || 0,
-      start_date: newLease.start_date,
-      end_date: newLease.end_date,
-      email: newLease.email,
-      phone: newLease.phone,
-      status: 'active',
-      payment_day: +newLease.payment_day || 1,
-      payment_frequency: newLease.payment_frequency || 'monthly',
-      late_fee_percent: +newLease.late_fee_percent || 5,
-      late_fee_days: +newLease.late_fee_days || 3,
-      late_fee_type: newLease.late_fee_type || 'percent',
-      lease_terms_raw: newLease.lease_terms_raw || '',
-    }).select().single();
-
-    if (error) {
-      // Clean up uploaded file if lease insert failed
-      if (filePath) await supabase.storage.from('workspace-sources').remove([filePath]);
-      alert('Error saving: ' + error.message);
-    } else {
-      // Create document record linking file to lease
-      if (filePath && leaseData) {
-        await supabase.from('documents').insert({
-          user_id: user.id,
-          name: newLease.tenant_name + ' — Lease Agreement',
-          type: 'lease',
-          ownership_level: 'tenant',
-          property: newLease.property,
-          tenant_name: newLease.tenant_name,
-          lease_id: leaseData.id,
-          file_path: filePath,
-          file_url: '',
-          size: fileSize,
-        });
-      }
-      await fetchLeases();
-      setShowAdd(false);
-      setLeaseFile(null);
-      setNewLease({ tenant_name: '', property: '', rent: '', deposit: '', start_date: '', end_date: '', email: '', phone: '', payment_day: '1', payment_frequency: 'monthly', late_fee_percent: '5', late_fee_days: '3', late_fee_type: 'percent', lease_terms_raw: '' });
-      setExtractError('');
-    }
-    setSaving(false);
-  };
 
   const openEdit = (lease: Lease) => {
     setEditingLease(lease);
@@ -438,7 +309,7 @@ export default function Leases() {
 
           {/* Drop zone */}
           <div
-            onDrop={e => { e.preventDefault(); setDragOver(false); const file = e.dataTransfer.files?.[0]; if (file) { setShowAdd(true); extractLeaseData(file); } }}
+            onDrop={e => { e.preventDefault(); setDragOver(false); const files = Array.from(e.dataTransfer.files); if (files.length) { setImportFiles(files); setShowAdd(true); } }}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onClick={() => setShowAdd(true)}
@@ -450,8 +321,8 @@ export default function Leases() {
               transition: 'all 0.15s',
             }}>
             <div style={{ fontSize: 24, marginBottom: 6 }}>📄</div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Drop a lease PDF here to add it</div>
-            <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Or click to add manually · AI auto-fills details including late fee terms</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Drop your leases here to add rentals</div>
+            <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Upload together · Review building, units and tenants once</div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -480,314 +351,63 @@ export default function Leases() {
                       <div style={{ fontWeight: 700, fontSize: 16, color: T.ink }}>{lease.tenant_name}</div>
                       <span style={{ background: status.bg, color: status.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{status.label}</span>
                     </div>
-                    <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 14 }}>{lease.property}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 10 }}>
-                      {[
-                        { label: 'Monthly Rent', value: '$' + lease.rent.toLocaleString() },
-                        { label: 'Deposit', value: '$' + (lease.deposit || 0).toLocaleString() },
-                        { label: 'Start Date', value: lease.start_date },
-                        { label: 'End Date', value: lease.end_date + ' · ' + formatDaysLeft(days) },
-                      ].map(item => (
-                        <div key={item.label}>
-                          <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{item.label}</div>
-                          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, color: T.ink }}>{item.value}</div>
-                        </div>
-                      ))}
-                    </div>
+                    <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: …5677 tokens truncated…e approval, checks the base revision and existing future activity, creates/replaces only reviewed future charges, and applies current rent on the property's effective civil date through a guarded cron.
+- Email approvals persist content digests and provider-acceptance state. Recipient identity is derived on the server, duplicate submissions share a provider idempotency key, and uncertain delivery is not labeled delivered.
+- Selected history exports produce authenticated JSON manifests with expiring original-file links and tenant filtering. They are not bundled archives. Fixed-schema server outcomes measure import, payment and renewal milestones without message/document content or financial amounts.
 
-                    {/* Late fee terms */}
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
-                      {(lease.payment_day || lease.payment_frequency) && (
-                        <span style={{ fontSize: 12, color: T.inkMuted }}>
-                          💳 Due {lease.payment_day || 1}{[1,2,3].includes(lease.payment_day) ? ['st','nd','rd'][lease.payment_day-1] : 'th'} · {lease.payment_frequency || 'monthly'}
-                        </span>
-                      )}
-                      {lease.late_fee_percent > 0 && (
-                        <span style={{ fontSize: 12, color: T.inkMuted }}>
-                          ⚠ Late fee: {lease.late_fee_type === 'fixed' ? '$' + lease.late_fee_percent : lease.late_fee_percent + '%'} after {lease.late_fee_days || 3} days
-                          {lease.lease_terms_raw && <span style={{ color: T.tealDark, marginLeft: 4 }}>✓ from contract</span>}
-                        </span>
-                      )}
-                    </div>
+Existing commercial plan definitions remain unchanged. The PRD's P2 intake integrations and pricing experiments are not enabled.
 
-                    {(lease.email || lease.phone) && (
-                      <div style={{ fontSize: 12, color: T.inkMuted }}>
-                        {lease.email && <span>📧 {lease.email}</span>}
-                        {lease.email && lease.phone && <span> · </span>}
-                        {lease.phone && <span>📞 {lease.phone}</span>}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 20 }}>
-                    <button onClick={() => openRenewalWizard(lease)} disabled={draftingId === lease.id}
-                      style={{ ...btn.primary, fontSize: 12, padding: '7px 14px', whiteSpace: 'nowrap' as const }}>
-                      {draftingId === lease.id ? 'Drafting…' : '✦ Renewal Wizard'}
-                    </button>
-                    <button onClick={() => openEdit(lease)}
-                      style={{ ...btn.ghost, fontSize: 12, padding: '7px 14px' }}>
-                      ✏️ Edit
-                    </button>
-                    <button onClick={() => removeLease(lease.id)}
-                      style={{ ...btn.danger, fontSize: 12, padding: '7px 14px' }}>
-                      Remove
-                    </button>
-                  </div>
-                </div>
+## Repeatable validation
 
-                {renewalDrafts[lease.id] && (
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.navy, marginBottom: 8 }}>✦ Renewal Letter Draft</div>
-                    <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 16, fontSize: 13, lineHeight: 1.75, whiteSpace: 'pre-wrap', color: T.ink }}>
-                      {renewalDrafts[lease.id]}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={() => navigator.clipboard.writeText(renewalDrafts[lease.id])}
-                        style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>📋 Copy</button>
-                      <button onClick={() => {
-                        const subject = encodeURIComponent('Lease Renewal Offer — ' + lease.property);
-                        const body = encodeURIComponent(renewalDrafts[lease.id]);
-                        window.open('mailto:' + (lease.email || '') + '?subject=' + subject + '&body=' + body);
-                      }}
-                        style={{ ...btn.teal, fontSize: 12, padding: '6px 14px' }}>✉️ Open in Email</button>
-                      <button onClick={() => setRenewalDrafts(prev => { const n = { ...prev }; delete n[lease.id]; return n; })}
-                        style={{ ...btn.danger, fontSize: 12, padding: '6px 14px' }}>Dismiss</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+Run `npm ci`, then `npm run test:workspace`. PGlite is a committed development dependency; no temporary external install is required. The command runs:
 
-      {tab === 'generator' && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy, marginBottom: 20 }}>Lease Details</div>
-            {[
-              { label: 'Tenant Full Name', key: 'tenant', type: 'text', placeholder: 'John Smith' },
-              { label: 'Property Address', key: 'property', type: 'text', placeholder: '42 Maple St, Unit 1' },
-              { label: 'Monthly Rent ($)', key: 'rent', type: 'number', placeholder: '1800' },
-              { label: 'Security Deposit ($)', key: 'deposit', type: 'number', placeholder: '3600' },
-              { label: 'Lease Start', key: 'start', type: 'date', placeholder: '' },
-              { label: 'Lease End', key: 'end', type: 'date', placeholder: '' },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 14 }}>
-                <label style={label}>{f.label}</label>
-                <input type={f.type} placeholder={f.placeholder} value={form[f.key as keyof typeof form]}
-                  onChange={e => setForm({ ...form, [f.key]: e.target.value })} style={input} />
-              </div>
-            ))}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: 'State', key: 'state', options: ['California', 'New York', 'Texas', 'Florida', 'Illinois', 'Washington', 'Arizona', 'Colorado', 'Other'] },
-                { label: 'Pets', key: 'pets', options: ['no pets', 'cats only', 'small dogs', 'all pets'] },
-                { label: 'Parking', key: 'parking', options: ['included', 'not included', 'additional fee'] },
-                { label: 'Laundry', key: 'laundry', options: ['in-unit', 'shared', 'none'] },
-              ].map(s => (
-                <div key={s.key}>
-                  <label style={label}>{s.label}</label>
-                  <select value={form[s.key as keyof typeof form]} onChange={e => setForm({ ...form, [s.key]: e.target.value })}
-                    style={input}>
-                    {s.options.map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-            <button onClick={generateLease} disabled={generating}
-              style={{ ...btn.primary, width: '100%', justifyContent: 'center' }}>
-              {generating ? 'Generating…' : '✦ Generate Lease Agreement'}
-            </button>
-          </div>
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius, padding: 24, boxShadow: T.shadow }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Generated Agreement</div>
-              {generatedLease && (
-                <button onClick={() => navigator.clipboard.writeText(generatedLease)}
-                  style={{ ...btn.ghost, fontSize: 12, padding: '6px 14px' }}>📋 Copy</button>
-              )}
-            </div>
-            {generatedLease
-              ? <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 16, fontSize: 12.5, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 600, overflowY: 'auto', color: T.ink }}>{generatedLease}</div>
-              : <div style={{ color: T.inkMuted, fontSize: 13, lineHeight: 1.7 }}>Fill in the details and click Generate to create a complete, state-specific lease agreement.</div>
-            }
-          </div>
-        </div>
-      )}
+1. Domain tests for tenancy lifecycle, confirmed/partial rent arithmetic, unit identity, calendar schedules, extraction unknowns, approval digests and membership isolation.
+2. Real route-handler boundary tests with network access prohibited for anonymous requests.
+3. Disposable PostgreSQL-compatible integration tests covering all new migrations, injected atomic rollback, stale/repeated approvals, unit limits, fractional-dollar storage, foreign IDs, partial receipts/refunds, reversals, provider replay/order, repair expense identity, renewal conflicts and effective civil dates, financial/profile write guards and RLS.
 
-      {/* Add Lease Modal */}
-      {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}>
-          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: T.shadowMd }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Add Lease</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 20 }}>Upload your lease — AI will auto-fill everything including payment terms and late fees.</div>
+Build using the normal deployment environment and `npm run build`. Local builds used nonfunctional placeholders for required provider variables and a 6 GB Node heap; passing does not establish provider connectivity or live-schema compatibility.
 
-            <div onClick={() => fileInputRef.current?.click()}
-              onDrop={e => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) extractLeaseData(file); }}
-              onDragOver={e => e.preventDefault()}
-              style={{ border: '2px dashed ' + T.border, borderRadius: T.radius, padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: extracting ? T.tealLight : leaseFile ? T.greenLight : T.bg }}>
-              <input ref={fileInputRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }}
-                onChange={e => { const file = e.target.files?.[0]; if (file) extractLeaseData(file); }} />
-              {extracting
-                ? <div style={{ color: T.navy, fontSize: 13, fontWeight: 600 }}>✦ Reading lease including payment terms… just a moment</div>
-                : leaseFile
-                ? <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.greenDark }}>📄 {leaseFile.name}</div>
-                    <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>File will be saved with lease · Click to replace</div>
-                  </div>
-                : <>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Upload Lease PDF or Photo</div>
-                    <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Click or drag · AI extracts all terms including late fees and payment schedule</div>
-                  </>
-              }
-            </div>
+## Required release gates
 
-            {extractError && (
-              <div style={{
-                background: extractError.startsWith('✓') ? T.tealLight : T.coralLight,
-                border: `1px solid ${extractError.startsWith('✓') ? T.teal + '33' : T.coral + '33'}`,
-                borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13,
-                color: extractError.startsWith('✓') ? T.tealDark : T.coral,
-                marginBottom: 16,
-              }}>
-                {extractError}
-              </div>
-            )}
+This remains a draft implementation, not a production release. Do not merge or promote it solely because local checks pass.
 
-            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Review & Edit Details</div>
-              {renderLeaseFormFields(newLease, setNewLease)}
-            </div>
+1. Inventory and back up the actual schema and reconcile legacy money units, manually marked paid rows, active payment links and in-flight attempts. The registered legacy `payments.amount` column is dollars; the migration widens it to `numeric(12,2)` without changing units. No automatic ambiguous historical backfill is authorized.
+2. Apply the ordered `20261117*` migrations to an isolated copy of the real schema and validate data reconciliation. The disposable fixture cannot establish compatibility with untracked production schema changes. Deploy schema and application as a coordinated release; financial guards intentionally reject legacy direct-paid mutations.
+3. Complete operational reconciliation for failed/expired attempts, dispute resolution and old payment links. A 23-hour retry limit fails closed before provider idempotency retention expires. No automatic fresh charge is created after that limit.
+4. Complete scoped co-signer sharing and review former-occupant history boundaries, revocable invitations and all older RLS/service-role routes. Verify member revocation with real signed-in accounts and expired sessions.
+5. Verify executed renewal source integrity, correction authors/version evidence, approval replay and conflicting concurrent edits against real provider sandboxes. Statutory notices remain a separately reviewed process. Sending a proposal is not tenant acceptance.
+6. Exercise all legacy rent/schedule/expense screens against the new guards; verify partial-balance presentation throughout, online/manual retry recovery and document export expiry/missing originals.
+7. Run signed-in browser E2E and human keyboard/screen-reader checks at 320/390/768/1280 px and 200% zoom. Verify dialog focus restoration, draft resumption, back/reload context, tenant privacy and all error/empty states.
+8. Expand outcome instrumentation for repairs, failures/reversals and second-rent-cycle retention. Run the pre-specified RentSpree and TurboTenant task study before making any 30% faster claim.
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={addLease} disabled={saving} style={{ ...btn.primary }}>
-                {saving ? 'Saving…' : 'Save Lease'}
-              </button>
-              <button onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}
-                style={{ ...btn.ghost }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+## Deployment access
 
-      {/* Edit Lease Modal */}
-      {editingLease && editForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setEditingLease(null); setEditForm(null); }}>
-          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: T.shadowMd }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Edit Lease</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 20 }}>{editingLease.tenant_name}</div>
-            {renderLeaseFormFields(editForm, setEditForm)}
-            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <button onClick={saveLease} disabled={saving} style={{ ...btn.primary }}>
-                {saving ? 'Saving…' : 'Save Changes'}
-              </button>
-              <button onClick={() => { setEditingLease(null); setEditForm(null); }}
-                style={{ ...btn.ghost }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+The connected Vercel account still returned HTTP 403 for the `keywise-apps-projects` team during this work. Team authorization is required before preview/deployment inspection. No production migration, real-money charge, tenant message or statutory notice was executed by this development session.
 
-      {/* Renewal Wizard Modal */}
-      {renewalWizard && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => setRenewalWizard(null)}>
-          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 500, boxShadow: T.shadowMd }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>✦ Renewal Wizard</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 24 }}>{renewalWizard.tenant_name} · {renewalWizard.property}</div>
+Preserve all user records on rollback. Keeping the new financial guards while reverting to a legacy application can intentionally block old direct-paid flows; reconcile deployment compatibility rather than dropping history or disabling safety checks casually.
 
-            <div style={{ background: T.bg, borderRadius: T.radiusSm, padding: 14, marginBottom: 24, display: 'flex', gap: 24 }}>
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Current Rent</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: T.navy }}>${renewalWizard.rent.toLocaleString()}/mo</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lease Expires</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: T.ink }}>{renewalWizard.end_date}</div>
-              </div>
-            </div>
+## Batch lease onboarding (November 23)
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={label}>Rent Increase Type</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  { id: 'percent', label: '% Increase' },
-                  { id: 'fixed', label: '$ Fixed Amount' },
-                  { id: 'market', label: '✦ Research Market Rate' },
-                ].map(opt => (
-                  <button key={opt.id} onClick={() => setRenewalOptions({ ...renewalOptions, increaseType: opt.id as any })}
-                    style={{
-                      flex: 1, padding: '8px 6px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: renewalOptions.increaseType === opt.id ? T.navy : T.bg,
-                      color: renewalOptions.increaseType === opt.id ? 'white' : T.inkMid,
-                      border: `1px solid ${renewalOptions.increaseType === opt.id ? T.navy : T.border}`,
-                    }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+The lease tracker, tenant onboarding and portfolio onboarding now share the same
+occupied-rental import flow. Landlords can drop up to ten documents, extract two
+concurrently, review all rentals together, apply one shared building address and
+approve the batch. Manual entry uses the same path. Per-document errors retain
+uploaded sources for retries; unsupported formats and missing browser MIME types
+receive explicit handling. Optional contact and schedule fields are expandable.
+Current terms and occupancy still require owner review; dates do not establish
+continued occupancy. Existing unit/plan limits remain enforced.
 
-            {renewalOptions.increaseType !== 'market' && (
-              <div style={{ marginBottom: 20 }}>
-                <label style={label}>{renewalOptions.increaseType === 'percent' ? 'Percentage Increase (%)' : 'Dollar Amount Increase ($)'}</label>
-                <input style={input} type="number" value={renewalOptions.increaseValue}
-                  onChange={e => setRenewalOptions({ ...renewalOptions, increaseValue: e.target.value })} />
-                {renewalOptions.increaseValue && (
-                  <div style={{ fontSize: 12, color: T.tealDark, marginTop: 6, fontWeight: 600 }}>
-                    New rent: ${renewalOptions.increaseType === 'percent'
-                      ? Math.round(renewalWizard.rent * (1 + +renewalOptions.increaseValue / 100)).toLocaleString()
-                      : (renewalWizard.rent + +renewalOptions.increaseValue).toLocaleString()
-                    }/mo
-                  </div>
-                )}
-              </div>
-            )}
+Apply `20261123000000_batch_lease_onboarding.sql` after the existing migrations
+before deploying this source. It adds service-role-only batch save/commit RPCs
+and updates occupied-import creation to reuse an owner-scoped building. Commits
+are atomic across the batch and replay the same approved draft identities.
+A failed unit rolls back the entire batch, including newly created buildings.
+The migration does not rewrite historical properties or merge existing buildings.
 
-            {renewalOptions.increaseType === 'market' && (
-              <div style={{ background: T.tealLight, border: `1px solid ${T.teal}33`, borderRadius: T.radiusSm, padding: 12, marginBottom: 20, fontSize: 13, color: T.tealDark }}>
-                ✦ Claude will research comparable rentals in your area and propose a competitive market rate.
-              </div>
-            )}
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={label}>New Lease Term</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[{ id: '12', label: '12 Months' }, { id: '6', label: '6 Months' }, { id: 'month-to-month', label: 'Month-to-Month' }].map(opt => (
-                  <button key={opt.id} onClick={() => setRenewalOptions({ ...renewalOptions, newTerm: opt.id as any })}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: renewalOptions.newTerm === opt.id ? T.navy : T.bg,
-                      color: renewalOptions.newTerm === opt.id ? 'white' : T.inkMid,
-                      border: `1px solid ${renewalOptions.newTerm === opt.id ? T.navy : T.border}`,
-                    }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={label}>Additional Notes for Claude (optional)</label>
-              <textarea value={renewalOptions.notes}
-                onChange={e => setRenewalOptions({ ...renewalOptions, notes: e.target.value })}
-                placeholder="e.g. tenant has been great, offer discount if they sign early..."
-                style={{ ...input, minHeight: 70, resize: 'vertical' as const }} />
-            </div>
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={draftRenewal} style={{ ...btn.primary }}>✦ Draft Renewal Letter</button>
-              <button onClick={() => setRenewalWizard(null)} style={{ ...btn.ghost }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+Validation includes regression coverage for missing file metadata, actionable
+storage failures, private source ownership, duplicate rental identities, batch
+rollback, unit caps, replay and stale drafts. `npm run test:workspace` includes
+these checks. A production build with placeholder provider variables verifies
+compilation only. Live upload/extraction and signed-in browser acceptance still
+require verification. Under-five-minute duplex onboarding remains a target,
+not a measured performance claim.
