@@ -67,6 +67,7 @@ const assert=require('node:assert/strict');
  equal(batchLeases.length,2);
  equal(await scalar("select count(*)::int as result from buildings where address='30 Duplex Rd'"),1,'duplex has one building');
  equal(await scalar("select num_units as result from buildings where address='30 Duplex Rd'"),2);
+ equal(await scalar("select type as result from buildings where address='30 Duplex Rd'"),'Duplex');
  equal((await rpc('workspace_commit_import_batch',[owner,JSON.stringify(batchApprovals),99])).map(x=>x.id),batchLeases.map(x=>x.id),'batch retries return same rentals');
  await reject(rpc('workspace_commit_import_batch',[other,JSON.stringify(batchApprovals),99]),/Approval changed/);
  await reject(rpc('workspace_commit_import_batch',[owner,JSON.stringify([batchApprovals[0],batchApprovals[0]]),99]),/Duplicate draft/);
