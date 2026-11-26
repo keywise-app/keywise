@@ -15,6 +15,7 @@ import Onboarding from './Onboarding';
 import TenantDashboard from './TenantDashboard';
 import Landing from './Landing';
 import TrialBanner from './TrialBanner';
+import CheckoutIntent, { checkoutPlanFromSearch, type CheckoutPlan } from './CheckoutIntent';
 import ErrorBoundary from './ErrorBoundary';
 import WizardOnboardUnit from './WizardOnboardUnit';
 import WizardRenewal from './WizardRenewal';
@@ -104,6 +105,7 @@ export default function AppRoot() {
   const [page, setPage] = useState('dashboard');
   const [routeKey, setRouteKey] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlan | null>(() => typeof window === 'undefined' ? null : checkoutPlanFromSearch(window.location.search));
   const [stripeSuccess, setStripeSuccess] = useState(false);
   const [userRole, setUserRoleRaw] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -552,6 +554,13 @@ export default function AppRoot() {
 
   // Tenant portal
   if (userRole === 'tenant') return <TenantDashboard />;
+
+  // An offer selected before email sign-in survives the return link. The landlord
+  // reviews it here and explicitly chooses whether to open Stripe Checkout.
+  if (checkoutPlan) return <CheckoutIntent plan={checkoutPlan} onDismiss={() => {
+    setCheckoutPlan(null);
+    window.history.replaceState({}, '', '/');
+  }} />;
 
   // Onboarding
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;

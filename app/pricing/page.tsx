@@ -4,11 +4,11 @@ import PricingCards from './PricingCards';
 
 export const metadata: Metadata = {
   title: 'Pricing | Keywise',
-  description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
+  description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/month for unlimited units.',
   alternates: { canonical: 'https://keywise.app/pricing' },
   openGraph: {
     title: 'Pricing | Keywise',
-    description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/mo for unlimited. Founding member rate: $29/mo for life.',
+    description: 'Simple pricing for independent landlords. Free for 1 unit, Pro at $49/month for unlimited units.',
     url: 'https://keywise.app/pricing',
     siteName: 'Keywise',
     type: 'website',
@@ -31,6 +31,8 @@ const INK_MID = '#4A5068';
 const INK_MUTED = '#8892A4';
 
 export default function PricingPage() {
+  const annualAvailable = Boolean(process.env.STRIPE_PRO_ANNUAL_PRICE_ID);
+  const foundingAvailable = Boolean(process.env.STRIPE_PRO_FOUNDING_PRICE_ID);
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#fff', color: INK, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -58,7 +60,7 @@ export default function PricingPage() {
           <p style={{ fontSize: 16, color: INK_MUTED, margin: 0 }}>Free for 1 unit with no card required. Compare Pro when you need more units or online rent collection.</p>
         </div>
 
-        <PricingCards />
+        <PricingCards annualAvailable={annualAvailable} />
 
         <p style={{ textAlign: 'center', fontSize: 13, color: INK_MUTED, marginTop: 20 }}>
           $2 per online rent payment transaction. No hidden fees. · <Link href="/" style={{ color: INK_MID, fontWeight: 600, textDecoration: 'none' }}>Already a customer? Sign in</Link>
@@ -68,12 +70,11 @@ export default function PricingPage() {
         <div style={{ maxWidth: 600, margin: '60px auto 0' }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: N, textAlign: 'center', marginBottom: 24 }}>Common questions</h2>
           {[
-            { q: "What's the founding member deal?", a: "The first 100 California landlords who subscribe get $29/mo locked in for life. The only condition: maintain a continuous subscription. If you cancel, you lose the founding rate and would resubscribe at the current price ($49/mo)." },
-            { q: 'What happens to existing customers?', a: "If you're already subscribed, your rate is grandfathered. Nothing changes unless you cancel." },
+            ...(foundingAvailable ? [{ q: "What's the founding member deal?", a: "The first 100 eligible landlords who subscribe get $29/mo after a 14-day trial, as long as their subscription remains continuous. If you cancel, you lose the founding rate." }] : []),
             { q: 'Is there a free trial?', a: "Yes. 14 days, full Pro features. A card is required to start the trial, but you won't be charged until it ends — cancel anytime before then." },
             { q: 'What does the $2 transaction fee cover?', a: 'Each online rent payment processed through Keywise costs $2 flat — not a percentage of rent. A $3,000 payment costs the same as a $1,000 one.' },
-            { q: 'Can I switch from monthly to annual?', a: 'Yes, anytime from your billing settings. Annual saves $198/year vs monthly.' },
-            { q: 'What if founding member spots fill up?', a: "The founding member offer disappears. You can still subscribe at the standard $49/mo or $390/yr price." },
+            ...(annualAvailable ? [{ q: 'Is annual billing available?', a: 'Yes. Annual Pro is $390/year after the 14-day trial, a $198 saving against 12 monthly payments.' }] : []),
+            ...(foundingAvailable ? [{ q: 'What if founding member spots fill up?', a: 'The founding member offer disappears. You can still choose an available Pro plan.' }] : []),
             { q: 'Can I cancel anytime?', a: 'Yes. No contracts, no cancellation fees. Cancel from your settings page and your subscription ends at the end of the billing period.' },
           ].map((item, i) => (
             <div key={i} style={{ borderBottom: `1px solid ${BORDER}`, padding: '16px 0' }}>
