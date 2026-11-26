@@ -156,7 +156,7 @@ export default function Page() {
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Stop managing leases in a filing cabinet</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Keywise extracts lease terms with AI, tracks expirations, and handles digital signatures. Free for up to 2 units.
+            Keywise extracts lease terms with AI, tracks expirations, and handles digital signatures. Free for 1 unit.
           </p>
           <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Try Keywise free →

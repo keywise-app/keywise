@@ -113,7 +113,7 @@ export default function ToolsIndexPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
           <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Keywise helps California landlords stay compliant.</h3>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            AI-powered property management for 1-50 units. Free for up to 2 units, no credit card required.
+            AI-powered property management for 1-50 units. Free for 1 unit, no credit card required.
           </p>
           <Link href="/?signup=true" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             Start Free &rarr;

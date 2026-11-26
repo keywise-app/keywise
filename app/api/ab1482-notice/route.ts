@@ -99,7 +99,7 @@ A few things to double-check before serving:
 - Serve via personal delivery, or first-class mail (which adds 5 days to the notice period under CCP 1013)
 - Keep a copy for your records
 
-Managing more than one property? Keywise tracks all your California compliance in one place — AB 1482, just-cause evictions, security deposits, move-out inspections. Free for 1-2 units.
+Managing more than one property? Keywise tracks all your California compliance in one place — AB 1482, just-cause evictions, security deposits, move-out inspections. Free for 1 unit.
 
 → https://keywise.app
 
