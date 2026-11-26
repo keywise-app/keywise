@@ -103,18 +103,9 @@ export async function POST(req: Request) {
           };
 
           if (plan === 'founding' && !existingProfile.is_founding_member) {
-            // Claim next founding member number
-            const { count, error: countError } = await supabase
-              .from('profiles')
-              .select('id', { count: 'exact', head: true })
-              .eq('is_founding_member', true);
-            if (countError || count === null) throw new Error('Founding offer count unavailable');
-            const nextNumber = count + 1;
-            if (nextNumber > 100) throw new Error('Founding capacity requires manual reconciliation');
-            patch.is_founding_member = true;
+            const { data: nextNumber, error: claimError } = await supabase.rpc('claim_founding_member', { p_user_id: userId });
+            if (claimError || typeof nextNumber !== 'number') throw new Error('Founding capacity requires manual reconciliation');
             patch.founding_member_number = nextNumber;
-            patch.founding_member_locked_at = new Date().toISOString();
-            patch.founding_member_continuous = true;
             patch.price_tier = 'founding_29';
           } else if (plan === 'founding') {
             patch.price_tier = 'founding_29';
