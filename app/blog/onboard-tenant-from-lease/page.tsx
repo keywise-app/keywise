@@ -139,7 +139,7 @@ export default function Page() {
         <div style={{ background: N, borderRadius: 14, padding: '32px 28px', marginTop: 48, textAlign: 'center' }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Stop retyping your leases</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 20, maxWidth: 460, margin: '0 auto 20px' }}>
-            Upload a lease PDF and onboard your tenant in under a minute. Free for up to 2 units.
+            Upload a lease PDF and onboard your tenant in under a minute. Free for 1 unit.
           </div>
           <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none', letterSpacing: '-0.2px' }}>
             Start Free →

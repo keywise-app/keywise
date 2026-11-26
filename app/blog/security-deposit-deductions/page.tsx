@@ -121,7 +121,7 @@ export default function Page() {
 
         <div style={{ marginTop: 32, marginBottom: 40, padding: 24, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: N, marginBottom: 8 }}>Make deposit deductions defensible</div>
-          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16 }}>Documented inspections, tracked deadlines, and organized records. Free for 1-2 units.</div>
+          <div style={{ fontSize: 14, color: INK_MID, marginBottom: 16 }}>Documented inspections, tracked deadlines, and organized records. Free for 1 unit.</div>
           <Link href="/?signup=true" style={{ display: 'inline-block', background: N, color: '#fff', padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
             Start free →
           </Link>

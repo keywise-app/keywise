@@ -163,7 +163,7 @@ export default function Page() {
             </thead>
             <tbody>
               {[
-                ['Free tier', '2 units', 'No', 'Yes', '2 units'],
+                ['Free tier', '2 units', 'No', 'Yes', '1 unit'],
                 ['Rent collection', '$2.50/ACH (free tier)', 'From $1/ACH', 'Tenant pays', '$2 flat'],
                 ['AI features', 'No', 'No', 'No', 'Yes'],
                 ['Lease extraction', 'No', 'No', 'No', 'Yes (AI)'],

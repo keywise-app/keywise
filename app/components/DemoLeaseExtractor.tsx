@@ -151,7 +151,7 @@ export default function DemoLeaseExtractor({ onSignupClick }: { onSignupClick: (
             Save This & Continue Free →
           </button>
           <div style={{ fontSize: 12, color: INK_MUTED, marginTop: 8, textAlign: 'center' }}>
-            No credit card · Free for 1-2 units
+            No credit card · Free for 1 unit
           </div>
         </div>
       )}

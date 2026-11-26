@@ -389,7 +389,7 @@ export default function CalculatorForm() {
                 <a href="/?signup=true" style={{ display: 'inline-block', background: TEAL, color: N, padding: '12px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
                   Start free →
                 </a>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>Free for 1-2 units. No credit card.</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>Free for 1 unit. No credit card.</div>
                 <div style={{ fontSize: 11, color: TEAL, marginTop: 10 }}>
                   Managing more units? First 100 California landlords get Pro at $29/mo for life — <a href="/pricing" style={{ color: TEAL, fontWeight: 700 }}>see founding member pricing →</a>
                 </div>

@@ -285,7 +285,7 @@ export default function ComplianceSaveButton({ calculations, onSaved }: Props) {
           >
             {status === 'signing-up' ? 'Creating account...' : 'Create account & save'}
           </button>
-          <div style={{ fontSize: 11, color: INK_MUTED, textAlign: 'center' }}>Free for 1-2 units. No credit card.</div>
+          <div style={{ fontSize: 11, color: INK_MUTED, textAlign: 'center' }}>Free for 1 unit. No credit card.</div>
         </div>
       </div>
     );
