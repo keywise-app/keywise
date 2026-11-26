@@ -47,8 +47,8 @@ const POSTS = [
   },
   {
     slug: 'late-rent-notice',
-    title: 'How to Write a Late Rent Notice (Free Template)',
-    description: 'A step-by-step guide to writing professional late rent notices, plus a free template you can use today.',
+    title: 'Late Rent Notice Template: Copyable Rent Reminder',
+    description: 'Copy a free payment reminder, check the rent details, and learn when a formal notice needs a local form.',
     date: '2026',
     tag: 'Templates',
   },
