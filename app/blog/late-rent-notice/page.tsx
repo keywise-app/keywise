@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import ReminderTemplate from './ReminderTemplate';
 
 export const metadata: Metadata = {
-  title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
-  description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
+  title: 'Late Rent Notice Template: Copyable Rent Reminder | Keywise',
+  description: 'Copy a free late rent reminder for your tenant. Check the rent details, personalize the message, and learn when a formal notice needs a local form.',
   alternates: { canonical: 'https://keywise.app/blog/late-rent-notice' },
   openGraph: {
-    title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
-    description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
+    title: 'Late Rent Notice Template: Copyable Rent Reminder | Keywise',
+    description: 'Copy and personalize a free late rent reminder for your tenant.',
     url: 'https://keywise.app/blog/late-rent-notice',
     siteName: 'Keywise',
     type: 'article',
@@ -15,15 +16,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'How to Write a Late Rent Notice (Free Template) | Keywise',
-    description: 'Free late rent notice template for landlords. Legal guidelines, sample language, and how to handle late payments professionally.',
+    title: 'Late Rent Notice Template: Copyable Rent Reminder | Keywise',
+    description: 'Copy and personalize a free late rent reminder for your tenant.',
   },
   robots: { index: true, follow: true },
 };
 
 const N = '#0F3460';
 const TEAL = '#00D4AA';
-const BG = '#F0F4FF';
 const BORDER = '#E0E6F0';
 const INK = '#1A1A2E';
 const INK_MID = '#4A5068';
@@ -49,62 +49,55 @@ export default function Page() {
       </nav>
 
       <article style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px', lineHeight: 1.7 }}>
-        <div style={{ fontSize: 12, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Templates · 2026</div>
+        <div style={{ fontSize: 14, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12 }}>Free template · Small landlords</div>
         <h1 style={{ fontSize: 38, fontWeight: 800, color: N, letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.2 }}>
-          How to Write a Late Rent Notice (Free Template)
+          Late Rent Notice Template: Copyable Rent Reminder
         </h1>
         <p style={{ fontSize: 18, color: INK_MID, marginBottom: 32 }}>
-          When a tenant misses rent, the way you respond sets the tone for everything that follows. A professional late rent notice protects your legal position, keeps the relationship workable, and — most importantly — usually gets you paid.
+          Start with a clear, respectful payment reminder. Copy the example below, replace the brackets, and check your rent records before sending it.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>What is a late rent notice?</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Free late rent reminder template</h2>
+        <ReminderTemplate />
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          A late rent notice is a formal written communication informing a tenant that their rent is overdue. It's typically the first step before any legal action like serving a Pay or Quit notice. Sending one promptly creates a paper trail and gives the tenant a clear deadline to make things right.
-        </p>
-        <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Most leases include a grace period (typically 3-5 days) before rent is officially considered late. Once that grace period passes, you can issue a notice. Many states require this notice before you can proceed with eviction, so even informal landlords should treat it as a critical document. In California, not every eviction follows the standard nonpayment process — the <Link href="/blog/ab-1482-owner-move-in-eviction-california" style={{ color: '#00A886', fontWeight: 600 }}>owner move-in exception to just-cause</Link> rules are a good example of how differently things can play out.
+          This example is a payment reminder, not a statutory notice to pay or quit. Formal notices can have specific wording, deadlines, and delivery rules. The <a href="https://selfhelp.courts.ca.gov/eviction-landlord/notice-types" style={{ color: '#007D68', fontWeight: 600 }}>California Courts notice guide</a> and <a href="https://www.nycourts.gov/new-york-city-housing-court/starting-nonpayment-case" style={{ color: '#007D68', fontWeight: 600 }}>New York Courts rent-demand guide</a> show how requirements differ. Check the current rules where the rental is located before using a formal notice.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>What to include in a late rent notice</h2>
+        <div style={{ margin: '28px 0', padding: 24, border: `1px solid ${BORDER}`, borderRadius: 12 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: N, margin: '0 0 8px' }}>Keep the next rent cycle organized</h2>
+          <p style={{ fontSize: 16, color: INK_MID, margin: '0 0 14px' }}>Keywise keeps the lease, rent records, tenant details, and messages together. You can set up one rental on the free plan.</p>
+          <Link href="/start/landlords" style={{ color: '#007D68', fontSize: 16, fontWeight: 700 }}>Set up your first rental</Link>
+        </div>
+
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Before you send the reminder</h2>
+        <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
+          Confirm that the payment is still outstanding and review the lease before stating an amount, fee, or deadline. Save a copy of what you send and any reply with the tenant's records.
+        </p>
+
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>What to include in a rent reminder</h2>
         <ul style={{ fontSize: 16, color: INK_MID, paddingLeft: 24, marginBottom: 20 }}>
-          <li style={{ marginBottom: 8 }}><strong>Date</strong> the notice is being sent</li>
+          <li style={{ marginBottom: 8 }}><strong>Date</strong> the reminder is being sent</li>
           <li style={{ marginBottom: 8 }}><strong>Tenant's full name</strong> and property address</li>
-          <li style={{ marginBottom: 8 }}><strong>Amount owed</strong> — include the rent and any late fees specified in the lease</li>
-          <li style={{ marginBottom: 8 }}><strong>Original due date</strong> and how many days late the payment is</li>
+          <li style={{ marginBottom: 8 }}><strong>Rent amount</strong> that your records show is unpaid</li>
+          <li style={{ marginBottom: 8 }}><strong>Original due date</strong> from the lease or payment schedule</li>
           <li style={{ marginBottom: 8 }}><strong>Payment instructions</strong> — exactly how and where to pay</li>
-          <li style={{ marginBottom: 8 }}><strong>Deadline</strong> for payment (typically 3-5 days from notice)</li>
-          <li style={{ marginBottom: 8 }}><strong>Consequences</strong> if not paid by the deadline (additional fees, formal eviction notice)</li>
           <li style={{ marginBottom: 8 }}><strong>Your contact information</strong> for questions or payment arrangements</li>
         </ul>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Free late rent notice template</h2>
-        <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 24, fontSize: 14, color: INK, fontFamily: 'Georgia, serif', lineHeight: 1.8, marginBottom: 24 }}>
-          <p style={{ margin: '0 0 12px' }}><strong>NOTICE OF LATE RENT</strong></p>
-          <p style={{ margin: '0 0 12px' }}>Date: [Today's Date]</p>
-          <p style={{ margin: '0 0 12px' }}>To: [Tenant Name]<br/>[Property Address]</p>
-          <p style={{ margin: '0 0 12px' }}>Dear [Tenant Name],</p>
-          <p style={{ margin: '0 0 12px' }}>This is a friendly reminder that your rent payment of <strong>$[Amount]</strong> for the property at [Address] was due on [Due Date]. As of today, [X] days have passed and we have not received payment.</p>
-          <p style={{ margin: '0 0 12px' }}>Per your lease agreement, a late fee of $[Fee] has been added, bringing the total amount due to <strong>$[Total]</strong>.</p>
-          <p style={{ margin: '0 0 12px' }}>Please remit payment by <strong>[Deadline Date]</strong> via [payment method]. If you are experiencing difficulty paying, please contact me as soon as possible so we can discuss options.</p>
-          <p style={{ margin: '0 0 12px' }}>If payment is not received by the deadline, additional action may be required as outlined in your lease.</p>
-          <p style={{ margin: '0 0 4px' }}>Sincerely,</p>
-          <p style={{ margin: 0 }}>[Your Name]<br/>[Phone] · [Email]</p>
-        </div>
-
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Tone matters</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>A clear tone helps</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Even though you're collecting on a debt, the tone of your notice should be firm but respectful. Most late payments are caused by a job change, an unexpected expense, or simple forgetfulness — not malice. A professional notice that opens the door to communication often gets faster resolution than an aggressive one. Modern <Link href="/blog/landlord-tenant-communication-app" style={{ color: '#00A886', fontWeight: 600 }}>communication tools</Link> make it easy for a tenant to respond right away instead of avoiding the conversation.
+          State what your records show and give the tenant a way to respond if the payment has already been made or the balance is disputed. A reminder should be easy to understand without assuming why the payment is late.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Save the harsher legal language for the formal "Pay or Quit" notice if it comes to that. The first late notice should make it easy for a tenant to do the right thing.
+          If you need to take a formal step, use the correct local form and service process. Do not turn this general reminder into an eviction demand by adding an assumed deadline or threat.
         </p>
 
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>How Keywise automates this</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Keep the record in Keywise</h2>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          Writing late rent notices manually for every overdue payment gets old fast. Most <Link href="/blog/small-landlord-property-management-software-2026" style={{ color: '#00A886', fontWeight: 600 }}>landlord software for notices</Link> handles this automatically, and Keywise watches your payment schedule and drafts a professional late notice the moment rent goes overdue — pre-filled with the tenant's name, property, exact amount owed, and your late fee terms pulled directly from the lease.
+          Keywise keeps the lease, payment history, and tenant conversations together, so you can check the facts before sending a message. Its writing tool can help draft an editable rent reminder from the details you provide. Review every draft for accuracy and local requirements before sending.
         </p>
         <p style={{ fontSize: 16, color: INK_MID, marginBottom: 16 }}>
-          You can edit the draft, then send it via email or SMS in one click. Every notice is timestamped and saved in the tenant's file, building the same kind of paper trail you should have started with a signed <Link href="/blog/landlord-move-in-checklist" style={{ color: '#00A886', fontWeight: 600 }}>move-in checklist</Link> — and if budget is tight, there's plenty of <Link href="/blog/free-property-management-software-landlords" style={{ color: '#00A886', fontWeight: 600 }}>free property management software</Link> that can get you started.
+          The same tenant file can hold your <Link href="/blog/landlord-move-in-checklist" style={{ color: '#007D68', fontWeight: 600 }}>move-in checklist</Link> and other documents, making the next conversation easier to prepare.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: N, marginTop: 40, marginBottom: 12 }}>Related articles</h2>
@@ -115,12 +108,12 @@ export default function Page() {
         </div>
 
         <div style={{ marginTop: 60, padding: 32, background: N, borderRadius: 12, textAlign: 'center' }}>
-          <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Stop writing late notices from scratch</h3>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 }}>
-            Keywise drafts professional notices automatically. Free for 1 unit.
+          <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Keep rent details and tenant messages together</h3>
+          <p style={{ fontSize: 16, color: '#fff', marginBottom: 20 }}>
+            Set up one rental on Keywise's free plan and start with a clearer record for your next rent cycle.
           </p>
-          <Link href="/" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 32px', borderRadius: 10, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-            Try Keywise free →
+          <Link href="/start/landlords" style={{ display: 'inline-block', background: TEAL, color: N, padding: '14px 24px', borderRadius: 10, fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
+            Set up your first rental
           </Link>
         </div>
       </article>

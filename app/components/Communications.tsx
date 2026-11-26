@@ -260,7 +260,7 @@ export default function Communications() {
     }
 
     const prompts: Record<string, string> = {
-      'late-rent': `Draft a late rent notice. ${base} Rent is overdue. Request payment within 3 days. Sign with landlord's full signature. ${context}`,
+      'late-rent': `Draft a courteous, editable overdue rent reminder, not a statutory pay-or-quit notice. ${base} Ask the tenant to pay or contact the landlord. Do not assume the monthly rent equals the unpaid balance or invent a deadline, legal consequence, or service requirement. Omit late fees. Use placeholders where a verified detail is missing. Sign with landlord's full signature. ${context}`,
       'payment-reminder': `Draft a friendly upcoming payment reminder. ${base} Rent is due soon. Mention they can pay online via Keywise. Sign with landlord's name. ${context}`,
       'entry-notice': `Draft a 24-hour entry notice. ${base} ${fieldsInfo ? 'Details: ' + fieldsInfo + '.' : 'Reason: ' + (context || 'routine inspection') + '. Suggest next business day 10am-12pm.'} Sign with landlord's signature.`,
       'lease-renewal': `Draft a lease renewal offer. ${base} ${fieldsInfo ? 'New terms: ' + fieldsInfo + '.' : (context || 'Offer 12-month renewal at 3% increase, 30-day response window.')} Briefly explain reasoning. Sign with landlord's signature.`,
