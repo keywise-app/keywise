@@ -330,7 +330,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
               </div>
               <button onClick={openBillingPortal} disabled={billingLoading}
                 style={{ ...btn.teal, opacity: billingLoading ? 0.7 : 1 }}>
-                {billingLoading ? 'Loading…' : 'Add Payment Method →'}
+                {billingLoading ? 'Loading…' : 'Manage Trial Billing →'}
               </button>
             </>
           );

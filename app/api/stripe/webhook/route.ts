@@ -90,6 +90,9 @@ export async function POST(req: Request) {
         const userId = session.metadata?.user_id;
         const plan = session.metadata?.plan;
         if (userId) {
+          const { data: existingProfile, error: existingError } = await supabase
+            .from('profiles').select('is_founding_member').eq('id', userId).single();
+          if (existingError || !existingProfile) throw new Error('Subscription profile is unavailable');
           const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
           if (!subscriptionId) throw new Error('Subscription checkout has no subscription');
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -99,7 +102,7 @@ export async function POST(req: Request) {
             stripe_customer_id: session.customer as string,
           };
 
-          if (plan === 'founding') {
+          if (plan === 'founding' && !existingProfile.is_founding_member) {
             // Claim next founding member number
             const { count, error: countError } = await supabase
               .from('profiles')
@@ -107,15 +110,14 @@ export async function POST(req: Request) {
               .eq('is_founding_member', true);
             if (countError || count === null) throw new Error('Founding offer count unavailable');
             const nextNumber = count + 1;
-            if (nextNumber <= 100) {
-              patch.is_founding_member = true;
-              patch.founding_member_number = nextNumber;
-              patch.founding_member_locked_at = new Date().toISOString();
-              patch.founding_member_continuous = true;
-              patch.price_tier = 'founding_29';
-            } else {
-              patch.price_tier = 'standard_49';
-            }
+            if (nextNumber > 100) throw new Error('Founding capacity requires manual reconciliation');
+            patch.is_founding_member = true;
+            patch.founding_member_number = nextNumber;
+            patch.founding_member_locked_at = new Date().toISOString();
+            patch.founding_member_continuous = true;
+            patch.price_tier = 'founding_29';
+          } else if (plan === 'founding') {
+            patch.price_tier = 'founding_29';
           } else if (plan === 'annual') {
             patch.price_tier = 'annual_390';
           } else {
@@ -270,9 +272,13 @@ export async function POST(req: Request) {
     // ── Invoice payment succeeded ───────────────────────────────────────────
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object as Stripe.Invoice;
-      if (invoice.customer) {
+      const invoicedSubscription = (invoice as any).subscription ?? (invoice as any).parent?.subscription_details?.subscription;
+      const subscriptionId = typeof invoicedSubscription === 'string' ? invoicedSubscription : invoicedSubscription?.id;
+      if (invoice.customer && subscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         await updateProfileByCustomer(invoice.customer as string, {
-          subscription_status: 'active',
+          subscription_status: subscription.status,
+          trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
         });
       }
     }
