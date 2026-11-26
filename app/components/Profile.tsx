@@ -310,7 +310,7 @@ export default function Profile({ onImport }: { onImport?: () => void }) {
               style={{ ...btn.primary, opacity: subscribing ? 0.7 : 1, marginBottom: 10 }}>
               {subscribing ? 'Setting up…' : 'Upgrade to Pro →'}
             </button>
-            <div style={{ fontSize: 12, color: T.inkMuted }}>Free forever for 1-2 units · Pro $49/month · Cancel anytime</div>
+            <div style={{ fontSize: 12, color: T.inkMuted }}>Free for 1 unit · Pro $49/month after a 14-day trial · Card required</div>
           </>
         )}
 

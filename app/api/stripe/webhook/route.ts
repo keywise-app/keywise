@@ -90,19 +90,23 @@ export async function POST(req: Request) {
         const userId = session.metadata?.user_id;
         const plan = session.metadata?.plan;
         if (userId) {
+          const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+          if (!subscriptionId) throw new Error('Subscription checkout has no subscription');
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           const patch: Record<string, any> = {
-            subscription_status: 'active',
+            subscription_status: subscription.status,
+            trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             stripe_customer_id: session.customer as string,
           };
 
           if (plan === 'founding') {
             // Claim next founding member number
-            const { count } = await supabase
+            const { count, error: countError } = await supabase
               .from('profiles')
               .select('id', { count: 'exact', head: true })
-              .eq('is_founding_member', true)
-              .eq('founding_member_continuous', true);
-            const nextNumber = (count ?? 0) + 1;
+              .eq('is_founding_member', true);
+            if (countError || count === null) throw new Error('Founding offer count unavailable');
+            const nextNumber = count + 1;
             if (nextNumber <= 100) {
               patch.is_founding_member = true;
               patch.founding_member_number = nextNumber;
@@ -118,7 +122,8 @@ export async function POST(req: Request) {
             patch.price_tier = 'standard_49';
           }
 
-          await supabase.from('profiles').update(patch).eq('id', userId);
+          const { error: updateError } = await supabase.from('profiles').update(patch).eq('id', userId);
+          if (updateError) throw new Error('Subscription profile could not be updated');
 
           // Send founding member welcome email
           if (plan === 'founding' && patch.founding_member_number) {

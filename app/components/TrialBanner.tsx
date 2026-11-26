@@ -15,14 +15,9 @@ export default function TrialBanner({
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Show for free users (no subscription) or trialing users
-  if (dismissed || subscriptionStatus === 'active') return null;
+  // Trialing users already chose a plan and can manage billing in settings.
+  if (dismissed || subscriptionStatus === 'active' || subscriptionStatus === 'trialing') return null;
   if (!subscriptionStatus && typeof window !== 'undefined' && localStorage.getItem('kw_upgrade_dismissed')) return null;
-
-  const isTrialing = subscriptionStatus === 'trialing';
-  const daysLeft = isTrialing && trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
-    : null;
 
   const handleUpgrade = async () => {
     setLoading(true);
@@ -57,10 +52,7 @@ export default function TrialBanner({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <span style={{ fontSize: 15, flexShrink: 0 }}>✦</span>
         <span style={{ fontSize: 13, color: '#fff', fontWeight: 600, lineHeight: 1.4 }}>
-          {isTrialing && daysLeft !== null
-            ? `Trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. `
-            : "You're on the free plan. "
-          }
+          You're on the free plan.{' '}
           <span style={{ fontWeight: 400, opacity: 0.9 }}>
             Upgrade to Pro for $49/mo — unlimited units + all compliance tools.
           </span>

@@ -298,6 +298,7 @@ export default function Landing() {
  const [sent, setSent] = useState(false);
  const [error, setError] = useState('');
  const [menuOpen, setMenuOpen] = useState(false);
+ const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
  const emailRef = useRef<HTMLInputElement>(null);
  const signupRef = useRef<HTMLFormElement>(null);
  const demoRef = useRef<HTMLElement>(null);
@@ -312,6 +313,7 @@ export default function Landing() {
  useEffect(() => {
   captureAcquisition();
   const params = new URLSearchParams(window.location.search);
+  if (['monthly', 'annual', 'founding'].includes(params.get('plan') || '')) setSelectedOffer(params.get('plan'));
   if (params.get('login') === 'true') setAuthMode('login');
   if (params.get('signup') === 'true') emailRef.current?.focus();
   fetch('/api/track-visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:'/',referrer:document.referrer || 'direct',user_agent:navigator.userAgent})}).catch(() => {});
@@ -319,7 +321,9 @@ export default function Landing() {
  async function submit(event: React.FormEvent) {
   event.preventDefault(); setBusy(true); setError(''); track('signup_link_requested','hero');
   try {
-   const { error } = await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:`https://keywise.app/?welcome=true&source=${currentAcquisitionSource()}`,shouldCreateUser:true}});
+   const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+   const plan = ['monthly', 'annual', 'founding'].includes(requestedPlan || '') ? `&plan=${requestedPlan}` : '';
+   const { error } = await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:`https://keywise.app/?welcome=true&source=${encodeURIComponent(currentAcquisitionSource())}${plan}`,shouldCreateUser:true}});
    if (error) throw error;
    setSent(true); track('signup_link_sent','hero');
   } catch (error) { setError((error as Error).message || 'We couldn’t send your link. Please try again.'); }
@@ -347,8 +351,9 @@ export default function Landing() {
    <section className="kw-hero">
     <div className="kw-shell kw-hero-grid">
      <div><p className="kw-eyebrow">{brand.category}</p><h1>Your rental is already running.<br/>Get it under control.</h1><p className="kw-lede">{brand.description}</p>
-      <form ref={signupRef} onSubmit={submit} aria-label="Start your free Keywise account">
-       {sent ? <div role="status" style={{background:TEAL_LIGHT,border:'1px solid #B4DCCF',borderRadius:12,padding:20}}><strong>Check your email to get started.</strong><p style={{fontSize:14,margin:'8px 0'}}>Open your sign-in link, then add your first property. You can close this page.</p><button type="button" className="kw-text-button" onClick={() => {setSent(false);setError('');}}>Use a different email or resend</button></div> : <><label htmlFor="kw-start-email" style={{fontSize:13,fontWeight:650}}>Your email</label><div className="kw-signup-row"><input ref={emailRef} id="kw-start-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" aria-describedby="kw-start-details" disabled={busy}/><button className="kw-button" disabled={busy}>{busy?'Sending your link…':brand.primaryAction+' →'}</button></div><p id="kw-start-details" style={{fontSize:12,color:'#55677B',margin:'10px 0'}}>We’ll email you a sign-in link. No password to remember.</p></>}
+      {selectedOffer && <p role="status" style={{fontSize:15,color:'#0F3460',fontWeight:650,margin:'0 0 14px'}}>Your {selectedOffer === 'founding' ? 'founding member' : selectedOffer === 'annual' ? 'annual Pro' : 'monthly Pro'} selection is saved. Sign in to review the 14-day trial and secure checkout.</p>}
+      <form ref={signupRef} onSubmit={submit} aria-label="Start your Keywise account">
+       {sent ? <div role="status" style={{background:TEAL_LIGHT,border:'1px solid #B4DCCF',borderRadius:12,padding:20}}><strong>Check your email to get started.</strong><p style={{fontSize:14,margin:'8px 0'}}>Open your sign-in link, then {selectedOffer ? 'review your plan and checkout' : 'add your first property'}. You can close this page.</p><button type="button" className="kw-text-button" onClick={() => {setSent(false);setError('');}}>Use a different email or resend</button></div> : <><label htmlFor="kw-start-email" style={{fontSize:13,fontWeight:650}}>Your email</label><div className="kw-signup-row"><input ref={emailRef} id="kw-start-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" aria-describedby="kw-start-details" disabled={busy}/><button className="kw-button" disabled={busy}>{busy?'Sending your link…':selectedOffer ? 'Continue with email →' : brand.primaryAction+' →'}</button></div><p id="kw-start-details" style={{fontSize:12,color:'#55677B',margin:'10px 0'}}>{selectedOffer ? 'We’ll email a sign-in link. Your card is requested only at Stripe Checkout.' : 'We’ll email you a sign-in link. No password to remember.'}</p></>}
        {error && <p role="alert" style={{color:'#B33035',fontSize:13}}>{error}</p>}
       </form>
       <div className="kw-proof"><span>{brand.freeLabel}</span><span>No credit card</span><span>Invite tenants later</span></div>

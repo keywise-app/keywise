@@ -12,7 +12,7 @@ const SURFACE = '#FFFFFF';
 const INK_MID = '#4A5068';
 const INK_MUTED = '#8892A4';
 
-export default function PricingCards() {
+export default function PricingCards({ annualAvailable }: { annualAvailable: boolean }) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
 
@@ -34,18 +34,18 @@ export default function PricingCards() {
             style={{ padding: '10px 20px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', border: 'none', cursor: 'pointer', background: billing === 'monthly' ? N : '#fff', color: billing === 'monthly' ? '#fff' : INK_MID, transition: 'all 0.15s' }}>
             Monthly
           </button>
-          <button onClick={() => setBilling('annual')}
+          {annualAvailable && <button onClick={() => setBilling('annual')}
             style={{ padding: '10px 20px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', border: 'none', borderLeft: `1px solid ${BORDER}`, cursor: 'pointer', background: billing === 'annual' ? N : '#fff', color: billing === 'annual' ? '#fff' : INK_MID, transition: 'all 0.15s' }}>
             Annual <span style={{ fontSize: 11, fontWeight: 700, color: billing === 'annual' ? TEAL : TEAL_DARK }}>save $198</span>
-          </button>
+          </button>}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: showFounding ? 'repeat(3, 1fr)' : '1fr 1fr', gap: 20, maxWidth: showFounding ? 1020 : 720, margin: '0 auto' }}>
-        <style>{`@media (max-width: 768px) { .pricing-grid { grid-template-columns: 1fr !important; max-width: 420px !important; } }`}</style>
+      <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: showFounding ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 20, maxWidth: showFounding ? 1020 : 720, margin: '0 auto' }}>
+        <style>{`@media (max-width: 768px) { .pricing-grid { grid-template-columns: minmax(0, 1fr) !important; max-width: 420px !important; } }`}</style>
 
         {/* Free */}
-        <div className="pricing-grid" style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
+        <div style={{ background: SURFACE, borderRadius: 20, padding: '32px 28px', border: `1px solid ${BORDER}`, boxShadow: '0 2px 8px rgba(15,52,96,0.06)' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: INK_MUTED, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Free</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
             <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$0</span>
@@ -88,7 +88,7 @@ export default function PricingCards() {
                 </div>
               ))}
             </div>
-            <Link href="/?signup=true" style={{ display: 'block', textAlign: 'center', background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            <Link href={`/?signup=true&plan=${billing}`} style={{ display: 'block', textAlign: 'center', background: TEAL, color: N, border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
               Start 14-day free trial →
             </Link>
           </div>
@@ -103,7 +103,7 @@ export default function PricingCards() {
               <span style={{ fontSize: 44, fontWeight: 800, color: N, letterSpacing: '-2px' }}>$29</span>
               <span style={{ fontSize: 14, color: INK_MUTED }}>/mo for life</span>
             </div>
-            <div style={{ fontSize: 13, color: INK_MID, marginBottom: 20 }}>Same features as Pro. Locked in forever.</div>
+            <div style={{ fontSize: 13, color: INK_MID, marginBottom: 20 }}>Same features as Pro · 14-day trial · Card required</div>
 
             {/* Live counter */}
             <div style={{ background: BG, borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>

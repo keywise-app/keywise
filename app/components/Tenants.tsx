@@ -2,6 +2,7 @@
 import TenancyAccess from './workspace/TenancyAccess';
 import WizardRenewal from './WizardRenewal';
 import { workspaceApi, workspaceFetch } from '../lib/workspace-api';
+import { getLimits } from '../lib/planLimits';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
@@ -99,7 +100,7 @@ export default function Tenants({ autoOpenWizard, onWizardOpen }: { autoOpenWiza
     if (pRes.data) setPayments(pRes.data);
     if (profRes.data) {
       setProfile(profRes.data);
-      setIsPro((profRes.data as any).subscription_status === 'active');
+      setIsPro(getLimits((profRes.data as any).subscription_status).onlinePayments);
     }
     // Fetch documents for all tenants
     const { data: allDocs } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
