@@ -68,8 +68,14 @@ begin
  update public.buildings set type=case num_units when 1 then 'Single Family' when 2 then 'Duplex' when 3 then 'Triplex' when 4 then 'Fourplex' else 'Multi-Unit (5+)' end where user_id=p_actor and not(id=any(existing_buildings));
  return results;
 end $$;
-revoke all on function public.workspace_save_import_batch(uuid,jsonb) from public;
-revoke all on function public.workspace_commit_import_batch(uuid,jsonb,integer) from public;
+revoke all on function public.workspace_save_import_batch(uuid,jsonb) from public, anon, authenticated;
+revoke all on function public.workspace_commit_import_batch(uuid,jsonb,integer) from public, anon, authenticated;
 grant execute on function public.workspace_save_import_batch(uuid,jsonb) to service_role;
 grant execute on function public.workspace_commit_import_batch(uuid,jsonb,integer) to service_role;
+-- Supabase default function privileges may grant anon/authenticated explicitly.
+-- These routines accept a server-verified actor and must remain server-only.
+revoke all on function public.workspace_commit_import(uuid,uuid,integer,text,integer) from public, anon, authenticated;
+revoke all on function public.workspace_save_import(uuid,uuid,integer,jsonb,jsonb,text) from public, anon, authenticated;
+grant execute on function public.workspace_commit_import(uuid,uuid,integer,text,integer) to service_role;
+grant execute on function public.workspace_save_import(uuid,uuid,integer,jsonb,jsonb,text) to service_role;
 commit;
