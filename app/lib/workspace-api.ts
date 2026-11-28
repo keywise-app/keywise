@@ -6,7 +6,11 @@ export async function workspaceApi(path: string, options: RequestInit = {}) {
   headers.set('Authorization', `Bearer ${session.access_token}`);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   const response = await fetch(path, { ...options, headers });
-  const data = await response.json();
+  const raw = await response.text();
+  let data;
+  try { data = JSON.parse(raw); } catch {
+    throw new Error(response.status === 413 ? 'This file is too large. Use a lease under 10 MB.' : 'The service returned an unexpected response. Your draft is safe; please retry.');
+  }
   if (!response.ok) throw new Error(data.error || 'Unable to save. Please try again.');
   return data;
 }

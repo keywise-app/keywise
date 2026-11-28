@@ -1,6 +1,7 @@
 'use client';
+import AddTenantWizard from './AddTenantWizard';
 import { workspaceFetch } from '../lib/workspace-api';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { callClaude } from '../lib/claude';
 import { T, input, label, btn } from '../lib/theme';
@@ -68,9 +69,8 @@ export default function Leases() {
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [extractError, setExtractError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [renewalDrafts, setRenewalDrafts] = useState<{ [key: string]: string }>({});
   const [draftingId, setDraftingId] = useState<string | null>(null);
@@ -80,16 +80,6 @@ export default function Leases() {
   });
   const [editingLease, setEditingLease] = useState<Lease | null>(null);
   const [editForm, setEditForm] = useState<any>(null);
-  const [leaseFile, setLeaseFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [newLease, setNewLease] = useState({
-    tenant_name: '', property: '', rent: '', deposit: '',
-    start_date: '', end_date: '', email: '', phone: '',
-    payment_day: '1', payment_frequency: 'monthly',
-    late_fee_percent: '5', late_fee_days: '3',
-    late_fee_type: 'percent', lease_terms_raw: '',
-  });
 
   const [form, setForm] = useState({
     tenant: '', property: '', rent: '', deposit: '',
@@ -115,125 +105,6 @@ export default function Leases() {
     setLoading(false);
   };
 
-  const extractLeaseData = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setExtractError('File too large. Maximum size is 10 MB.');
-      return;
-    }
-    setLeaseFile(file);
-    setExtracting(true);
-    setExtractError('');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please sign in again.');
-      const path = `${user.id}/lease-${crypto.randomUUID()}`;
-      const {error:uploadError} = await supabase.storage.from('workspace-sources').upload(path,file);
-      if (uploadError) throw uploadError;
-      const res = await workspaceFetch('/api/extract-lease', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storage_path:path, fileType:file.type }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setExtractError(data.error);
-      } else {
-        setNewLease({
-          tenant_name: data.tenant_name || '',
-          property: data.property || '',
-          rent: data.rent || '',
-          deposit: data.deposit || '',
-          start_date: data.start_date || '',
-          end_date: data.end_date || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          payment_day: data.payment_day || '1',
-          payment_frequency: data.payment_frequency || 'monthly',
-          late_fee_percent: data.late_fee_percent || data.late_fee_fixed || '5',
-          late_fee_days: data.late_fee_days || '3',
-          late_fee_type: data.late_fee_type || 'percent',
-          lease_terms_raw: data.late_fee_clause || '',
-        });
-
-      }
-    } catch (err) {
-      setExtractError('Could not read file. Please try again.');
-    }
-    setExtracting(false);
-  };
-
-  const addLease = async () => {
-    if (!newLease.tenant_name || !newLease.property || !newLease.rent || !newLease.start_date || !newLease.end_date) {
-      alert('Please fill in tenant name, property, rent, and both dates.');
-      return;
-    }
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-
-    // Upload lease file to storage if one was provided
-    let filePath = '';
-    let fileSize = '';
-    if (leaseFile) {
-      const ext = leaseFile.name.split('.').pop();
-      filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('workspace-sources').upload(filePath, leaseFile);
-      if (uploadError) {
-        alert('File upload failed: ' + uploadError.message);
-        setSaving(false);
-        return;
-      }
-      fileSize = (leaseFile.size / 1024).toFixed(0) + ' KB';
-    }
-
-    // Create lease record
-    const { data: leaseData, error } = await supabase.from('leases').insert({
-      user_id: user.id,
-      tenant_name: newLease.tenant_name,
-      property: newLease.property,
-      rent: +newLease.rent,
-      deposit: +newLease.deposit || 0,
-      start_date: newLease.start_date,
-      end_date: newLease.end_date,
-      email: newLease.email,
-      phone: newLease.phone,
-      status: 'active',
-      payment_day: +newLease.payment_day || 1,
-      payment_frequency: newLease.payment_frequency || 'monthly',
-      late_fee_percent: +newLease.late_fee_percent || 5,
-      late_fee_days: +newLease.late_fee_days || 3,
-      late_fee_type: newLease.late_fee_type || 'percent',
-      lease_terms_raw: newLease.lease_terms_raw || '',
-    }).select().single();
-
-    if (error) {
-      // Clean up uploaded file if lease insert failed
-      if (filePath) await supabase.storage.from('workspace-sources').remove([filePath]);
-      alert('Error saving: ' + error.message);
-    } else {
-      // Create document record linking file to lease
-      if (filePath && leaseData) {
-        await supabase.from('documents').insert({
-          user_id: user.id,
-          name: newLease.tenant_name + ' — Lease Agreement',
-          type: 'lease',
-          ownership_level: 'tenant',
-          property: newLease.property,
-          tenant_name: newLease.tenant_name,
-          lease_id: leaseData.id,
-          file_path: filePath,
-          file_url: '',
-          size: fileSize,
-        });
-      }
-      await fetchLeases();
-      setShowAdd(false);
-      setLeaseFile(null);
-      setNewLease({ tenant_name: '', property: '', rent: '', deposit: '', start_date: '', end_date: '', email: '', phone: '', payment_day: '1', payment_frequency: 'monthly', late_fee_percent: '5', late_fee_days: '3', late_fee_type: 'percent', lease_terms_raw: '' });
-      setExtractError('');
-    }
-    setSaving(false);
-  };
 
   const openEdit = (lease: Lease) => {
     setEditingLease(lease);
@@ -438,7 +309,7 @@ export default function Leases() {
 
           {/* Drop zone */}
           <div
-            onDrop={e => { e.preventDefault(); setDragOver(false); const file = e.dataTransfer.files?.[0]; if (file) { setShowAdd(true); extractLeaseData(file); } }}
+            onDrop={e => { e.preventDefault(); setDragOver(false); const files = Array.from(e.dataTransfer.files); if (files.length) { setImportFiles(files); setShowAdd(true); } }}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onClick={() => setShowAdd(true)}
@@ -450,8 +321,8 @@ export default function Leases() {
               transition: 'all 0.15s',
             }}>
             <div style={{ fontSize: 24, marginBottom: 6 }}>📄</div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Drop a lease PDF here to add it</div>
-            <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Or click to add manually · AI auto-fills details including late fee terms</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Drop your leases here to add rentals</div>
+            <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Upload together · Review building, units and tenants once</div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -615,63 +486,7 @@ export default function Leases() {
         </div>
       )}
 
-      {/* Add Lease Modal */}
-      {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}>
-          <div style={{ background: T.surface, borderRadius: T.radiusLg, padding: 32, width: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: T.shadowMd }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 18, color: T.navy, marginBottom: 4 }}>Add Lease</div>
-            <div style={{ fontSize: 13, color: T.inkMuted, marginBottom: 20 }}>Upload your lease — AI will auto-fill everything including payment terms and late fees.</div>
-
-            <div onClick={() => fileInputRef.current?.click()}
-              onDrop={e => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) extractLeaseData(file); }}
-              onDragOver={e => e.preventDefault()}
-              style={{ border: '2px dashed ' + T.border, borderRadius: T.radius, padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 20, background: extracting ? T.tealLight : leaseFile ? T.greenLight : T.bg }}>
-              <input ref={fileInputRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }}
-                onChange={e => { const file = e.target.files?.[0]; if (file) extractLeaseData(file); }} />
-              {extracting
-                ? <div style={{ color: T.navy, fontSize: 13, fontWeight: 600 }}>✦ Reading lease including payment terms… just a moment</div>
-                : leaseFile
-                ? <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.greenDark }}>📄 {leaseFile.name}</div>
-                    <div style={{ fontSize: 11, color: T.inkMuted, marginTop: 4 }}>File will be saved with lease · Click to replace</div>
-                  </div>
-                : <>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: T.navy }}>Upload Lease PDF or Photo</div>
-                    <div style={{ fontSize: 12, color: T.inkMuted, marginTop: 4 }}>Click or drag · AI extracts all terms including late fees and payment schedule</div>
-                  </>
-              }
-            </div>
-
-            {extractError && (
-              <div style={{
-                background: extractError.startsWith('✓') ? T.tealLight : T.coralLight,
-                border: `1px solid ${extractError.startsWith('✓') ? T.teal + '33' : T.coral + '33'}`,
-                borderRadius: T.radiusSm, padding: '10px 14px', fontSize: 13,
-                color: extractError.startsWith('✓') ? T.tealDark : T.coral,
-                marginBottom: 16,
-              }}>
-                {extractError}
-              </div>
-            )}
-
-            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: T.inkMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Review & Edit Details</div>
-              {renderLeaseFormFields(newLease, setNewLease)}
-            </div>
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={addLease} disabled={saving} style={{ ...btn.primary }}>
-                {saving ? 'Saving…' : 'Save Lease'}
-              </button>
-              <button onClick={() => { setShowAdd(false); setExtractError(''); setLeaseFile(null); }}
-                style={{ ...btn.ghost }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showAdd && <AddTenantWizard initialFiles={importFiles} onClose={() => { setShowAdd(false); setImportFiles([]); }} onComplete={() => { void fetchLeases(); }} />}
 
       {/* Edit Lease Modal */}
       {editingLease && editForm && (

@@ -38,6 +38,8 @@ export function importPlan(payload: any) {
  if(f.email && (typeof f.email!=='string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email))) throw new Response('Review the optional email address.',{status:400});
  const schedule=f.defer_schedule===true?[]:paymentSchedule(civilDate(f.first_due),f.frequency,Number(f.horizon),rent,f.lifecycle_state==='active_fixed'?end || undefined:undefined);
  if(f.defer_schedule!==true && (!schedule.length || start && schedule[0].due_date<start)) throw new Response('Review the first payment date against the lease term.',{status:400});
- const plan={property_id:f.property_id || null,address:f.address.trim(),unit_number:String(f.unit_number || '').slice(0,50),tenant_name:f.tenant_name.trim(),email:f.email || null,phone:typeof f.phone==='string'?f.phone.slice(0,40):null,rent_cents:rent,deposit_cents:deposit===null?null:Math.round(deposit*100),start_date:start,end_date:end,lifecycle_state:f.lifecycle_state,timezone:f.timezone,schedule,source:payload.source || null,fields:payload.fields || {}};
+ const buildingAddress=typeof f.building_address==='string'?f.building_address.trim():'';
+ if(buildingAddress.length>500) throw new Response('Review the building address.',{status:400});
+ const plan={building_address:buildingAddress || null,property_id:f.property_id || null,address:f.address.trim(),unit_number:String(f.unit_number || '').slice(0,50),tenant_name:f.tenant_name.trim(),email:f.email || null,phone:typeof f.phone==='string'?f.phone.slice(0,40):null,rent_cents:rent,deposit_cents:deposit===null?null:Math.round(deposit*100),start_date:start,end_date:end,lifecycle_state:f.lifecycle_state,timezone:f.timezone,schedule,source:payload.source || null,fields:payload.fields || {}};
  return {plan,digest:createHash('sha256').update(JSON.stringify(plan)).digest('hex')};
 }
