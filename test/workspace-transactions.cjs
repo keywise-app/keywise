@@ -23,7 +23,10 @@ const assert=require('node:assert/strict');
  insert into properties(id,user_id,address,is_unit) values('${unit}','${owner}','10 Example Ct, Unit A',true),('${foreign}','${other}','10 Example Ct, Unit A',true);
  insert into leases(id,user_id,tenant_user_id,property,status,tenant_name) values('${lease}','${owner}','${tenant}','10 Example Ct, Unit A','active','Sample Tenant');`);
  const migrations=['20261116235959_workflow_legacy_compatibility.sql','20261117000000_landlord_workflows.sql','20261117010000_workspace_payment_safety.sql','20261117020000_workspace_actions.sql','20261117030000_workspace_extraction_limits.sql','20261117040000_atomic_occupied_import.sql','20261117050000_workspace_receipts.sql','20261117060000_workspace_charge_identity.sql','20261117070000_private_import_sources.sql','20261117080000_repair_completion.sql','20261117090000_renewal_versions.sql','20261117100000_tenancy_members.sql','20261117110000_financial_write_guards.sql','20261117120000_workflow_outcomes.sql','20261117130000_exact_refund_amounts.sql','20261117140000_provider_profile_guards.sql','20261118000000_growth_cohorts.sql','20261123000000_batch_lease_onboarding.sql'];
- for(const file of migrations) await db.exec(readFileSync(`supabase/migrations/${file}`,'utf8'));
+ for(const file of migrations) {
+  if(file==='20261123000000_batch_lease_onboarding.sql')await db.exec('alter default privileges grant execute on functions to anon,authenticated;');
+  await db.exec(readFileSync(`supabase/migrations/${file}`,'utf8'));
+ }
  checks++;
  const scalar=async(sql,args=[])=>(await db.query(sql,args)).rows[0].result;
  const rpc=async(name,args)=>scalar(`select ${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args);
@@ -74,6 +77,10 @@ const assert=require('node:assert/strict');
  const before=await scalar('select revision as result from workspace_import_drafts where id=$1',[foreignDraft]);
  await reject(rpc('workspace_save_import_batch',[owner,JSON.stringify([{id:foreignDraft,revision:before,payload:{form:{tenant_name:'changed'}},plan:null,digest:null},{id:batchIds[0],revision:0,payload:{},plan:null,digest:null}])]),/Stale/);
  equal(await scalar('select revision as result from workspace_import_drafts where id=$1',[foreignDraft]),before,'batch draft save rolls back on stale revision');
+ for(const name of ['workspace_save_import','workspace_commit_import','workspace_save_import_batch','workspace_commit_import_batch']) {
+  for(const role of ['anon','authenticated']) equal(await scalar("select has_function_privilege($1,p.oid,'EXECUTE') as result from pg_proc p join pg_namespace n on p.pronamespace=n.oid where n.nspname='public' and p.proname=$2",[role,name]),false,'client roles cannot invoke actor-scoped import routines');
+  equal(await scalar("select has_function_privilege('service_role',p.oid,'EXECUTE') as result from pg_proc p join pg_namespace n on p.pronamespace=n.oid where n.nspname='public' and p.proname=$1",[name]),true);
+ }
  const payment='66666666-6666-4666-8666-666666666666';
  await rpc('workspace_create_charge',[payment,owner,lease,200000,'2026-11-01','rent','']);
  equal((await rpc('workspace_create_charge',[payment,owner,lease,200000,'2026-11-01','rent',''])).id,payment);
